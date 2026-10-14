@@ -9,7 +9,7 @@
 | Started | not recorded |
 | Finished | not recorded |
 | Baseline | `20261014-conlang-jax-v5e8-b256-opt1` |
-| Git revision | `b337b68be31f36a314e0dae5720a72813c598ddd` on `codex/jax-tpu-training` |
+| Git revision | `bde42367a09836ee775ced42e1a37d6fe085649f` on `codex/jax-tpu-training`; run config introduced by `b337b68be31f36a314e0dae5720a72813c598ddd` |
 | Command | `JAX_PLATFORMS=tpu CUDA_VISIBLE_DEVICES='' ELF_TPU_WORKER_INDEX=0 /home/kristinelu/elf-runs/runtime/venv/bin/python train.py --config configs/conlang-jax-v5e8-b256-full1.yaml` |
 | Seed | `1729` |
 | Hardware | selected candidate: `kmh-tpuvm-v5e-8-spot-kristine-02-08-02-17-N-us-west4-a`; v5litepod-8; single host; launch readiness pending final preflight |
@@ -102,3 +102,4 @@ Run identity, output path, and W&B display name are fresh. Model shape, optimize
 ## Updates
 
 - 2026-10-14T21:41:23Z: User authorized launch. The mandatory filtered inventory returned the selected v5e-8 as `AVAILABLE` with ELF runtime `READY`. The complete YAML parsed successfully and was committed alone as `b337b68be31f36a314e0dae5720a72813c598ddd`; immutable staging, final preflight, and launch remain pending.
+- 2026-10-14T21:50:24Z: The required correctness review found that evaluation time would contaminate the following throughput interval. Commit `bde42367a09836ee775ced42e1a37d6fe085649f` resets the interval after evaluation and adds a deterministic delay regression test. The focused test and full CPU suite passed (`89` tests and `7` subtests).
