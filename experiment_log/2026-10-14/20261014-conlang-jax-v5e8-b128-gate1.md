@@ -9,7 +9,7 @@
 | Started | not recorded |
 | Finished | not recorded |
 | Baseline | not specified |
-| Git revision | not recorded; repository has no configured remote and source is untracked |
+| Git revision | `codex/jax-tpu-training`; exact launch commit pending push and PR |
 | Command | `JAX_PLATFORMS=tpu CUDA_VISIBLE_DEVICES='' ELF_TPU_WORKER_INDEX=0 /home/kristinelu/elf-venv/bin/python train.py --config configs/conlang-jax-v5e8-gate1.yaml` |
 | Seed | `1729` |
 | Hardware | `kmh-tpuvm-v5e-8-spot-kristine-02-08-02-17-N-us-west4-a`; v5litepod-8; single host; READY/HEALTHY and AVAILABLE at 2026-10-14 preflight |
@@ -48,6 +48,8 @@ max_question_length: 128
 num_layers: 2
 num_heads: 4
 dropout: 0.1
+relative_attention_num_buckets: 32
+relative_attention_max_distance: 128
 ```
 
 ## Changed Hyperparameters
@@ -72,14 +74,14 @@ No confirmed changes; no explicit experimental baseline was specified. The b128 
 ## Failure Details
 
 - Last known step: not applicable
-- Error summary: launch blocked before staging because the source has no Git remote and GitHub authentication is invalid; repository policy requires a pushed pull request first
+- Error summary: launch blocked before staging because GitHub authentication is invalid; repository policy requires a pushed pull request first
 - Detailed output: not recorded
 
 ## Observations
 
 - The selected TPU was READY, HEALTHY, runtime-ready, and idle in the repository-required filtered inventory.
 - `gs://kmh-gcp-us-west4/kristine/datasets/conlangs` is in `US-WEST4` and contained the manifest plus all six compressed splits, totaling 11,643,131 bytes during preflight.
-- Focused CPU tests passed for static token shapes, pmapped parameter updates, bfloat16 compute with a float32 loss, YAML field validation, and TPU path validation.
+- CPU tests passed for static token shapes, pmapped parameter updates, bfloat16 compute with a float32 loss, relative-position attention, YAML field validation, and TPU path validation.
 
 ## Interpretation
 

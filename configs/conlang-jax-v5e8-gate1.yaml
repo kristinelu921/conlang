@@ -27,3 +27,5 @@ max_question_length: 128
 num_layers: 2
 num_heads: 4
 dropout: 0.1
+relative_attention_num_buckets: 32
+relative_attention_max_distance: 128

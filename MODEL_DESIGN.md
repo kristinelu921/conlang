@@ -20,32 +20,35 @@ and a receiver must answer a question from the two messages alone.
 | Initialization | Flax linen defaults, with token embeddings drawn from a normal of standard deviation 1 | Standard library initialization. The embedding scale is the one explicit choice. |
 | Optimizer | AdamW, learning rate `3e-4`, gradient clip `1.0` | AdamW is the usual Transformer optimizer. `3e-4` is a standard small-model step size. The clip limits a step from the large initial embeddings. |
 | Weight decay | `0.01` on matrices, `0` on biases and layer-norm scales | `0.01` is AdamW's usual default. Vector parameters such as layer-norm scales are left without decay so the decay does not shrink them toward zero. |
+| Position encoding | T5 relative attention bias, 32 buckets, maximum distance 128 | Relative buckets preserve order without allocating absolute tables at every supported sequence length. |
 
 Vocabulary size is 2191. Parameter counts, with the shared word embedding listed once:
 
 | Piece | Parameters |
 |---|---|
 | Word embedding shared by the sender and the receiver | 280,448 |
-| Sender, apart from that embedding | 463,104 |
-| Receiver, apart from that embedding | 1,226,255 |
-| Communication model, embedding counted once | 1,969,807 |
+| Sender, apart from that embedding | 397,312 |
+| Receiver, apart from that embedding | 1,209,103 |
+| Communication model, embedding counted once | 1,886,863 |
 
-Agent 1 and agent 2 are the same sender, so they are the same size. The receiver is larger than the sender because it has both an encoder and a decoder. Those counts were measured on the previous PyTorch modules. The Flax module uses the same widths, so the count will differ wherever Flax's attention parameterization differs.
+Agent 1 and agent 2 are the same sender, so they are the same size. The receiver
+is larger than the sender because it has both an encoder and a decoder. These
+counts come from the Flax parameter tree for the configuration above.
 
 ## Architecture
 
 Both agents call `Sender`. It prepends 4 learned query embeddings to the
-character embeddings, adds learned absolute positions, and runs a
-batch-first Transformer encoder. The returned message is the encoder state at
-the 4 query positions, shape `(batch, 4, 128)`. `encode_messages` runs that
-same module twice and concatenates on the length axis, shape `(batch, 8, 128)`.
+character embeddings and runs a batch-first Transformer encoder. The returned
+message is the encoder state at the 4 query positions, shape `(batch, 4, 128)`.
+`encode_messages` runs that module twice and concatenates on the length axis,
+shape `(batch, 8, 128)`.
 
 `Receiver` is an encoder-decoder:
 
-1. The 8 message vectors are placed in positions 0–7. They are not passed
-   through the token embedding, because they are already hidden states.
-2. The question is embedded with the shared token table and placed in the
-   following positions.
+1. The 8 message vectors are concatenated ahead of the question. They are not
+   passed through the token embedding, because they are already hidden states.
+2. The question is embedded with the shared token table and placed after the
+   messages.
 3. A 2-layer encoder mixes the messages with the question. Its output is the
    memory the decoder cross-attends to.
 4. A 2-layer decoder predicts the answer under a causal mask. The output head
@@ -56,11 +59,15 @@ Each block is post-norm with ReLU and dropout 0.1, built from Flax
 `deterministic` is passed on every call, so evaluation disables dropout even
 after a training call has built the module. Pre-norm and GELU were not substituted.
 
-Position tables are learned embeddings, not sinusoids. The sender table covers
-4 message slots plus 512 text characters. The receiver encoder table covers 8
-message slots plus 128 question characters. The answer position table has 4
-rows. Measured passages are a few hundred characters and questions are under
-80, so these caps hold the current generator without truncating.
+Sequence order comes from a T5 relative attention bias, not from absolute
+position embeddings. Each head has 32 learned buckets. Offsets up to half of
+the buckets are exact, and longer offsets share logarithmic buckets out to
+distance 128. Encoder self-attention and decoder cross-attention are
+bidirectional. Decoder self-attention only buckets distances into the past.
+The 4 sender query slots stay learned content vectors; their order relative
+to the passage comes from this bias. Measured passages are a few hundred
+characters and questions are under 80, so the configured caps of 512 and 128
+hold the current generator without truncating.
 
 Padding uses an explicit boolean attention mask.
 
@@ -119,7 +126,8 @@ sum. `loss` is what a minimizer should step on.
 
 ## Initialization
 
-Token embeddings use a normal initializer with standard deviation 1. The other
+Token embeddings, the sender query slots, and the relative-position bucket
+tables use a normal initializer with standard deviation 1. The other
 projections and layer norms use Flax linen defaults. Nothing is re-sampled
 after the module is built.
 

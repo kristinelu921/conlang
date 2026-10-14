@@ -78,6 +78,8 @@ class TrainConfig:
     num_layers: int = 2
     num_heads: int = 4
     dropout: float = 0.1
+    relative_attention_num_buckets: int = 32
+    relative_attention_max_distance: int = 128
 
     def validate(self) -> None:
         """Reject invalid science, topology, and node-local path settings."""
@@ -98,7 +100,9 @@ class TrainConfig:
         if min(positive_integers) < 1:
             raise ValueError("batch, step, evaluation, logging, and model sizes must be positive")
         if self.learning_rate <= 0 or self.weight_decay < 0 or self.max_gradient_norm <= 0:
-            raise ValueError("learning rate and gradient clip must be positive; weight decay cannot be negative")
+            raise ValueError(
+                "learning rate and gradient clip must be positive; weight decay cannot be negative"
+            )
         if self.throughput_warmup_steps < 1 or self.throughput_warmup_steps >= self.steps:
             raise ValueError("throughput warmup must be positive and shorter than the run")
         if self.limit_examples is not None and self.limit_examples < 1:
@@ -117,6 +121,13 @@ class TrainConfig:
             raise ValueError("hidden size must be divisible by the number of attention heads")
         if not 0 <= self.dropout < 1:
             raise ValueError("dropout must be in [0, 1)")
+        if (
+            self.relative_attention_num_buckets < 4
+            or self.relative_attention_num_buckets % 2 != 0
+        ):
+            raise ValueError("relative attention needs an even bucket count of at least 4")
+        if self.relative_attention_max_distance <= self.relative_attention_num_buckets // 2:
+            raise ValueError("relative attention max distance must exceed half the bucket count")
         if self.device == "tpu":
             if self.dataset_dir is not None:
                 raise ValueError("TPU runs must resolve the region-matched dataset rather than bypassing it")
@@ -223,6 +234,8 @@ def _model_config(config: TrainConfig, tokenizer: TextTokenizer) -> JaxCommunica
         padding_id=tokenizer.pad_id,
         bos_id=tokenizer.bos_id,
         eos_id=tokenizer.eos_id,
+        relative_attention_num_buckets=config.relative_attention_num_buckets,
+        relative_attention_max_distance=config.relative_attention_max_distance,
         dtype=dtype,
     )
 
@@ -442,7 +455,8 @@ def train(config: TrainConfig) -> dict[str, float]:
             jax.distributed.initialize()
         devices = jax.devices()
         if not devices or devices[0].platform != config.device:
-            raise RuntimeError(f"requested {config.device} backend, found {[device.platform for device in devices]}")
+            found_platforms = [device.platform for device in devices]
+            raise RuntimeError(f"requested {config.device} backend, found {found_platforms}")
         if config.device == "tpu" and jax.process_count() != 1:
             raise RuntimeError("this optimized conlang runner currently requires a single-host TPU")
         local_device_count = jax.local_device_count()
@@ -474,7 +488,8 @@ def train(config: TrainConfig) -> dict[str, float]:
         metrics_path = None if output_directory is None else output_directory / "metrics.jsonl"
         print(
             f"run_id={config.run_id} backend={devices[0].platform} devices={jax.device_count()} "
-            f"dataset={dataset_directory} examples={verified_dataset['questions']} "
+            f"dataset={dataset_directory} verified_questions={verified_dataset['questions']} "
+            f"train_examples={tokenized_train.size} validation_examples={tokenized_validation.size} "
             f"batch_size={config.batch_size} precision={config.precision}"
         )
         interval_started_at = time.perf_counter()

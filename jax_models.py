@@ -6,12 +6,14 @@ All You Need: https://arxiv.org/abs/1706.03762
 
 from __future__ import annotations
 
+import functools
 from dataclasses import dataclass
-from typing import NamedTuple
+from typing import Any, NamedTuple
 
 import jax
 import jax.numpy as jnp
 from flax import linen as nn
+from flax.linen.attention import dot_product_attention
 
 
 Array = jax.Array
@@ -33,6 +35,8 @@ class JaxCommunicationModelConfig:
     padding_id: int = 0
     bos_id: int = 1
     eos_id: int = 2
+    relative_attention_num_buckets: int = 32
+    relative_attention_max_distance: int = 128
     dtype: jnp.dtype = jnp.float32
 
     @property
@@ -56,6 +60,13 @@ class JaxCommunicationModelConfig:
         )
         if min(lengths) < 1:
             raise ValueError("model lengths and depth must be positive")
+        if (
+            self.relative_attention_num_buckets < 4
+            or self.relative_attention_num_buckets % 2 != 0
+        ):
+            raise ValueError("relative attention needs an even bucket count of at least 4")
+        if self.relative_attention_max_distance <= self.relative_attention_num_buckets // 2:
+            raise ValueError("relative attention max distance must exceed half the bucket count")
 
 
 class JaxCommunicationOutput(NamedTuple):
@@ -71,6 +82,96 @@ def _attention_mask(query_valid: Array, key_valid: Array) -> Array:
     return nn.make_attention_mask(query_valid, key_valid, dtype=jnp.bool_)
 
 
+def _relative_position_bucket(
+    relative_position: Array,
+    bidirectional: bool,
+    num_buckets: int,
+    max_distance: int,
+) -> Array:
+    """Map a key-minus-query offset into one T5 relative-position bucket."""
+    # Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer: https://arxiv.org/abs/1910.10683
+    relative_buckets = jnp.zeros_like(relative_position, dtype=jnp.int32)
+    if bidirectional:
+        num_buckets //= 2
+        relative_buckets += (relative_position > 0).astype(jnp.int32) * num_buckets
+        relative_position = jnp.abs(relative_position)
+    else:
+        relative_position = -jnp.minimum(relative_position, 0)
+    max_exact = num_buckets // 2
+    is_small = relative_position < max_exact
+    safe_position = jnp.maximum(relative_position, 1).astype(jnp.float32)
+    relative_position_if_large = max_exact + (
+        jnp.log(safe_position / max_exact) / jnp.log(max_distance / max_exact) * (num_buckets - max_exact)
+    ).astype(jnp.int32)
+    relative_position_if_large = jnp.minimum(relative_position_if_large, num_buckets - 1)
+    return relative_buckets + jnp.where(
+        is_small,
+        relative_position.astype(jnp.int32),
+        relative_position_if_large,
+    )
+
+
+def _relative_attention_bias(
+    module: nn.Module,
+    query_length: int,
+    key_length: int,
+    config: JaxCommunicationModelConfig,
+    bidirectional: bool,
+    name: str,
+) -> Array:
+    """Return a head-wise relative bias of shape (1, heads, query, key)."""
+    relative_embedding = module.param(
+        name,
+        nn.initializers.normal(stddev=1.0),
+        (config.num_heads, config.relative_attention_num_buckets),
+        jnp.float32,
+    )
+    query_positions = jnp.arange(query_length)
+    key_positions = jnp.arange(key_length)
+    relative_position = key_positions[None, :] - query_positions[:, None]
+    buckets = _relative_position_bucket(
+        relative_position,
+        bidirectional,
+        config.relative_attention_num_buckets,
+        config.relative_attention_max_distance,
+    )
+    return relative_embedding[:, buckets][None]
+
+
+def _attend(
+    query: Array,
+    key: Array,
+    value: Array,
+    *,
+    bias: Array,
+    mask: Array | None = None,
+    dropout_rng: Array | None = None,
+    dropout_rate: float = 0.0,
+    broadcast_dropout: bool = True,
+    deterministic: bool = False,
+    dtype: Any = None,
+    precision: Any = None,
+    force_fp32_for_softmax: bool = False,
+    qk_attn_weights_einsum: Any = None,
+    attn_weights_value_einsum: Any = None,
+) -> Array:
+    """Add a relative-position bias, then run dot-product attention."""
+    return dot_product_attention(
+        query,
+        key,
+        value,
+        bias=bias.astype(query.dtype),
+        mask=mask,
+        dropout_rng=dropout_rng,
+        dropout_rate=dropout_rate,
+        broadcast_dropout=broadcast_dropout,
+        deterministic=deterministic,
+        dtype=dtype,
+        precision=precision,
+        force_fp32_for_softmax=force_fp32_for_softmax,
+        qk_attn_weights_einsum=qk_attn_weights_einsum,
+        attn_weights_value_einsum=attn_weights_value_einsum,
+    )
 class EncoderBlock(nn.Module):
     """Apply one post-norm Transformer encoder block."""
 
@@ -80,6 +181,15 @@ class EncoderBlock(nn.Module):
     def __call__(self, hidden: Array, valid: Array, deterministic: bool) -> Array:
         """Encode one padded sequence while masking invalid keys."""
         config = self.config
+        sequence_length = hidden.shape[1]
+        relative_bias = _relative_attention_bias(
+            self,
+            sequence_length,
+            sequence_length,
+            config,
+            bidirectional=True,
+            name="relative_attention_bias",
+        )
         attention = nn.MultiHeadDotProductAttention(
             num_heads=config.num_heads,
             qkv_features=config.hidden_size,
@@ -88,10 +198,14 @@ class EncoderBlock(nn.Module):
             dtype=config.dtype,
             param_dtype=jnp.float32,
             force_fp32_for_softmax=True,
+            attention_fn=functools.partial(_attend, bias=relative_bias),
             name="self_attention",
         )(hidden, mask=_attention_mask(valid, valid), deterministic=deterministic)
         hidden = nn.LayerNorm(dtype=jnp.float32, name="attention_norm")(
-            hidden + nn.Dropout(config.dropout, name="attention_dropout")(attention, deterministic=deterministic)
+            hidden
+            + nn.Dropout(config.dropout, name="attention_dropout")(
+                attention, deterministic=deterministic
+            )
         ).astype(config.dtype)
         feedforward = nn.Dense(
             config.feedforward_size,
@@ -100,7 +214,9 @@ class EncoderBlock(nn.Module):
             name="feedforward_in",
         )(hidden)
         feedforward = jax.nn.relu(feedforward)
-        feedforward = nn.Dropout(config.dropout, name="feedforward_dropout")(feedforward, deterministic=deterministic)
+        feedforward = nn.Dropout(config.dropout, name="feedforward_dropout")(
+            feedforward, deterministic=deterministic
+        )
         feedforward = nn.Dense(
             config.hidden_size,
             dtype=config.dtype,
@@ -131,6 +247,14 @@ class DecoderBlock(nn.Module):
         config = self.config
         causal_mask = nn.make_causal_mask(answer_valid, dtype=jnp.bool_)
         padding_mask = _attention_mask(answer_valid, answer_valid)
+        self_bias = _relative_attention_bias(
+            self,
+            hidden.shape[1],
+            hidden.shape[1],
+            config,
+            bidirectional=False,
+            name="self_relative_attention_bias",
+        )
         self_attention = nn.MultiHeadDotProductAttention(
             num_heads=config.num_heads,
             qkv_features=config.hidden_size,
@@ -139,12 +263,23 @@ class DecoderBlock(nn.Module):
             dtype=config.dtype,
             param_dtype=jnp.float32,
             force_fp32_for_softmax=True,
+            attention_fn=functools.partial(_attend, bias=self_bias),
             name="self_attention",
         )(hidden, mask=nn.combine_masks(causal_mask, padding_mask), deterministic=deterministic)
         hidden = nn.LayerNorm(dtype=jnp.float32, name="self_attention_norm")(
             hidden
-            + nn.Dropout(config.dropout, name="self_attention_dropout")(self_attention, deterministic=deterministic)
+            + nn.Dropout(config.dropout, name="self_attention_dropout")(
+                self_attention, deterministic=deterministic
+            )
         ).astype(config.dtype)
+        cross_bias = _relative_attention_bias(
+            self,
+            hidden.shape[1],
+            memory.shape[1],
+            config,
+            bidirectional=True,
+            name="cross_relative_attention_bias",
+        )
         cross_attention = nn.MultiHeadDotProductAttention(
             num_heads=config.num_heads,
             qkv_features=config.hidden_size,
@@ -153,6 +288,7 @@ class DecoderBlock(nn.Module):
             dtype=config.dtype,
             param_dtype=jnp.float32,
             force_fp32_for_softmax=True,
+            attention_fn=functools.partial(_attend, bias=cross_bias),
             name="cross_attention",
         )(
             hidden,
@@ -173,7 +309,9 @@ class DecoderBlock(nn.Module):
             name="feedforward_in",
         )(hidden)
         feedforward = jax.nn.relu(feedforward)
-        feedforward = nn.Dropout(config.dropout, name="feedforward_dropout")(feedforward, deterministic=deterministic)
+        feedforward = nn.Dropout(config.dropout, name="feedforward_dropout")(
+            feedforward, deterministic=deterministic
+        )
         feedforward = nn.Dense(
             config.hidden_size,
             dtype=config.dtype,
@@ -202,20 +340,11 @@ class Sender(nn.Module):
             (config.message_length, config.hidden_size),
             jnp.float32,
         ).astype(config.dtype)
-        position_embedding = self.param(
-            "position_embedding",
-            nn.initializers.normal(stddev=1.0),
-            (config.message_length + config.max_text_length, config.hidden_size),
-            jnp.float32,
-        ).astype(config.dtype)
         text_length = text_embeddings.shape[1]
         if text_length > config.max_text_length:
-            raise ValueError("text is longer than the position table")
+            raise ValueError("text is longer than the configured maximum")
         queries = jnp.broadcast_to(query_embedding[None], (batch_size, *query_embedding.shape))
-        queries = queries + position_embedding[None, : config.message_length]
-        text_positions = position_embedding[config.message_length : config.message_length + text_length]
-        text = text_embeddings + text_positions[None]
-        hidden = jnp.concatenate((queries, text), axis=1)
+        hidden = jnp.concatenate((queries, text_embeddings), axis=1)
         valid = jnp.concatenate(
             (
                 jnp.ones((batch_size, config.message_length), dtype=jnp.bool_),
@@ -247,26 +376,15 @@ class Receiver(nn.Module):
         config = self.config
         batch_size = messages.shape[0]
         message_count = config.message_length * 2
-        encoder_position_embedding = self.param(
-            "encoder_position_embedding",
-            nn.initializers.normal(stddev=1.0),
-            (message_count + config.max_question_length, config.hidden_size),
-            jnp.float32,
-        ).astype(config.dtype)
-        answer_position_embedding = self.param(
-            "answer_position_embedding",
-            nn.initializers.normal(stddev=1.0),
-            (config.max_answer_length, config.hidden_size),
-            jnp.float32,
-        ).astype(config.dtype)
         question_length = question_embeddings.shape[1]
-        answer_length = answer_embeddings.shape[1]
-        if question_length > config.max_question_length or answer_length > config.max_answer_length:
-            raise ValueError("question or answer is longer than its position table")
-        messages = messages + encoder_position_embedding[None, :message_count]
-        question_positions = encoder_position_embedding[message_count : message_count + question_length]
-        question_hidden = question_embeddings + question_positions[None]
-        memory = jnp.concatenate((messages, question_hidden), axis=1)
+        if messages.shape[1] != message_count:
+            raise ValueError("receiver expected two concatenated messages")
+        if (
+            question_length > config.max_question_length
+            or answer_embeddings.shape[1] > config.max_answer_length
+        ):
+            raise ValueError("question or answer is longer than the configured maximum")
+        memory = jnp.concatenate((messages, question_embeddings), axis=1)
         memory_valid = jnp.concatenate(
             (
                 jnp.ones((batch_size, message_count), dtype=jnp.bool_),
@@ -278,7 +396,7 @@ class Receiver(nn.Module):
             memory = EncoderBlock(config, name=f"encoder_layer_{layer_index}")(
                 memory, memory_valid, deterministic
             )
-        hidden = answer_embeddings + answer_position_embedding[None, :answer_length]
+        hidden = answer_embeddings
         answer_valid = answer_input_ids != config.padding_id
         for layer_index in range(config.num_layers):
             hidden = DecoderBlock(config, name=f"decoder_layer_{layer_index}")(

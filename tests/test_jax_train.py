@@ -11,7 +11,9 @@ import numpy as np
 import optax
 import pytest
 
-from jax_models import JaxCommunicationModel
+from flax.traverse_util import flatten_dict
+
+from jax_models import JaxCommunicationModel, _relative_position_bucket
 from linked_facts.generate_dataset import iter_question_examples
 from tokenizer import TextTokenizer
 from train import (
@@ -185,6 +187,19 @@ def test_config_rejects_unknown_yaml_fields(tmp_path: Path) -> None:
         parse_arguments(["--config", str(config_path), "--disable-wandb"])
 
 
+def test_config_rejects_invalid_relative_attention_buckets() -> None:
+    """Relative-position settings should fail before model initialization."""
+    with pytest.raises(ValueError, match="even bucket count"):
+        replace(TrainConfig(), relative_attention_num_buckets=31).validate()
+
+    with pytest.raises(ValueError, match="max distance"):
+        replace(
+            TrainConfig(),
+            relative_attention_num_buckets=32,
+            relative_attention_max_distance=16,
+        ).validate()
+
+
 def test_tpu_config_requires_regional_cache_and_node_local_output() -> None:
     """TPU runs should fail before launch when locality paths are missing."""
     config = TrainConfig(device="tpu", throughput_warmup_steps=1, steps=2)
@@ -244,3 +259,57 @@ def test_final_checkpoint_serializes_one_local_replica(tmp_path: Path) -> None:
 
     assert output_path.stat().st_size > 0
     assert not output_path.with_suffix(".msgpack.tmp").exists()
+
+
+def test_relative_buckets_separate_nearby_offsets_and_clamp_far_ones() -> None:
+    """Nearby offsets should keep their own buckets, and far offsets should share the last one."""
+    nearby = _relative_position_bucket(jnp.array([-2, -1, 0, 1, 2]), True, 32, 128)
+    far_positive = _relative_position_bucket(jnp.array([10_000]), True, 32, 128)
+    far_negative = _relative_position_bucket(jnp.array([-10_000]), True, 32, 128)
+    past = _relative_position_bucket(jnp.array([0, -1]), False, 32, 128)
+
+    assert len(set(int(bucket) for bucket in nearby)) == 5
+    assert int(far_positive[0]) == 31
+    assert int(far_negative[0]) == 15
+    assert int(past[0]) == 0
+    assert int(past[1]) == 1
+
+
+def test_model_uses_relative_bias_without_absolute_positions() -> None:
+    """Order should come from relative attention bias, and token order should change the logits."""
+    tokenizer = TextTokenizer(["buffalo", "chapel"])
+    config = _small_config()
+    batch = tokenize_examples(_examples(), tokenizer, config).select([0, 1])
+    model = JaxCommunicationModel(_model_config(config, tokenizer))
+    variables = model.init(
+        {"params": jax.random.PRNGKey(0)},
+        jnp.asarray(batch.agent_1_token_ids),
+        jnp.asarray(batch.agent_2_token_ids),
+        jnp.asarray(batch.question_token_ids),
+        jnp.asarray(batch.answer_token_ids),
+        deterministic=True,
+    )
+    parameter_names = {"/".join(path) for path in flatten_dict(variables["params"])}
+    swapped_agent_1 = batch.agent_1_token_ids.copy()
+    swapped_agent_1[:, [0, 1]] = swapped_agent_1[:, [1, 0]]
+
+    original = model.apply(
+        variables,
+        jnp.asarray(batch.agent_1_token_ids),
+        jnp.asarray(batch.agent_2_token_ids),
+        jnp.asarray(batch.question_token_ids),
+        jnp.asarray(batch.answer_token_ids),
+        deterministic=True,
+    ).logits
+    swapped = model.apply(
+        variables,
+        jnp.asarray(swapped_agent_1),
+        jnp.asarray(batch.agent_2_token_ids),
+        jnp.asarray(batch.question_token_ids),
+        jnp.asarray(batch.answer_token_ids),
+        deterministic=True,
+    ).logits
+
+    assert any(name.endswith("relative_attention_bias") for name in parameter_names)
+    assert not any("position_embedding" in name for name in parameter_names)
+    assert not jnp.allclose(original, swapped)
