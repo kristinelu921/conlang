@@ -1,0 +1,4 @@
+interface:
+  display_name: "Launch ELF Training"
+  short_description: "Launch, evaluate checkpoints, monitor, and recover ELF TPU runs"
+  default_prompt: "Use $launch-elf-training to launch ELF training or an exact-checkpoint generation evaluation, monitor it every 30 minutes, and recover the same run safely until completion."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Query and Claim GCP TPUs"
+  short_description: "Find and safely claim Kristine TPU capacity"
+  default_prompt: "Use $query-monitor-gcp-tpus to find or query a READY Kristine TPU, validate storage locality, and check VFIO occupancy before launch."

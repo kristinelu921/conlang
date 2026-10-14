@@ -1,0 +1,4 @@
+interface:
+  display_name: "W&B Experiment Log Manager"
+  short_description: "Reconcile W&B runs into complete experiment reports"
+  default_prompt: "Use $hourly-agent-manager to reconcile my W&B runs with experiment_log and summarize missing or important findings."

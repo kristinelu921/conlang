@@ -1,0 +1,100 @@
+{
+  "schema_version": 3,
+  "dataset": "linked_facts_natural_language",
+  "config": {
+    "seed": 1729,
+    "entities_per_world": 8,
+    "train_worlds": 12500,
+    "validation_worlds": 625,
+    "test_worlds_per_split": 625,
+    "compression": "gzip"
+  },
+  "splits": {
+    "train": {
+      "path": "train.jsonl.gz",
+      "worlds": 12500,
+      "questions": 100000,
+      "uncompressed_sha256": "cad5e5e63840557bfa0f3c7acb2ca893a375e2ca52655aafb273c6fa25fb7079",
+      "bytes_on_disk": 9267279
+    },
+    "validation": {
+      "path": "validation.jsonl.gz",
+      "worlds": 625,
+      "questions": 5000,
+      "uncompressed_sha256": "cfe433f2cb42ba12689b2700d7f29bc4ee2cfae1c26c1934e7f580ee56ffb397",
+      "bytes_on_disk": 466048
+    },
+    "test_familiar": {
+      "path": "test_familiar.jsonl.gz",
+      "worlds": 625,
+      "questions": 5000,
+      "uncompressed_sha256": "9836fa2e6ac256e3817668258dd6abef12037285b46ab9b2f8653aefbb65b45d",
+      "bytes_on_disk": 466319
+    },
+    "test_new_names": {
+      "path": "test_new_names.jsonl.gz",
+      "worlds": 625,
+      "questions": 5000,
+      "uncompressed_sha256": "47f4332e67e24518150bc89a2e50d14027259771e979ab856b78d484a54af543",
+      "bytes_on_disk": 471536
+    },
+    "test_new_wording": {
+      "path": "test_new_wording.jsonl.gz",
+      "worlds": 625,
+      "questions": 5000,
+      "uncompressed_sha256": "ad88123758ed64e06c5c8ef5420f5400852e6b7fa3465c9e44d214702c0ec3e2",
+      "bytes_on_disk": 480103
+    },
+    "test_new_names_and_wording": {
+      "path": "test_new_names_and_wording.jsonl.gz",
+      "worlds": 625,
+      "questions": 5000,
+      "uncompressed_sha256": "3145dd62ae512dfb01d075e3d26c6daebb49bc3639c9a09ee6bbbc8d55878a95",
+      "bytes_on_disk": 489093
+    }
+  },
+  "total_worlds": 15625,
+  "total_questions": 125000,
+  "split_contract": {
+    "train": {
+      "names": "familiar",
+      "wording": "familiar"
+    },
+    "validation": {
+      "names": "familiar",
+      "wording": "familiar"
+    },
+    "test_familiar": {
+      "names": "familiar",
+      "wording": "familiar"
+    },
+    "test_new_names": {
+      "names": "held_out",
+      "wording": "familiar"
+    },
+    "test_new_wording": {
+      "names": "familiar",
+      "wording": "held_out"
+    },
+    "test_new_names_and_wording": {
+      "names": "held_out",
+      "wording": "held_out"
+    }
+  },
+  "model_inputs": {
+    "shared_encoder_call_1": "agent_1_input",
+    "shared_encoder_call_2": "agent_2_input",
+    "receiver_inputs": [
+      "questions[].question",
+      "message_1",
+      "message_2"
+    ],
+    "training_target": "questions[].answer",
+    "excluded_metadata": [
+      "metadata",
+      "questions[].domain",
+      "questions[].reasoning_path",
+      "questions[].answer_index"
+    ]
+  }
+}

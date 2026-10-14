@@ -1,0 +1,4 @@
+interface:
+  display_name: "ELF Launch Errors"
+  short_description: "Diagnose ELF TPU launch and throughput failures"
+  default_prompt: "Use $errors to diagnose and document this ELF TPU staging, launch, or throughput failure."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Report Experiment Logs"
+  short_description: "Create consistent, reproducible experiment reports"
+  default_prompt: "Use $report-experiment-logs to document and compare these experiment results."
