@@ -563,6 +563,8 @@ def train(config: TrainConfig) -> dict[str, float]:
                 _append_metrics(metrics_path, evaluation_record)
                 if wandb_run is not None:
                     wandb_run.log({f"eval/{key}": value for key, value in evaluation.items()}, step=step)
+                interval_started_at = time.perf_counter()
+                interval_start_step = step
         if config.output_path is not None:
             save_checkpoint(replicated_state, config.steps, config.output_path)
         print(f"TRAINING_COMPLETE run_id={config.run_id} step={config.steps}")

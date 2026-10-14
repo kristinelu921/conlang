@@ -25,6 +25,7 @@ from train import (
     parse_arguments,
     save_checkpoint,
     shard_batch,
+    train,
     tokenize_examples,
 )
 
@@ -243,6 +244,45 @@ def test_tpu_config_binds_output_directory_to_run_id() -> None:
 
     with pytest.raises(ValueError, match="exactly match run_id"):
         config.validate()
+
+
+def test_throughput_timing_excludes_evaluation_delay(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Evaluation wall time should not reduce the following training interval's throughput."""
+    config = replace(_small_config(), steps=3, eval_every=2)
+    clock = {"time": 0.0}
+    metric_records: list[dict[str, float]] = []
+
+    def fake_train_step(
+        state: object,
+        batch: object,
+        dropout_keys: object,
+    ) -> tuple[object, dict[str, jax.Array]]:
+        del batch, dropout_keys
+        clock["time"] += 1.0
+        return state, {"loss": jnp.array([1.0]), "gradient_norm": jnp.array([1.0])}
+
+    def fake_evaluation(*args: object, **kwargs: object) -> dict[str, float]:
+        del args, kwargs
+        clock["time"] += 100.0
+        return {"exact_match": 0.5, "mean_joint_log_probability": -1.0}
+
+    monkeypatch.setattr("train.resolve_training_dataset", lambda *args, **kwargs: Path("dataset"))
+    monkeypatch.setattr("train.verify_dataset", lambda dataset_path: {"questions": 2})
+    monkeypatch.setattr("train.resolve_split_path", lambda dataset_path, split: Path(split))
+    monkeypatch.setattr("train.load_examples", lambda *args, **kwargs: _examples())
+    monkeypatch.setattr("train.build_parallel_train_step", lambda model: fake_train_step)
+    monkeypatch.setattr("train.build_parallel_evaluation_step", lambda model: object())
+    monkeypatch.setattr("train.evaluate_exact_match", fake_evaluation)
+    monkeypatch.setattr("train.time.perf_counter", lambda: clock["time"])
+    monkeypatch.setattr(
+        "train._append_metrics",
+        lambda metrics_path, metrics: metric_records.append(dict(metrics)),
+    )
+
+    train(config)
+
+    step_three_metrics = next(record for record in metric_records if record.get("step") == 3.0)
+    assert step_three_metrics["examples_per_second"] == pytest.approx(2.0)
 
 
 def test_final_checkpoint_serializes_one_local_replica(tmp_path: Path) -> None:
