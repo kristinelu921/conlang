@@ -52,8 +52,9 @@ same module twice and concatenates on the length axis, shape `(batch, 8, 128)`.
    is a separate linear map from 128 to the vocabulary.
 
 Each block is post-norm with ReLU and dropout 0.1, built from Flax
-`SelfAttention`, `MultiHeadDotProductAttention`, and `Dense`. Pre-norm and GELU
-were not substituted.
+`MultiHeadDotProductAttention` and `Dense`. Attention softmax runs in float32.
+`deterministic` is passed on every call, so evaluation disables dropout even
+after a training call has built the module. Pre-norm and GELU were not substituted.
 
 Position tables are learned embeddings, not sinusoids. The sender table covers
 4 message slots plus 512 text characters. The receiver encoder table covers 8
@@ -104,7 +105,7 @@ projection is not tied to it.
 
 Teacher forcing shifts the target right and starts the decoder at `<bos>`. For
 an answer encoded as `[word, eos]` and padded to 4, the scored tokens are the
-word and the end token. Padding positions use `ignore_index` and add nothing.
+word and the end token. Padding positions are masked out of the sum.
 
 ```text
 log p(answer | messages, question) = sum_t log p(answer_t | answer_<t, messages, question)

@@ -12,6 +12,7 @@ import optax
 import pytest
 
 from jax_models import JaxCommunicationModel
+from linked_facts.generate_dataset import iter_question_examples
 from tokenizer import TextTokenizer
 from train import (
     TrainConfig,
@@ -20,6 +21,7 @@ from train import (
     _optimizer_for_params,
     build_parallel_train_step,
     parse_arguments,
+    save_checkpoint,
     shard_batch,
     tokenize_examples,
 )
@@ -76,6 +78,19 @@ def test_tokenization_produces_static_training_shapes() -> None:
     assert tokenized.agent_1_token_ids.dtype == np.int32
 
 
+def test_regional_training_split_fits_static_sequence_limits() -> None:
+    """The committed dataset should fit the TPU graph without truncation or recompilation."""
+    config = TrainConfig()
+    maximum_lengths = {"agent_1_input": 0, "agent_2_input": 0, "question": 0}
+    for example in iter_question_examples(Path("datasets/linked_facts_v1/train.jsonl.gz")):
+        for field_name in maximum_lengths:
+            maximum_lengths[field_name] = max(maximum_lengths[field_name], len(str(example[field_name])))
+
+    assert maximum_lengths["agent_1_input"] <= config.max_text_length
+    assert maximum_lengths["agent_2_input"] <= config.max_text_length
+    assert maximum_lengths["question"] <= config.max_question_length
+
+
 def test_jax_training_step_updates_parameters_and_stays_finite() -> None:
     """One pmapped JAX step should update model parameters with finite metrics."""
     tokenizer = TextTokenizer(["buffalo", "chapel"])
@@ -98,6 +113,37 @@ def test_jax_training_step_updates_parameters_and_stays_finite() -> None:
 
     assert np.isfinite(host_loss)
     assert not np.array_equal(jax.device_get(before), after)
+
+
+def test_eval_mode_disables_dropout() -> None:
+    """A deterministic apply should be repeatable and should not require a dropout key."""
+    tokenizer = TextTokenizer(["buffalo", "chapel"])
+    config = replace(_small_config(), dropout=0.5)
+    batch = tokenize_examples(_examples(), tokenizer, config).select([0, 1])
+    model = JaxCommunicationModel(_model_config(config, tokenizer))
+    parameter_key, dropout_key = jax.random.split(jax.random.PRNGKey(0))
+    variables = model.init(
+        {"params": parameter_key, "dropout": dropout_key},
+        jnp.asarray(batch.agent_1_token_ids),
+        jnp.asarray(batch.agent_2_token_ids),
+        jnp.asarray(batch.question_token_ids),
+        jnp.asarray(batch.answer_token_ids),
+        deterministic=False,
+    )
+
+    def evaluate() -> jax.Array:
+        return model.apply(
+            variables,
+            jnp.asarray(batch.agent_1_token_ids),
+            jnp.asarray(batch.agent_2_token_ids),
+            jnp.asarray(batch.question_token_ids),
+            jnp.asarray(batch.answer_token_ids),
+            deterministic=True,
+        ).logits
+
+    first = jax.jit(evaluate)()
+    second = jax.jit(evaluate)()
+    assert jnp.array_equal(first, second)
 
 
 def test_model_forward_uses_float32_loss_with_bfloat16_compute() -> None:
@@ -145,3 +191,56 @@ def test_tpu_config_requires_regional_cache_and_node_local_output() -> None:
 
     with pytest.raises(ValueError, match="dataset_cache_dir"):
         config.validate()
+
+
+def test_tpu_config_rejects_deceptive_nonlocal_paths() -> None:
+    """A path containing an elf-data substring should not bypass locality checks."""
+    config = TrainConfig(
+        run_id="gate",
+        device="tpu",
+        dataset_cache_dir=Path("/tmp/home/user/elf-data/cache"),
+        output_path=Path("/home/user/elf-runs/gate/checkpoint.msgpack"),
+        throughput_warmup_steps=1,
+        steps=2,
+    )
+
+    with pytest.raises(ValueError, match="dataset_cache_dir"):
+        config.validate()
+
+    traversal_config = replace(
+        config,
+        dataset_cache_dir=Path("/home/user/elf-data/../../../tmp/cache"),
+    )
+    with pytest.raises(ValueError, match="dataset_cache_dir"):
+        traversal_config.validate()
+
+
+def test_tpu_config_binds_output_directory_to_run_id() -> None:
+    """Run identity and output ownership should not silently diverge."""
+    config = TrainConfig(
+        run_id="gate",
+        device="tpu",
+        dataset_cache_dir=Path("/home/user/elf-data/cache"),
+        output_path=Path("/home/user/elf-runs/different/checkpoint.msgpack"),
+        throughput_warmup_steps=1,
+        steps=2,
+    )
+
+    with pytest.raises(ValueError, match="exactly match run_id"):
+        config.validate()
+
+
+def test_final_checkpoint_serializes_one_local_replica(tmp_path: Path) -> None:
+    """The final checkpoint should serialize a pmapped state without array indexing."""
+    tokenizer = TextTokenizer(["buffalo", "chapel"])
+    config = _small_config()
+    batch = tokenize_examples(_examples(), tokenizer, config).select([0, 1])
+    model = JaxCommunicationModel(_model_config(config, tokenizer))
+    state = _initialize_state(model, optax.adam(1e-3), batch, config.seed)
+    replicated_state = jax.device_put_replicated(state, jax.local_devices())
+    output_path = tmp_path / "checkpoint.msgpack"
+
+    save_checkpoint(replicated_state, 2, output_path)
+
+    assert output_path.stat().st_size > 0
+    assert not output_path.with_suffix(".msgpack.tmp").exists()

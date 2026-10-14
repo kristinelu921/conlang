@@ -6,6 +6,7 @@ import argparse
 import json
 import os
 import random
+import re
 import time
 from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import asdict, dataclass, fields
@@ -28,6 +29,20 @@ from training_data import load_examples, resolve_split_path
 
 
 Array = jax.Array
+RUN_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+
+
+def _is_node_local_path(path: Path, directory_name: str) -> bool:
+    """Return whether a path is below /home/<user>/<directory_name>/."""
+    parts = path.resolve(strict=False).parts
+    return (
+        path.is_absolute()
+        and len(parts) >= 5
+        and parts[0] == "/"
+        and parts[1] == "home"
+        and bool(parts[2])
+        and parts[3] == directory_name
+    )
 
 
 @dataclass(frozen=True)
@@ -84,8 +99,14 @@ class TrainConfig:
             raise ValueError("batch, step, evaluation, logging, and model sizes must be positive")
         if self.learning_rate <= 0 or self.weight_decay < 0 or self.max_gradient_norm <= 0:
             raise ValueError("learning rate and gradient clip must be positive; weight decay cannot be negative")
-        if self.throughput_warmup_steps < 0 or self.throughput_warmup_steps >= self.steps:
-            raise ValueError("throughput warmup must be non-negative and shorter than the run")
+        if self.throughput_warmup_steps < 1 or self.throughput_warmup_steps >= self.steps:
+            raise ValueError("throughput warmup must be positive and shorter than the run")
+        if self.limit_examples is not None and self.limit_examples < 1:
+            raise ValueError("limit_examples must be positive when configured")
+        if self.eval_examples % self.batch_size != 0:
+            raise ValueError("eval_examples must be divisible by batch_size for static evaluation")
+        if RUN_ID_PATTERN.fullmatch(self.run_id) is None:
+            raise ValueError("run_id contains unsupported characters")
         if self.device not in {"cpu", "tpu"}:
             raise ValueError("device must be cpu or tpu")
         if self.precision not in {"float32", "bfloat16"}:
@@ -99,10 +120,14 @@ class TrainConfig:
         if self.device == "tpu":
             if self.dataset_dir is not None:
                 raise ValueError("TPU runs must resolve the region-matched dataset rather than bypassing it")
-            if self.dataset_cache_dir is None or "/elf-data/" not in str(self.dataset_cache_dir):
+            if self.dataset_cache_dir is None or not _is_node_local_path(
+                self.dataset_cache_dir, "elf-data"
+            ):
                 raise ValueError("TPU dataset_cache_dir must be node-local under /home/<user>/elf-data/")
-            if self.output_path is None or "/elf-runs/" not in str(self.output_path):
+            if self.output_path is None or not _is_node_local_path(self.output_path, "elf-runs"):
                 raise ValueError("TPU output_path must be node-local under /home/<user>/elf-runs/")
+            if self.output_path.parent.name != self.run_id:
+                raise ValueError("TPU output directory must exactly match run_id")
 
 
 class JaxExampleBatch(NamedTuple):

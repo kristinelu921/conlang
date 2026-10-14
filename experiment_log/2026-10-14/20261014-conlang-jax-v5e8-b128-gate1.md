@@ -87,4 +87,4 @@ No confirmed changes; no explicit experimental baseline was specified. The b128 
 
 ## Updates
 
-- 2026-10-14T20:55:00Z: Created the planned report after selecting the same-region v5e-8 and preparing the native JAX throughput gate; launch remains blocked before staging.
+- 2026-10-14T20:51:22Z: Created the planned report after selecting the same-region v5e-8 and preparing the native JAX throughput gate; launch remains blocked before staging.

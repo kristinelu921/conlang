@@ -80,18 +80,18 @@ class EncoderBlock(nn.Module):
     def __call__(self, hidden: Array, valid: Array, deterministic: bool) -> Array:
         """Encode one padded sequence while masking invalid keys."""
         config = self.config
-        attention = nn.SelfAttention(
+        attention = nn.MultiHeadDotProductAttention(
             num_heads=config.num_heads,
             qkv_features=config.hidden_size,
             out_features=config.hidden_size,
             dropout_rate=config.dropout,
-            deterministic=deterministic,
             dtype=config.dtype,
             param_dtype=jnp.float32,
+            force_fp32_for_softmax=True,
             name="self_attention",
-        )(hidden, mask=_attention_mask(valid, valid))
+        )(hidden, mask=_attention_mask(valid, valid), deterministic=deterministic)
         hidden = nn.LayerNorm(dtype=jnp.float32, name="attention_norm")(
-            hidden + nn.Dropout(config.dropout, deterministic=deterministic)(attention)
+            hidden + nn.Dropout(config.dropout, name="attention_dropout")(attention, deterministic=deterministic)
         ).astype(config.dtype)
         feedforward = nn.Dense(
             config.feedforward_size,
@@ -100,7 +100,7 @@ class EncoderBlock(nn.Module):
             name="feedforward_in",
         )(hidden)
         feedforward = jax.nn.relu(feedforward)
-        feedforward = nn.Dropout(config.dropout, deterministic=deterministic)(feedforward)
+        feedforward = nn.Dropout(config.dropout, name="feedforward_dropout")(feedforward, deterministic=deterministic)
         feedforward = nn.Dense(
             config.hidden_size,
             dtype=config.dtype,
@@ -108,7 +108,8 @@ class EncoderBlock(nn.Module):
             name="feedforward_out",
         )(feedforward)
         return nn.LayerNorm(dtype=jnp.float32, name="feedforward_norm")(
-            hidden + nn.Dropout(config.dropout, deterministic=deterministic)(feedforward)
+            hidden
+            + nn.Dropout(config.dropout, name="residual_dropout")(feedforward, deterministic=deterministic)
         ).astype(config.dtype)
 
 
@@ -130,35 +131,40 @@ class DecoderBlock(nn.Module):
         config = self.config
         causal_mask = nn.make_causal_mask(answer_valid, dtype=jnp.bool_)
         padding_mask = _attention_mask(answer_valid, answer_valid)
-        self_attention = nn.SelfAttention(
+        self_attention = nn.MultiHeadDotProductAttention(
             num_heads=config.num_heads,
             qkv_features=config.hidden_size,
             out_features=config.hidden_size,
             dropout_rate=config.dropout,
-            deterministic=deterministic,
             dtype=config.dtype,
             param_dtype=jnp.float32,
+            force_fp32_for_softmax=True,
             name="self_attention",
-        )(hidden, mask=nn.combine_masks(causal_mask, padding_mask))
+        )(hidden, mask=nn.combine_masks(causal_mask, padding_mask), deterministic=deterministic)
         hidden = nn.LayerNorm(dtype=jnp.float32, name="self_attention_norm")(
-            hidden + nn.Dropout(config.dropout, deterministic=deterministic)(self_attention)
+            hidden
+            + nn.Dropout(config.dropout, name="self_attention_dropout")(self_attention, deterministic=deterministic)
         ).astype(config.dtype)
         cross_attention = nn.MultiHeadDotProductAttention(
             num_heads=config.num_heads,
             qkv_features=config.hidden_size,
             out_features=config.hidden_size,
             dropout_rate=config.dropout,
-            deterministic=deterministic,
             dtype=config.dtype,
             param_dtype=jnp.float32,
+            force_fp32_for_softmax=True,
             name="cross_attention",
         )(
             hidden,
             memory,
             mask=_attention_mask(answer_valid, memory_valid),
+            deterministic=deterministic,
         )
         hidden = nn.LayerNorm(dtype=jnp.float32, name="cross_attention_norm")(
-            hidden + nn.Dropout(config.dropout, deterministic=deterministic)(cross_attention)
+            hidden
+            + nn.Dropout(config.dropout, name="cross_attention_dropout")(
+                cross_attention, deterministic=deterministic
+            )
         ).astype(config.dtype)
         feedforward = nn.Dense(
             config.feedforward_size,
@@ -167,7 +173,7 @@ class DecoderBlock(nn.Module):
             name="feedforward_in",
         )(hidden)
         feedforward = jax.nn.relu(feedforward)
-        feedforward = nn.Dropout(config.dropout, deterministic=deterministic)(feedforward)
+        feedforward = nn.Dropout(config.dropout, name="feedforward_dropout")(feedforward, deterministic=deterministic)
         feedforward = nn.Dense(
             config.hidden_size,
             dtype=config.dtype,
@@ -175,7 +181,8 @@ class DecoderBlock(nn.Module):
             name="feedforward_out",
         )(feedforward)
         return nn.LayerNorm(dtype=jnp.float32, name="feedforward_norm")(
-            hidden + nn.Dropout(config.dropout, deterministic=deterministic)(feedforward)
+            hidden
+            + nn.Dropout(config.dropout, name="residual_dropout")(feedforward, deterministic=deterministic)
         ).astype(config.dtype)
 
 
@@ -201,9 +208,13 @@ class Sender(nn.Module):
             (config.message_length + config.max_text_length, config.hidden_size),
             jnp.float32,
         ).astype(config.dtype)
+        text_length = text_embeddings.shape[1]
+        if text_length > config.max_text_length:
+            raise ValueError("text is longer than the position table")
         queries = jnp.broadcast_to(query_embedding[None], (batch_size, *query_embedding.shape))
         queries = queries + position_embedding[None, : config.message_length]
-        text = text_embeddings + position_embedding[None, config.message_length :]
+        text_positions = position_embedding[config.message_length : config.message_length + text_length]
+        text = text_embeddings + text_positions[None]
         hidden = jnp.concatenate((queries, text), axis=1)
         valid = jnp.concatenate(
             (
@@ -248,8 +259,13 @@ class Receiver(nn.Module):
             (config.max_answer_length, config.hidden_size),
             jnp.float32,
         ).astype(config.dtype)
+        question_length = question_embeddings.shape[1]
+        answer_length = answer_embeddings.shape[1]
+        if question_length > config.max_question_length or answer_length > config.max_answer_length:
+            raise ValueError("question or answer is longer than its position table")
         messages = messages + encoder_position_embedding[None, :message_count]
-        question_hidden = question_embeddings + encoder_position_embedding[None, message_count:]
+        question_positions = encoder_position_embedding[message_count : message_count + question_length]
+        question_hidden = question_embeddings + question_positions[None]
         memory = jnp.concatenate((messages, question_hidden), axis=1)
         memory_valid = jnp.concatenate(
             (
@@ -262,7 +278,7 @@ class Receiver(nn.Module):
             memory = EncoderBlock(config, name=f"encoder_layer_{layer_index}")(
                 memory, memory_valid, deterministic
             )
-        hidden = answer_embeddings + answer_position_embedding[None]
+        hidden = answer_embeddings + answer_position_embedding[None, :answer_length]
         answer_valid = answer_input_ids != config.padding_id
         for layer_index in range(config.num_layers):
             hidden = DecoderBlock(config, name=f"decoder_layer_{layer_index}")(
