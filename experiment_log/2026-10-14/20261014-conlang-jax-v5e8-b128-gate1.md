@@ -9,7 +9,7 @@
 | Started | not recorded |
 | Finished | not recorded |
 | Baseline | not specified |
-| Git revision | `codex/jax-tpu-training`; exact launch commit pending push and PR |
+| Git revision | `cbefd6190fab0f9969c55c751e36e678c5bf39ee` on `codex/jax-tpu-training` |
 | Command | `JAX_PLATFORMS=tpu CUDA_VISIBLE_DEVICES='' ELF_TPU_WORKER_INDEX=0 /home/kristinelu/elf-venv/bin/python train.py --config configs/conlang-jax-v5e8-gate1.yaml` |
 | Seed | `1729` |
 | Hardware | `kmh-tpuvm-v5e-8-spot-kristine-02-08-02-17-N-us-west4-a`; v5litepod-8; single host; READY/HEALTHY and AVAILABLE at 2026-10-14 preflight |
@@ -67,6 +67,7 @@ No confirmed changes; no explicit experimental baseline was specified. The b128 
 | Artifact | Path or URL | Verified |
 |---|---|---|
 | Configuration | `configs/conlang-jax-v5e8-gate1.yaml` | yes |
+| Pull request | `https://github.com/kristinelu921/conlang/pull/1` | yes |
 | Checkpoint | `/home/kristinelu/elf-runs/20261014-conlang-jax-v5e8-b128-gate1/checkpoint.msgpack` | no |
 | Tracking run | not recorded | no |
 | Metrics | `/home/kristinelu/elf-runs/20261014-conlang-jax-v5e8-b128-gate1/metrics.jsonl` | no |
@@ -74,7 +75,7 @@ No confirmed changes; no explicit experimental baseline was specified. The b128 
 ## Failure Details
 
 - Last known step: not applicable
-- Error summary: launch blocked before staging because GitHub authentication is invalid; repository policy requires a pushed pull request first
+- Error summary: none; the earlier GitHub gate was cleared by pushing the reviewed source and opening PR 1
 - Detailed output: not recorded
 
 ## Observations
@@ -90,3 +91,4 @@ No confirmed changes; no explicit experimental baseline was specified. The b128 
 ## Updates
 
 - 2026-10-14T20:51:22Z: Created the planned report after selecting the same-region v5e-8 and preparing the native JAX throughput gate; launch remains blocked before staging.
+- 2026-10-14T21:10:29Z: Pushed reviewed code/config commit `cbefd6190fab0f9969c55c751e36e678c5bf39ee` and opened PR 1; the run remains unlaunched pending fresh preflight and immutable staging.
