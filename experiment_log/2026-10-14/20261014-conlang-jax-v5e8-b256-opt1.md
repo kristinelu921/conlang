@@ -9,7 +9,7 @@
 | Started | not recorded |
 | Finished | not recorded |
 | Baseline | `20261014-conlang-jax-v5e8-b128-gate1` |
-| Git revision | pending selected-config commit on `codex/jax-tpu-training` |
+| Git revision | `3cd53e9c0d656dc9bc5634511dff405017960515` on `codex/jax-tpu-training` |
 | Command | `JAX_PLATFORMS=tpu CUDA_VISIBLE_DEVICES='' ELF_TPU_WORKER_INDEX=0 /home/kristinelu/elf-runs/runtime/venv/bin/python train.py --config configs/conlang-jax-v5e8-b256-opt1.yaml` |
 | Seed | `1729` |
 | Hardware | `kmh-tpuvm-v5e-8-spot-kristine-02-08-02-17-N-us-west4-a`; v5litepod-8; single host |
@@ -90,3 +90,4 @@ relative_attention_max_distance: 128
 ## Updates
 
 - 2026-10-14T21:23:45Z: Selected the directly comparable batch-256 optimization arm after the batch-128 run completed and passed its terminal audit.
+- 2026-10-14T21:25:36Z: Pushed the selected run config and report in commit `3cd53e9c0d656dc9bc5634511dff405017960515` to PR 1; the optimization arm remains unlaunched pending fresh inventory, preflight, and immutable staging.
