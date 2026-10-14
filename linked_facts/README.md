@@ -148,7 +148,7 @@ for example in iter_question_examples(Path("datasets/linked_facts_v1/train.jsonl
     target = example["answer"]
 ```
 
-The model in `models.py` is specified in `MODEL_DESIGN.md`. It uses one small Transformer for both senders. Each
+The model in `jax_models.py` is specified in `MODEL_DESIGN.md`. It uses one small Transformer for both senders. Each
 sender pass returns 4 vectors of hidden size 128. The receiver is a second
 small Transformer. It reads the 8 message vectors plus the character-tokenized
 question and scores up to 4 answer tokens. Passages are characters, so a
@@ -162,9 +162,6 @@ Training maximizes the joint log probability of those answer tokens:
 log p(answer | messages, question) = sum_t log p(answer_t | answer_<t, messages, question)
 ```
 
-`CommunicationModel.forward` returns that sum for each example. Its `loss` is
+`JaxCommunicationModel` returns that sum for each example. Its `loss` is
 the negative batch mean, for a standard minimizer. The same sender encodes both
 private texts, so the answer objective trains both messages together.
-`ControlModel` in `control_model.py` scores the same objective from both
-passages and the question in one sequence. `train.py` trains the communication
-model, and `control_train.py` trains the control model.

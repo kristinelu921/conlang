@@ -1,11 +1,8 @@
 # Communication model design
 
-This note records the choices in `models.py` and the reasons for them. The
+This note records the choices in `jax_models.py` and the reasons for them. The
 task is the linked-facts game: one shared sender reads each private passage,
-and a receiver (model C) must answer a question from the two messages alone.
-`ControlModel` in `control_model.py` is the single model that sees both
-passages and the question. `train.py` trains the communication model, and
-`control_train.py` trains the control model.
+and a receiver must answer a question from the two messages alone.
 
 ## Choices
 
@@ -20,8 +17,7 @@ passages and the question. `train.py` trains the communication model, and
 | Channel contents | Continuous hidden states | The joint answer log probability has to train both messages. Continuous vectors let that gradient pass through the sender. A discrete codebook would need an extra sampling step that was not requested. |
 | Tokenizer | Characters for text, one token per answer word | Passages must expose held-out spellings. Answers are 4–13 characters, so a character answer cannot fit in 4 tokens. |
 | Objective | Sum of answer-token log probabilities | You asked for joint log probabilities. The scalar loss is the negative of that sum, averaged over the batch. |
-| Initialization | PyTorch defaults | You asked for standard initializations. Nothing is re-sampled after construction. |
-| Control model | Encoder-decoder in `control_model.py`, hidden 192, 6 heads, 2 layers, feedforward 768 | Same answer objective with no message bottleneck. Width 192 is about twice the parameter count of the 128-wide model, and 6 heads keep each head 32 wide. |
+| Initialization | Flax linen defaults, with token embeddings drawn from a normal of standard deviation 1 | Standard library initialization. The embedding scale is the one explicit choice. |
 | Optimizer | AdamW, learning rate `3e-4`, gradient clip `1.0` | AdamW is the usual Transformer optimizer. `3e-4` is a standard small-model step size. The clip limits a step from the large initial embeddings. |
 | Weight decay | `0.01` on matrices, `0` on biases and layer-norm scales | `0.01` is AdamW's usual default. Vector parameters such as layer-norm scales are left without decay so the decay does not shrink them toward zero. |
 
@@ -33,9 +29,8 @@ Vocabulary size is 2191. Parameter counts, with the shared word embedding listed
 | Sender, apart from that embedding | 463,104 |
 | Receiver, apart from that embedding | 1,226,255 |
 | Communication model, embedding counted once | 1,969,807 |
-| Control transformer, including its own embedding | 3,117,583 |
 
-Agent 1 and agent 2 are the same sender, so they are the same size. The receiver is larger than the sender because it has both an encoder and a decoder. The control model has 3,117,583 parameters, 1.92 times a 128-wide encoder-decoder of the same depth. Hidden size 256 would be 5,073,551 parameters, because the attention and feedforward matrices grow with the square of the width.
+Agent 1 and agent 2 are the same sender, so they are the same size. The receiver is larger than the sender because it has both an encoder and a decoder. Those counts were measured on the previous PyTorch modules. The Flax module uses the same widths, so the count will differ wherever Flax's attention parameterization differs.
 
 ## Architecture
 
@@ -56,10 +51,9 @@ same module twice and concatenates on the length axis, shape `(batch, 8, 128)`.
 4. A 2-layer decoder predicts the answer under a causal mask. The output head
    is a separate linear map from 128 to the vocabulary.
 
-Layer defaults are the PyTorch 2.14 `TransformerEncoderLayer` and
-`TransformerDecoderLayer` defaults, aside from the sizes above: ReLU, post-norm,
-layer-norm epsilon `1e-5`, bias on, dropout 0.1. Post-norm and ReLU are the
-library standard for this block. Pre-norm and GELU were not substituted.
+Each block is post-norm with ReLU and dropout 0.1, built from Flax
+`SelfAttention`, `MultiHeadDotProductAttention`, and `Dense`. Pre-norm and GELU
+were not substituted.
 
 Position tables are learned embeddings, not sinusoids. The sender table covers
 4 message slots plus 512 text characters. The receiver encoder table covers 8
@@ -67,15 +61,14 @@ message slots plus 128 question characters. The answer position table has 4
 rows. Measured passages are a few hundred characters and questions are under
 80, so these caps hold the current generator without truncating.
 
-The encoder is built with `enable_nested_tensor=False`, so padding uses an
-explicit key-padding mask instead of the nested-tensor fast path.
+Padding uses an explicit boolean attention mask.
 
 ## KV structure
 
-Inside each attention block, query, key, and value share one projection
-(`in_proj_weight`, shape `(3 * 128, 128)`), initialized with Xavier uniform.
-The output projection is a separate linear layer. There is no extra KV bias
-and no zero-attention slot. Four heads each see 32-dimensional keys and values.
+Inside each attention block, query, key, and value are produced for every head
+and the heads are mixed by an output projection. There is no grouped-query or
+multi-query attention and no KV cache. Four heads each see 32-dimensional keys
+and values.
 
 The communication channel is not a token KV cache. It is the 8 continuous
 vectors. After the receiver encoder, those vectors and the question tokens
@@ -121,58 +114,34 @@ loss = -mean_batch of that sum
 The sum is the joint probability of the answer string. A mean over tokens would
 treat a short answer and a long one as the same number of decisions, which is a
 different objective. `CommunicationOutput.joint_log_probability` is the per-row
-sum. `loss` is what a minimizer should step on. The control transformer uses the
-same sum, with the full character context in place of the two messages.
+sum. `loss` is what a minimizer should step on.
 
 ## Initialization
 
-No custom reset runs after module construction.
-
-| Parameter | Scheme |
-|---|---|
-| Token, position, and query embeddings | Normal with mean 0 and standard deviation 1. The padding row of the token embedding stays zero. |
-| Attention input projection | Xavier uniform. Its bias is zero. |
-| Attention output projection and the vocabulary projection | Kaiming uniform on the weights, which is PyTorch's linear default. Attention output bias is then set to zero by the attention module. The vocabulary bias uses the linear default. |
-| Feedforward linears | Kaiming uniform, the linear default. |
-| Layer norm | Weight 1, bias 0. |
-
-## Control transformer
-
-`ControlModel` in `control_model.py` is one encoder-decoder with hidden size 192, 6 heads, 2
-layers, and feedforward width 768. Dropout and initialization match the other
-models. Its input is the character
-sequence `agent 1 passage + agent 2 passage + question`, capped at 1024
-positions. Measured full contexts reach 944 characters. It has no query slots
-and no message bottleneck. The answer head is the same 4-token decoder, and the
-loss is the same joint log probability.
+Token embeddings use a normal initializer with standard deviation 1. The other
+projections and layer norms use Flax linen defaults. Nothing is re-sampled
+after the module is built.
 
 ## Training
 
-`train.py` trains the communication model. `control_train.py` trains the control model on the same loss and the same optimizer settings. Both read a generated dataset directory and optimize that loss with
-AdamW. Matrices, including the `N(0, 1)` embeddings, use weight decay `0.01`.
-Biases and layer-norm scales use weight decay `0`. The learning rate is
-`3e-4`, the gradient clip is `1.0`, and the batch size is 32. There is no
-learning-rate schedule. Evaluation runs the model in eval mode, so dropout is
-off, and reports greedy exact match. `greedy_answer_token_ids` itself does not
-switch modes.
+`train.py` trains the communication model with JAX, Flax, and Optax. It pads
+every passage, question, and answer to one configured static shape, tokenizes
+the dataset once on the host, shards each global batch across all local TPU
+devices with `jax.pmap`, and averages gradients across those devices. This
+avoids shape-driven recompilation and per-step Python tokenization on TPU.
 
-Both trainers log to the Weights & Biases project `conlangs` unless
-`--disable-wandb` is set. Each step records the loss, the answer-token
-distribution, global and per-module weight and gradient norms, and activation
-RMS. For the communication model the three gradient series are the agent-1
-sender path, the agent-2 sender path, and the receiver, with the shared
-embedding split across those paths. Each series also logs the value distribution
-of its four intermediate vectors.
+The JAX path uses AdamW with learning rate `3e-4`, matrix-only weight decay
+`0.01`, gradient clipping at `1.0`, and no learning-rate schedule. The TPU gate
+uses bfloat16 model compute with float32 log-softmax and loss calculations.
+Evaluation disables dropout and reports greedy exact match.
 
-On a TPU, omit `--dataset-dir`. The trainers read the instance zone, select the one
-`kmh-gcp` bucket whose location is that region, and stage
-`kristine/datasets/conlangs` from that bucket. A zone in another region never
-falls back to the us-west4 copy. A local directory is only used when
-`--dataset-dir` is passed.
+The optimized trainer logs loss, global gradient norm, and steady-state
+examples per second at a configurable interval. Throughput accounting excludes
+compilation and warmup. On TPU, omitting `dataset_dir` makes the trainer verify
+the TPU zone, require the matching regional bucket, and use the configured
+node-local cache under `/home/<user>/elf-data/`.
 
 ```bash
-python train.py --dataset-dir datasets/linked_facts_v1
-python control_train.py --dataset-dir datasets/linked_facts_v1
-python train.py
-python control_train.py
+JAX_PLATFORMS=cpu python train.py --dataset-dir datasets/linked_facts_v1 --disable-wandb
+JAX_PLATFORMS=tpu python train.py --config configs/conlang-jax-v5e8-gate1.yaml
 ```
