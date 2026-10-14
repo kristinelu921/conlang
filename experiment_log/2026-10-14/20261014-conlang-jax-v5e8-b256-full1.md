@@ -10,9 +10,9 @@
 | Finished | not recorded |
 | Baseline | `20261014-conlang-jax-v5e8-b256-opt1` |
 | Git revision | `bde42367a09836ee775ced42e1a37d6fe085649f` on `codex/jax-tpu-training`; run config introduced by `b337b68be31f36a314e0dae5720a72813c598ddd` |
-| Command | `JAX_PLATFORMS=tpu CUDA_VISIBLE_DEVICES='' ELF_TPU_WORKER_INDEX=0 /home/kristinelu/elf-runs/runtime/venv/bin/python train.py --config configs/conlang-jax-v5e8-b256-full1.yaml` |
+| Command | `cd /home/kristinelu/elf-runs/source/20261014-conlang-jax-v5e8-b256-full1-20261014T215704.497568387Z && JAX_PLATFORMS=tpu CUDA_VISIBLE_DEVICES='' ELF_TPU_WORKER_INDEX=0 PYTHONPATH=$PWD /home/kristinelu/elf-runs/runtime/venv/bin/python train.py --config configs/conlang-jax-v5e8-b256-full1.yaml` |
 | Seed | `1729` |
-| Hardware | selected candidate: `kmh-tpuvm-v5e-8-spot-kristine-02-08-02-17-N-us-west4-a`; v5litepod-8; single host; launch readiness pending final preflight |
+| Hardware | `kmh-tpuvm-v5e-8-spot-kristine-02-08-02-17-N-us-west4-a`; v5litepod-8, topology 2x4; single host; Spot; `READY`/`HEALTHY`; initial occupancy `AVAILABLE` |
 
 ## Configuration
 
@@ -76,9 +76,9 @@ Run identity, output path, and W&B display name are fresh. Model shape, optimize
 | Artifact | Path or URL | Verified |
 |---|---|---|
 | Configuration | `configs/conlang-jax-v5e8-b256-full1.yaml` | yes; parsed and validated locally |
-| Pull request | `https://github.com/kristinelu921/conlang/pull/1` | existing; update pending |
-| Source snapshot | pending immutable staging under `/kmh-nfs-ssd-us-mount/staging/kristine/elf/` | no |
-| Regional dataset | `/home/kristinelu/elf-data/conlangs-v1`; source `gs://kmh-gcp-us-west4/kristine/datasets/conlangs` | previously verified; current preflight pending |
+| Pull request | `https://github.com/kristinelu921/conlang/pull/1` | yes; reviewed head `d0da78079cbcd1301f9867b1b739c5760e12c4c6` pushed |
+| Source snapshot | `/kmh-nfs-ssd-us-mount/staging/kristine/elf/20261014-conlang-jax-v5e8-b256-full1-20261014T215704.497568387Z`; node-local copy under `/home/kristinelu/elf-runs/source/`; aggregate SHA-256 `bf07f75ad01b3b11c417cf0b001714b7e1c52567e16a88d4ec0a16791b11da23` | yes; 29 files, 293,002 file bytes, exact local/remote match |
+| Regional dataset | `/home/kristinelu/elf-data/conlangs-v1`; source `gs://kmh-gcp-us-west4/kristine/datasets/conlangs` | yes; US-WEST4, 7 canonical objects, 11,643,131 file bytes, 125,000 questions |
 | Checkpoint | `/home/kristinelu/elf-runs/20261014-conlang-jax-v5e8-b256-full1/checkpoint.msgpack` | no; not started |
 | Tracking run | not recorded | no; not started |
 | Metrics | `/home/kristinelu/elf-runs/20261014-conlang-jax-v5e8-b256-full1/metrics.jsonl` | no; not started |
@@ -94,6 +94,7 @@ Run identity, output path, and W&B display name are fresh. Model shape, optimize
 
 - The mandatory filtered inventory selected the available, runtime-ready US-WEST4 v5e-8 that completed the accepted batch-256 gate.
 - The accepted gate used the same explicit `message_length: 4`, model dimensions, precision, batch size, seed, regional data, and TPU topology planned here.
+- The staged snapshot captured the current worktree, including pre-existing uncommitted default/documentation edits for a separate one-message experiment. The selected immutable YAML explicitly pins `message_length: 4`; its SHA-256 is `16bfabe83aded6d17e171ec697a2439675e096bf2bdb3076925f13ef4510f122`.
 
 ## Interpretation
 
@@ -103,3 +104,5 @@ Run identity, output path, and W&B display name are fresh. Model shape, optimize
 
 - 2026-10-14T21:41:23Z: User authorized launch. The mandatory filtered inventory returned the selected v5e-8 as `AVAILABLE` with ELF runtime `READY`. The complete YAML parsed successfully and was committed alone as `b337b68be31f36a314e0dae5720a72813c598ddd`; immutable staging, final preflight, and launch remain pending.
 - 2026-10-14T21:50:24Z: The required correctness review found that evaluation time would contaminate the following throughput interval. Commit `bde42367a09836ee775ced42e1a37d6fe085649f` resets the interval after evaluation and adds a deterministic delay regression test. The focused test and full CPU suite passed (`89` tests and `7` subtests).
+- 2026-10-14T21:57:04Z: The final cleanup review found no confirmed issues; reviewed head `d0da78079cbcd1301f9867b1b739c5760e12c4c6` was pushed to PR 1. The selected TPU is currently `READY`/`HEALTHY`, Spot, and initially `AVAILABLE`; the runtime reports JAX 0.6.2, Flax 0.10.5, and Optax 0.2.8. The regional bucket is US-WEST4 and the verified node-local dataset matches its seven canonical objects.
+- 2026-10-14T21:57:04Z: Created and copied the immutable snapshot exactly once. The local and node-local copies contain 29 files and 293,002 file bytes with matching aggregate SHA-256 `bf07f75ad01b3b11c417cf0b001714b7e1c52567e16a88d4ec0a16791b11da23`; the node-local effective YAML parsed as batch 256, 1,000 steps, message length 4, and TPU execution.
