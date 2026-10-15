@@ -436,6 +436,23 @@ def _read_step_metrics(device_metrics: Mapping[str, Array]) -> tuple[dict[str, A
     return host_metrics, generated
 
 
+def _selected_gradient_norm(
+    component_gradients: Any,
+    parts: tuple[str, ...],
+    shared_encoder_reference: Any | None = None,
+) -> Array:
+    """Measure selected gradients after isolating a tied sender use when needed."""
+    selected = {part: component_gradients[part] for part in parts}
+    if shared_encoder_reference is not None:
+        shared_encoder_part = "shared_sender_receiver_encoder"
+        selected[shared_encoder_part] = jax.tree_util.tree_map(
+            lambda combined, receiver: combined - receiver,
+            component_gradients[shared_encoder_part],
+            shared_encoder_reference[shared_encoder_part],
+        )
+    return optax.global_norm(selected)
+
+
 def build_parallel_train_step(
     model: JaxCommunicationModel,
     collect_path_gradients: bool = True,
@@ -451,16 +468,15 @@ def build_parallel_train_step(
         sender_parameter_parts = (*sender_parameter_parts, shared_encoder_part)
         receiver_parameter_parts = (*receiver_parameter_parts, shared_encoder_part)
 
-    def component_gradient_norm(
+    def component_gradients(
         params: Any,
         batch: JaxExampleBatch,
         dropout_key: Array,
         stop_message_1: bool,
         stop_message_2: bool,
         stop_receiver_tokens: bool,
-        parts: tuple[str, ...],
-    ) -> Array:
-        """Return the norm of one sender or receiver slice of the training gradient."""
+    ) -> Any:
+        """Return one stop-gradient slice of the distributed training gradient."""
 
         def loss_function(current_params: Any) -> Array:
             return model.apply(
@@ -476,9 +492,7 @@ def build_parallel_train_step(
                 rngs={"dropout": dropout_key},
             ).loss
 
-        component_gradients = jax.lax.pmean(jax.grad(loss_function)(params), axis_name="devices")
-        selected = {part: component_gradients[part] for part in parts}
-        return optax.global_norm(selected)
+        return jax.lax.pmean(jax.grad(loss_function)(params), axis_name="devices")
 
     def train_step(
         state: TrainState,
@@ -546,31 +560,45 @@ def build_parallel_train_step(
             )
         if collect_path_gradients:
             # These reuse the update's dropout key so each path is a slice of the same noise.
-            metrics["gradient_norm_agent_1"] = component_gradient_norm(
+            receiver_gradients = component_gradients(
                 params_for_path_gradients,
                 batch,
                 dropout_key,
+                True,
+                True,
                 False,
-                True,
-                True,
-                sender_parameter_parts,
             )
-            metrics["gradient_norm_agent_2"] = component_gradient_norm(
+            agent_1_gradients = component_gradients(
                 params_for_path_gradients,
                 batch,
                 dropout_key,
-                True,
                 False,
                 True,
-                sender_parameter_parts,
+                True,
             )
-            metrics["gradient_norm_receiver"] = component_gradient_norm(
+            agent_2_gradients = component_gradients(
                 params_for_path_gradients,
                 batch,
                 dropout_key,
                 True,
-                True,
                 False,
+                True,
+            )
+            shared_encoder_reference = (
+                receiver_gradients if model.config.tie_sender_receiver_encoder else None
+            )
+            metrics["gradient_norm_agent_1"] = _selected_gradient_norm(
+                agent_1_gradients,
+                sender_parameter_parts,
+                shared_encoder_reference,
+            )
+            metrics["gradient_norm_agent_2"] = _selected_gradient_norm(
+                agent_2_gradients,
+                sender_parameter_parts,
+                shared_encoder_reference,
+            )
+            metrics["gradient_norm_receiver"] = _selected_gradient_norm(
+                receiver_gradients,
                 receiver_parameter_parts,
             )
         return state, metrics

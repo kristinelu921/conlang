@@ -27,6 +27,7 @@ from train import (
     _model_config,
     _optimizer_for_params,
     _read_step_metrics,
+    _selected_gradient_norm,
     _top_vocabulary_histogram,
     build_parallel_train_step,
     parse_arguments,
@@ -676,6 +677,79 @@ def test_component_gradients_partition_the_full_gradient() -> None:
             jax.tree_util.tree_leaves(full["receiver"]),
             strict=True,
         )
+    )
+
+
+def test_tied_component_gradients_isolate_each_shared_encoder_use() -> None:
+    """Tied path diagnostics should partition the shared encoder gradient."""
+    tokenizer = TextTokenizer(["buffalo", "chapel"])
+    config = replace(_small_config(), tie_sender_receiver_encoder=True)
+    batch = tokenize_examples(_examples(), tokenizer, config).select([0, 1])
+    model = JaxCommunicationModel(_model_config(config, tokenizer))
+    params = model.init(
+        {"params": jax.random.PRNGKey(0)},
+        jnp.asarray(batch.agent_1_token_ids),
+        jnp.asarray(batch.agent_2_token_ids),
+        jnp.asarray(batch.question_token_ids),
+        jnp.asarray(batch.answer_token_ids),
+        deterministic=True,
+    )["params"]
+
+    def gradients(stop_message_1: bool, stop_message_2: bool, stop_receiver_tokens: bool) -> Any:
+        def loss_function(current_params: Any) -> jax.Array:
+            return model.apply(
+                {"params": current_params},
+                jnp.asarray(batch.agent_1_token_ids),
+                jnp.asarray(batch.agent_2_token_ids),
+                jnp.asarray(batch.question_token_ids),
+                jnp.asarray(batch.answer_token_ids),
+                deterministic=True,
+                stop_message_1=stop_message_1,
+                stop_message_2=stop_message_2,
+                stop_receiver_tokens=stop_receiver_tokens,
+            ).loss
+
+        return jax.grad(loss_function)(params)
+
+    full = gradients(False, False, False)
+    agent_1 = gradients(False, True, True)
+    agent_2 = gradients(True, False, True)
+    receiver = gradients(True, True, False)
+    shared_encoder_part = "shared_sender_receiver_encoder"
+    agent_1_shared = jax.tree_util.tree_map(
+        lambda combined, receiver_only: combined - receiver_only,
+        agent_1[shared_encoder_part],
+        receiver[shared_encoder_part],
+    )
+    agent_2_shared = jax.tree_util.tree_map(
+        lambda combined, receiver_only: combined - receiver_only,
+        agent_2[shared_encoder_part],
+        receiver[shared_encoder_part],
+    )
+    partitioned_shared = jax.tree_util.tree_map(
+        lambda first, second, receiver_only: first + second + receiver_only,
+        agent_1_shared,
+        agent_2_shared,
+        receiver[shared_encoder_part],
+    )
+    sender_parts = ("sender", "token_embedding", shared_encoder_part)
+    isolated_agent_1 = {
+        "sender": agent_1["sender"],
+        "token_embedding": agent_1["token_embedding"],
+        shared_encoder_part: agent_1_shared,
+    }
+
+    assert all(
+        jnp.allclose(partitioned, complete)
+        for partitioned, complete in zip(
+            jax.tree_util.tree_leaves(partitioned_shared),
+            jax.tree_util.tree_leaves(full[shared_encoder_part]),
+            strict=True,
+        )
+    )
+    assert jnp.allclose(
+        _selected_gradient_norm(agent_1, sender_parts, receiver),
+        optax.global_norm(isolated_agent_1),
     )
 
 
