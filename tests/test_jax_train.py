@@ -269,14 +269,20 @@ def test_throughput_timing_excludes_evaluation_delay(monkeypatch: pytest.MonkeyP
         def finish(self, exit_code: int) -> None:
             assert exit_code == 0
 
-    def fake_train_step(
-        state: object,
-        batch: object,
-        dropout_keys: object,
-    ) -> tuple[object, dict[str, jax.Array]]:
-        del batch, dropout_keys
-        clock["time"] += 1.0
-        return state, {"loss": jnp.array([1.0]), "gradient_norm": jnp.array([1.0])}
+    def fake_train_step(collect_diagnostics: bool) -> Any:
+        def run_step(
+            state: object,
+            batch: object,
+            dropout_keys: object,
+        ) -> tuple[object, dict[str, jax.Array]]:
+            del batch, dropout_keys
+            clock["time"] += 1.0
+            metrics = {"loss": jnp.array([1.0]), "gradient_norm": jnp.array([1.0])}
+            if collect_diagnostics:
+                metrics["generated_token_ids"] = jnp.ones((1, 2, 4), dtype=jnp.int32)
+            return state, metrics
+
+        return run_step
 
     def fake_evaluation(*args: object, **kwargs: object) -> dict[str, float]:
         del args, kwargs
@@ -289,7 +295,9 @@ def test_throughput_timing_excludes_evaluation_delay(monkeypatch: pytest.MonkeyP
     monkeypatch.setattr("train.load_examples", lambda *args, **kwargs: _examples())
     monkeypatch.setattr(
         "train.build_parallel_train_step",
-        lambda model, collect_path_gradients=True, collect_diagnostics=True: fake_train_step,
+        lambda model, collect_path_gradients=True, collect_diagnostics=True: fake_train_step(
+            collect_diagnostics
+        ),
     )
     monkeypatch.setattr("train.build_parallel_evaluation_step", lambda model: object())
     monkeypatch.setattr("train.evaluate_exact_match", fake_evaluation)
@@ -567,7 +575,6 @@ def test_step_saves_one_output_record_and_logs_requested_metrics(tmp_path: Path)
         jax.random.split(jax.random.PRNGKey(1), jax.local_device_count()),
     )
     host_metrics, generated_token_ids = _read_step_metrics(device_metrics)
-    assert generated_token_ids is not None
     outputs_path = tmp_path / "outputs.jsonl"
     _append_model_outputs(outputs_path, 1, generated_token_ids, batch.answer_token_ids, tokenizer)
     record = _host_training_record(1, host_metrics, 2.0, generated_token_ids)
@@ -616,6 +623,17 @@ def test_step_saves_one_output_record_and_logs_requested_metrics(tmp_path: Path)
     assert "generated_vocabulary_top_token_ids" not in wandb_payload
     assert "token_output_histograms" not in record
     assert not any(key.startswith("token_output_position_") for key in wandb_payload)
+
+
+def test_read_step_metrics_requires_generated_token_ids() -> None:
+    """Logged-step metrics should fail at the boundary without generated tokens."""
+    device_metrics = {
+        "loss": jnp.array([1.0]),
+        "gradient_norm": jnp.array([1.0]),
+    }
+
+    with pytest.raises(AssertionError):
+        _read_step_metrics(device_metrics)
 
 
 def test_vocabulary_histogram_keeps_only_the_100_most_frequent_tokens() -> None:

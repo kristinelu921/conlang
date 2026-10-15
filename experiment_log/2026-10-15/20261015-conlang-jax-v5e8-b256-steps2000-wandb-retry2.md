@@ -104,3 +104,14 @@ No scientific or telemetry changes from retry 1. Only the run ID, output path, W
 
 - 2026-10-15T02:42:03Z: Created a fresh retry identity after preserving the zero-step wrapper failure. The exact config was committed and pushed, the mandatory inventory again selected the available runtime-ready v5e-8, and the new immutable source matched locally and remotely.
 - 2026-10-15T02:44:27Z: The final occupancy helper found the selected TPU newly occupied by an unrelated healthy current-user LaVin-DiT validation. The process owner, parent/child PIDs, full command, validation identity, and VFIO holdings were recorded read-only; the workload was left untouched and no retry-2 trainer or artifact was created.
+
+## Terminal Reconciliation
+
+- This identity was blocked before the launch wrapper or trainer started and is
+  not a runnable entry point in the finalized change.
+- Its YAML was removed from the finalized configuration closure. The historical
+  source remains available in Git commit `6460194`.
+- The pending result fields above are terminally resolved as not applicable
+  because the run never launched.
+- Successor evidence is recorded in
+  `20261015-conlang-jax-v4-8-b256-steps2000-wandb-retry5.md`.

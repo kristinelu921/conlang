@@ -329,7 +329,7 @@ def _host_training_record(
     step: int,
     host_metrics: Mapping[str, Any],
     examples_per_second: float | None,
-    generated_token_ids: np.ndarray | None = None,
+    generated_token_ids: np.ndarray,
 ) -> dict[str, Any]:
     """Build the scalar and histogram record saved for one logged step."""
     record: dict[str, Any] = {
@@ -345,13 +345,12 @@ def _host_training_record(
         record[key] = _json_metric_value(value)
     if "message_1_histogram" in record:
         record["activation_histogram_edges"] = list(ACTIVATION_HISTOGRAM_EDGES)
-    if generated_token_ids is not None:
-        token_ids, token_counts, histogram_edges = _top_vocabulary_histogram(
-            generated_token_ids
-        )
-        record["generated_vocabulary_top_token_ids"] = token_ids.tolist()
-        record["generated_vocabulary_histogram"] = token_counts.tolist()
-        record["generated_vocabulary_histogram_edges"] = histogram_edges.tolist()
+    token_ids, token_counts, histogram_edges = _top_vocabulary_histogram(
+        generated_token_ids
+    )
+    record["generated_vocabulary_top_token_ids"] = token_ids.tolist()
+    record["generated_vocabulary_histogram"] = token_counts.tolist()
+    record["generated_vocabulary_histogram_edges"] = histogram_edges.tolist()
     return record
 
 
@@ -419,11 +418,10 @@ def _append_model_outputs(
         outputs_file.write(json.dumps(record, sort_keys=True) + "\n")
 
 
-def _read_step_metrics(device_metrics: Mapping[str, Array]) -> tuple[dict[str, Any], np.ndarray | None]:
+def _read_step_metrics(device_metrics: Mapping[str, Array]) -> tuple[dict[str, Any], np.ndarray]:
     """Copy one step's replicated metrics to the host, unsharding generated tokens."""
-    generated = None
-    if "generated_token_ids" in device_metrics:
-        generated = _unshard_token_ids(device_metrics["generated_token_ids"])
+    assert "generated_token_ids" in device_metrics
+    generated = _unshard_token_ids(device_metrics["generated_token_ids"])
     host_metrics = {
         key: np.asarray(jax.device_get(value[0]))
         for key, value in device_metrics.items()
@@ -677,7 +675,7 @@ def save_checkpoint(state: TrainState, step: int, output_path: Path) -> None:
     temporary_path.replace(output_path)
 
 
-def _append_metrics(metrics_path: Path | None, metrics: Mapping[str, float]) -> None:
+def _append_metrics(metrics_path: Path | None, metrics: Mapping[str, Any]) -> None:
     """Append one JSON metric record when an output directory is configured."""
     if metrics_path is None:
         return
@@ -765,7 +763,7 @@ def train(config: TrainConfig) -> dict[str, Any]:
             generated_token_ids = None
             if should_log_scalars:
                 host_metrics, generated_token_ids = _read_step_metrics(device_metrics)
-                if outputs_path is not None and generated_token_ids is not None:
+                if outputs_path is not None:
                     _append_model_outputs(
                         outputs_path,
                         step,
