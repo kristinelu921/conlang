@@ -5,9 +5,9 @@
 | Field | Value |
 |---|---|
 | Run ID | `20261015-conlang-jax-v4-8-b256-steps2000-h512-output-h256-tied-encoders` |
-| Status | `planned` |
-| Started | not recorded |
-| Finished | not recorded |
+| Status | `completed` |
+| Started | `2026-10-15T15:58:30Z` |
+| Finished | `2026-10-15T16:09:58Z` |
 | Baseline | `20261015-conlang-jax-v4-8-b256-steps2000-output-h256-tied-encoders` |
 | Git revision | reviewed source and configuration `4dca699a171d928edf3e84934b0b1ae96aa8fb4c` |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` |
@@ -65,7 +65,15 @@ The output hidden dimension remains 256 and the sender/receiver memory encoders 
 
 ## Results
 
-Pending.
+| Metric | Hidden 512 | Hidden-128 tied baseline | Difference |
+|---|---:|---:|---:|
+| Final training loss | 3.949685 | 3.929022 | +0.020663 |
+| Final exact match | 0.0468750 | 0.0390625 | +0.0078125 |
+| Final mean joint log-probability | -4.053905 | -4.047143 | -0.006763 |
+| Median throughput | 2,588.58 examples/s | 5,868.96 examples/s | -3,280.39 examples/s (-55.89%) |
+| Mean throughput | 2,583.63 examples/s | 5,841.69 examples/s | -3,258.06 examples/s (-55.77%) |
+
+The run contains 200 training records, 20 evaluation records, 200 evaluation-output records, and 199 post-warmup throughput measurements. Throughput ranged from 2,213.19 to 2,599.88 examples/s. All 200 training records contain finite sender, receiver, and shared-encoder gradient/weight path metrics. Every compact vocabulary histogram has at most 18 occupied bins, matching token-ID and edge dimensions under the configured top-100 cap.
 
 ## Artifacts
 
@@ -75,14 +83,18 @@ Pending.
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` | yes; reviewed launch closure pushed at `4dca699` |
 | Source snapshot | `/kmh-nfs-ssd-us-mount/staging/kristine/elf/20261015-conlang-jax-v4-8-b256-steps2000-h512-output-h256-tied-encoders-20261015T155127.637498697Z`; remote path with the same basename under `/home/kristinelu/elf-runs/source/` | yes; local and remote both contain 40 files and 343676 bytes with relative SHA-256-manifest digest `e70030b02954bf3927a117f9eef38526611f7cc003f1b61bbacc1f6007da27ef` |
 | Regional dataset | `/home/kristinelu/elf-data/conlangs-v1` | yes; manifest SHA-256 `a839b6ac98ba33a008caaebdde40dea7bc1e639106e93aab25ab2af3c29588e8` |
-| Checkpoint | `/home/kristinelu/elf-runs/20261015-conlang-jax-v4-8-b256-steps2000-h512-output-h256-tied-encoders/checkpoint.msgpack` | no; launch pending |
-| Tracking run | not recorded | no; launch pending |
+| Checkpoint | `/home/kristinelu/elf-runs/20261015-conlang-jax-v4-8-b256-steps2000-h512-output-h256-tied-encoders/checkpoint.msgpack` | yes; 198393170 bytes, SHA-256 `fb45e75b32a41f799d1f85a40c2863f522f018a621687a9fa1ce32956ae36342`, independently restored at step 2000 on CPU |
+| Metrics | `experiment_log/2026-10-15/artifacts/20261015-conlang-jax-v4-8-b256-steps2000-h512-output-h256-tied-encoders/metrics.jsonl` | yes; 220 lines, SHA-256 `607b303f33e6240447fbcf8063f9bb2642606eb960283729511b4ce4ef38b101` |
+| Evaluation outputs | `experiment_log/2026-10-15/artifacts/20261015-conlang-jax-v4-8-b256-steps2000-h512-output-h256-tied-encoders/outputs.jsonl` | yes; 200 lines, SHA-256 `db26b7b6f7b52537dcfdf8d417c3a61fce2d3849db4f21f8f22254cedc5faab4` |
+| Effective configuration | `experiment_log/2026-10-15/artifacts/20261015-conlang-jax-v4-8-b256-steps2000-h512-output-h256-tied-encoders/config.yml` | yes; SHA-256 `2420afca80609d0e156ad1109cf1935e98fffefa9cb8033017b38ce0e627a467` |
+| Canonical launcher log | `experiment_log/2026-10-15/artifacts/20261015-conlang-jax-v4-8-b256-steps2000-h512-output-h256-tied-encoders/launcher.log.gz` | yes; deterministic gzip SHA-256 `8e7dcebf7afeafb07c9b1d0f9a559d908b028d9c2e1b7f02fe43025477b8630c`; uncompressed remote log SHA-256 `740bb96b437649803704bc97fe3b0b4e5cf61ddf416f7b0c21e533eb225862bf` |
+| Tracking run | `https://wandb.ai/kaynelu921-massachusetts-institute-of-technology/conlangs/runs/32eis239` | yes; authenticated API reports `finished`, summary step 2000, 200 histogram history rows, no table files, and no token-ID summary |
 
 ## Failure Details
 
-- Last known step: not applicable
-- Error summary: not applicable
-- Detailed output: not recorded
+- Last known step: 2000, completed
+- Error summary: none
+- Detailed output: canonical launcher log in the artifacts table
 
 ## Observations
 
@@ -91,11 +103,20 @@ Pending.
 - The exact YAML passed both sequential PR review passes. The full CPU suite passed: 106 tests and 7 subtests, with two pre-existing Pydantic warnings.
 - The Snap-wrapped inventory initially failed locally before any cloud request. The direct packaged Cloud CLI completed the required inventory.
 - Two gcloud reconnects later received malformed SSH banners before authentication and before running a remote command. A bounded explicit worker-0 connection using the exact gcloud-generated command verified the same selected TPU and copied the immutable snapshot without changing run identity.
+- JAX reported the TPU backend with four devices before training, and the canonical log contains the exact step-2000 completion sentinel.
+- The maximum pre-clip gradient norm was 10.479741 at step 1520; clipping was configured at 1.0, subsequent metrics remained finite, and the run completed without divergence.
+- At the terminal audit the TPU remained `READY` and `HEALTHY`; the exact trainer was absent, VFIO had no holders, and the libtpu lockfile was absent.
+- W&B stored the requested generated-vocabulary histogram at every training log point. Its public history contains only the compact histogram payload, while the summary omits token IDs and the run uploaded no table or media files.
+- Direct artifact copies initially hit an SSH MAC error. Enabling SSH compression with a fixed non-ETM MAC completed the transfers, and all local hashes match the remote source hashes. The temporary compressed transfer file was removed from the TPU.
 
 ## Interpretation
 
 - This run tests only a fourfold increase in transformer/message hidden size relative to the tied-encoder baseline. Because model geometry changed, the hidden-128 throughput is context rather than a like-for-like performance gate.
+- At this single seed and short horizon, hidden 512 improved final exact match by 0.0078125, worsened mean joint log-probability by 0.006763, raised final training loss by 0.020663, and reduced throughput by about 55.9%. One 256-example evaluation and one seed are insufficient evidence of a general quality improvement.
 
 ## Updates
 
 - `2026-10-15T15:56:47Z`: Configuration commit `4dca699` passed correctness and cleanup review, the full CPU suite passed, the immutable snapshot was verified locally and remotely, and the selected TPU/runtime/regional data passed preflight. Launch remains pending the final occupancy gate.
+- `2026-10-15T15:58:30Z`: W&B run `32eis239` started after the final occupancy gate reported the selected TPU available.
+- `2026-10-15T16:09:58Z`: Training reached step 2000, emitted `TRAINING_COMPLETE`, and W&B finalized the run as `finished`.
+- `2026-10-15T16:16:48Z`: The terminal worker audit found no trainer or VFIO holder, restored the checkpoint at step 2000, verified all remote hashes, and archived the metrics, outputs, effective configuration, and canonical log locally.
