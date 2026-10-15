@@ -72,6 +72,7 @@ class TrainConfig:
     wandb_enabled: bool = True
     hidden_size: int = 128
     output_hidden_size: int | None = None
+    tie_sender_receiver_encoder: bool = False
     message_length: int = 4
     max_answer_length: int = 4
     max_text_length: int = 512
@@ -228,6 +229,7 @@ def _model_config(config: TrainConfig, tokenizer: TextTokenizer) -> JaxCommunica
         vocab_size=tokenizer.vocab_size,
         hidden_size=config.hidden_size,
         output_hidden_size=config.output_hidden_size,
+        tie_sender_receiver_encoder=config.tie_sender_receiver_encoder,
         message_length=config.message_length,
         max_answer_length=config.max_answer_length,
         max_text_length=config.max_text_length,
@@ -442,6 +444,12 @@ def build_parallel_train_step(
     """Compile one data-parallel optimization step across local TPU devices."""
     if collect_path_gradients and not collect_diagnostics:
         raise ValueError("path gradients require diagnostic collection")
+    sender_parameter_parts = ("sender", "token_embedding")
+    receiver_parameter_parts = ("receiver", "token_embedding")
+    if model.config.tie_sender_receiver_encoder:
+        shared_encoder_part = "shared_sender_receiver_encoder"
+        sender_parameter_parts = (*sender_parameter_parts, shared_encoder_part)
+        receiver_parameter_parts = (*receiver_parameter_parts, shared_encoder_part)
 
     def component_gradient_norm(
         params: Any,
@@ -532,16 +540,38 @@ def build_parallel_train_step(
             ),
             "generated_token_ids": generated_token_ids,
         })
+        if model.config.tie_sender_receiver_encoder:
+            metrics["weight_norm_shared_encoder"] = optax.global_norm(
+                state.params["shared_sender_receiver_encoder"]
+            )
         if collect_path_gradients:
             # These reuse the update's dropout key so each path is a slice of the same noise.
             metrics["gradient_norm_agent_1"] = component_gradient_norm(
-                params_for_path_gradients, batch, dropout_key, False, True, True, ("sender", "token_embedding")
+                params_for_path_gradients,
+                batch,
+                dropout_key,
+                False,
+                True,
+                True,
+                sender_parameter_parts,
             )
             metrics["gradient_norm_agent_2"] = component_gradient_norm(
-                params_for_path_gradients, batch, dropout_key, True, False, True, ("sender", "token_embedding")
+                params_for_path_gradients,
+                batch,
+                dropout_key,
+                True,
+                False,
+                True,
+                sender_parameter_parts,
             )
             metrics["gradient_norm_receiver"] = component_gradient_norm(
-                params_for_path_gradients, batch, dropout_key, True, True, False, ("receiver", "token_embedding")
+                params_for_path_gradients,
+                batch,
+                dropout_key,
+                True,
+                True,
+                False,
+                receiver_parameter_parts,
             )
         return state, metrics
 

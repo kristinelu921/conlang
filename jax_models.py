@@ -26,6 +26,7 @@ class JaxCommunicationModelConfig:
     vocab_size: int
     hidden_size: int = 128
     output_hidden_size: int | None = None
+    tie_sender_receiver_encoder: bool = False
     message_length: int = 4
     max_answer_length: int = 4
     max_text_length: int = 512
@@ -235,6 +236,21 @@ class EncoderBlock(nn.Module):
         ).astype(config.dtype)
 
 
+class EncoderStack(nn.Module):
+    """Apply one reusable stack of Transformer encoder blocks."""
+
+    config: JaxCommunicationModelConfig
+
+    @nn.compact
+    def __call__(self, hidden: Array, valid: Array, deterministic: bool) -> Array:
+        """Encode a padded sequence through every configured layer."""
+        for layer_index in range(self.config.num_layers):
+            hidden = EncoderBlock(self.config, name=f"layer_{layer_index}")(
+                hidden, valid, deterministic
+            )
+        return hidden
+
+
 class DecoderBlock(nn.Module):
     """Apply one post-norm Transformer decoder block."""
 
@@ -334,6 +350,7 @@ class Sender(nn.Module):
     """Read one private passage and return fixed-length message vectors."""
 
     config: JaxCommunicationModelConfig
+    shared_encoder: EncoderStack | None = None
 
     @nn.compact
     def __call__(self, text_embeddings: Array, token_ids: Array, deterministic: bool) -> Array:
@@ -358,8 +375,13 @@ class Sender(nn.Module):
             ),
             axis=1,
         )
-        for layer_index in range(config.num_layers):
-            hidden = EncoderBlock(config, name=f"layer_{layer_index}")(hidden, valid, deterministic)
+        if self.shared_encoder is None:
+            for layer_index in range(config.num_layers):
+                hidden = EncoderBlock(config, name=f"layer_{layer_index}")(
+                    hidden, valid, deterministic
+                )
+        else:
+            hidden = self.shared_encoder(hidden, valid, deterministic)
         return hidden[:, : config.message_length]
 
 
@@ -367,6 +389,7 @@ class Receiver(nn.Module):
     """Read two messages and a question, then score answer tokens."""
 
     config: JaxCommunicationModelConfig
+    shared_encoder: EncoderStack | None = None
 
     @nn.compact
     def __call__(
@@ -398,10 +421,13 @@ class Receiver(nn.Module):
             ),
             axis=1,
         )
-        for layer_index in range(config.num_layers):
-            memory = EncoderBlock(config, name=f"encoder_layer_{layer_index}")(
-                memory, memory_valid, deterministic
-            )
+        if self.shared_encoder is None:
+            for layer_index in range(config.num_layers):
+                memory = EncoderBlock(config, name=f"encoder_layer_{layer_index}")(
+                    memory, memory_valid, deterministic
+                )
+        else:
+            memory = self.shared_encoder(memory, memory_valid, deterministic)
         hidden = answer_embeddings
         answer_valid = answer_input_ids != config.padding_id
         for layer_index in range(config.num_layers):
@@ -446,8 +472,14 @@ class JaxCommunicationModel(nn.Module):
             param_dtype=jnp.float32,
             name="token_embedding",
         )
-        self.sender = Sender(self.config, name="sender")
-        self.receiver = Receiver(self.config, name="receiver")
+        shared_encoder = None
+        if self.config.tie_sender_receiver_encoder:
+            shared_encoder = EncoderStack(
+                self.config,
+                name="shared_sender_receiver_encoder",
+            )
+        self.sender = Sender(self.config, shared_encoder=shared_encoder, name="sender")
+        self.receiver = Receiver(self.config, shared_encoder=shared_encoder, name="receiver")
 
     def encode_messages(
         self,

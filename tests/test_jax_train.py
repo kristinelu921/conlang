@@ -476,6 +476,86 @@ def test_output_hidden_size_is_independent_of_transformer_width() -> None:
     )
 
 
+def test_sender_and_receiver_can_share_one_encoder_stack() -> None:
+    """The tying option should store one encoder used by both model roles."""
+    tokenizer = TextTokenizer(["buffalo", "chapel"])
+    config = replace(_small_config(), tie_sender_receiver_encoder=True)
+    batch = tokenize_examples(_examples(), tokenizer, config).select([0, 1])
+    model = JaxCommunicationModel(_model_config(config, tokenizer))
+    variables = model.init(
+        {"params": jax.random.PRNGKey(0)},
+        jnp.asarray(batch.agent_1_token_ids),
+        jnp.asarray(batch.agent_2_token_ids),
+        jnp.asarray(batch.question_token_ids),
+        jnp.asarray(batch.answer_token_ids),
+        deterministic=True,
+    )
+
+    output = model.apply(
+        variables,
+        jnp.asarray(batch.agent_1_token_ids),
+        jnp.asarray(batch.agent_2_token_ids),
+        jnp.asarray(batch.question_token_ids),
+        jnp.asarray(batch.answer_token_ids),
+        deterministic=True,
+    )
+    parameters = variables["params"]
+
+    assert output.logits.shape == (2, config.max_answer_length, tokenizer.vocab_size)
+    assert "shared_sender_receiver_encoder" in parameters
+    assert "layer_0" in parameters["shared_sender_receiver_encoder"]
+    assert "layer_0" not in parameters["sender"]
+    assert "encoder_layer_0" not in parameters["receiver"]
+    assert "decoder_layer_0" in parameters["receiver"]
+
+
+def test_default_keeps_sender_and_receiver_encoders_separate() -> None:
+    """The default model should preserve the existing independent parameter tree."""
+    tokenizer = TextTokenizer(["buffalo", "chapel"])
+    config = _small_config()
+    batch = tokenize_examples(_examples(), tokenizer, config).select([0, 1])
+    model = JaxCommunicationModel(_model_config(config, tokenizer))
+    variables = model.init(
+        {"params": jax.random.PRNGKey(0)},
+        jnp.asarray(batch.agent_1_token_ids),
+        jnp.asarray(batch.agent_2_token_ids),
+        jnp.asarray(batch.question_token_ids),
+        jnp.asarray(batch.answer_token_ids),
+        deterministic=True,
+    )
+    parameters = variables["params"]
+
+    assert "shared_sender_receiver_encoder" not in parameters
+    assert "layer_0" in parameters["sender"]
+    assert "encoder_layer_0" in parameters["receiver"]
+
+
+def test_tied_encoder_is_included_in_weight_and_path_diagnostics() -> None:
+    """Diagnostics should include the shared weights in both model roles."""
+    tokenizer = TextTokenizer(["buffalo", "chapel"])
+    config = replace(_small_config(), tie_sender_receiver_encoder=True)
+    batch = tokenize_examples(_examples(), tokenizer, config).select([0, 1])
+    model = JaxCommunicationModel(_model_config(config, tokenizer))
+    initial_state = _initialize_state(model, optax.identity(), batch, config.seed)
+    replicated_state = jax.device_put_replicated(initial_state, jax.local_devices())
+
+    _updated_state, device_metrics = build_parallel_train_step(model)(
+        replicated_state,
+        shard_batch(batch, jax.local_device_count()),
+        jax.random.split(jax.random.PRNGKey(1), jax.local_device_count()),
+    )
+    host_metrics, _generated_token_ids = _read_step_metrics(device_metrics)
+
+    for key in (
+        "weight_norm_shared_encoder",
+        "gradient_norm_agent_1",
+        "gradient_norm_agent_2",
+        "gradient_norm_receiver",
+    ):
+        assert np.isfinite(host_metrics[key])
+        assert host_metrics[key] > 0
+
+
 def test_relative_buckets_separate_nearby_offsets_and_clamp_far_ones() -> None:
     """Nearby offsets should keep their own buckets, and far offsets should share the last one."""
     nearby = _relative_position_bucket(jnp.array([-2, -1, 0, 1, 2]), True, 32, 128)

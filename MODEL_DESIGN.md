@@ -57,6 +57,11 @@ shape `(batch, 8, 128)`.
    `output_hidden_size` adds a ReLU hidden projection of that width immediately
    before the vocabulary map while leaving the Transformer width unchanged.
 
+Setting `tie_sender_receiver_encoder` makes the sender and receiver reuse one
+Transformer encoder stack. Their already-shared token embedding remains tied,
+while the sender query embeddings, receiver decoder, and receiver output head
+remain separate because they have distinct roles and parameter structures.
+
 Each block is post-norm with ReLU and dropout 0.1, built from Flax
 `MultiHeadDotProductAttention` and `Dense`. Attention softmax runs in float32.
 `deterministic` is passed on every call, so evaluation disables dropout even
