@@ -457,16 +457,23 @@ def _selected_gradient_norm(
     return optax.global_norm(selected)
 
 
-def _gate_activation_statistics(gate: Array) -> Array:
-    """Return globally averaged gate mean and near-zero/near-one fractions."""
-    local_statistics = jnp.stack(
+def _gate_activation_statistics(gate: Array, valid: Array | None = None) -> Array:
+    """Return globally weighted gate mean and near-zero/near-one fractions."""
+    if valid is None:
+        weights = jnp.ones_like(gate, dtype=jnp.float32)
+    else:
+        assert valid.shape == gate.shape[:-1]
+        weights = jnp.broadcast_to(valid[..., None], gate.shape).astype(jnp.float32)
+    local_sums = jnp.stack(
         (
-            jnp.mean(gate),
-            jnp.mean((gate < 0.05).astype(jnp.float32)),
-            jnp.mean((gate > 0.95).astype(jnp.float32)),
+            jnp.sum(gate.astype(jnp.float32) * weights),
+            jnp.sum((gate < 0.05).astype(jnp.float32) * weights),
+            jnp.sum((gate > 0.95).astype(jnp.float32) * weights),
         )
     )
-    return jax.lax.pmean(local_statistics, axis_name="devices")
+    global_sums = jax.lax.psum(local_sums, axis_name="devices")
+    global_count = jax.lax.psum(jnp.sum(weights), axis_name="devices")
+    return global_sums / global_count
 
 
 def build_parallel_train_step(
@@ -581,7 +588,20 @@ def build_parallel_train_step(
             sender_gate_statistics = _gate_activation_statistics(
                 jnp.concatenate((output.sender_gate_1, output.sender_gate_2), axis=1)
             )
-            receiver_gate_statistics = _gate_activation_statistics(output.receiver_gate)
+            receiver_gate_valid = jnp.concatenate(
+                (
+                    jnp.ones(
+                        (batch.question_token_ids.shape[0], model.config.message_length * 2),
+                        dtype=jnp.bool_,
+                    ),
+                    batch.question_token_ids != model.config.padding_id,
+                ),
+                axis=1,
+            )
+            receiver_gate_statistics = _gate_activation_statistics(
+                output.receiver_gate,
+                receiver_gate_valid,
+            )
             metrics.update({
                 "sender_gate_mean": sender_gate_statistics[0],
                 "sender_gate_near_zero_fraction": sender_gate_statistics[1],

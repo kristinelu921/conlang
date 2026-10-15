@@ -23,6 +23,7 @@ from train import (
     TrainConfig,
     _append_model_outputs,
     _as_wandb_log,
+    _gate_activation_statistics,
     _host_training_record,
     _initialize_state,
     _model_config,
@@ -596,6 +597,28 @@ def test_role_gate_diagnostics_are_finite_fractions() -> None:
     ):
         assert np.isfinite(host_metrics[key])
         assert 0.0 <= host_metrics[key] <= 1.0
+
+
+def test_gate_statistics_ignore_inactive_positions() -> None:
+    """Receiver gate summaries should exclude padded memory positions."""
+    device_count = jax.local_device_count()
+    valid = jnp.broadcast_to(
+        jnp.array([[True, True, False, False]]),
+        (device_count, 1, 4),
+    )
+    valid_values = jnp.array([[[[0.25, 0.25], [0.75, 0.75]]]])
+    valid_values = jnp.broadcast_to(valid_values, (device_count, 1, 2, 2))
+    low_padding = jnp.zeros((device_count, 1, 2, 2))
+    high_padding = jnp.ones((device_count, 1, 2, 2))
+    low_padded_gate = jnp.concatenate((valid_values, low_padding), axis=2)
+    high_padded_gate = jnp.concatenate((valid_values, high_padding), axis=2)
+    parallel_statistics = jax.pmap(_gate_activation_statistics, axis_name="devices")
+
+    low_padded_statistics = parallel_statistics(low_padded_gate, valid)[0]
+    high_padded_statistics = parallel_statistics(high_padded_gate, valid)[0]
+
+    assert jnp.allclose(low_padded_statistics, jnp.array([0.5, 0.0, 0.0]))
+    assert jnp.allclose(high_padded_statistics, low_padded_statistics)
 
 
 def test_default_keeps_sender_and_receiver_encoders_separate() -> None:
