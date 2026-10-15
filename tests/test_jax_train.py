@@ -216,6 +216,12 @@ def test_config_rejects_nonpositive_output_hidden_size() -> None:
         replace(TrainConfig(), output_hidden_size=0).validate()
 
 
+def test_config_rejects_nonpositive_role_gate_channels() -> None:
+    """Enabled role gates should have a positive bottleneck width."""
+    with pytest.raises(ValueError, match="role gate channels must be positive"):
+        replace(TrainConfig(), role_gate_channels=0).validate()
+
+
 def test_tpu_config_requires_regional_cache_and_node_local_output() -> None:
     """TPU runs should fail before launch when locality paths are missing."""
     config = TrainConfig(device="tpu", throughput_warmup_steps=1, steps=2)
@@ -509,6 +515,87 @@ def test_sender_and_receiver_can_share_one_encoder_stack() -> None:
     assert "layer_0" not in parameters["sender"]
     assert "encoder_layer_0" not in parameters["receiver"]
     assert "decoder_layer_0" in parameters["receiver"]
+
+
+def test_role_gates_are_separate_identity_initialized_adapters() -> None:
+    """Sender and receiver should get distinct, initially closed residual gates."""
+    tokenizer = TextTokenizer(["buffalo", "chapel"])
+    config = replace(
+        _small_config(),
+        tie_sender_receiver_encoder=True,
+        role_gate_channels=4,
+    )
+    batch = tokenize_examples(_examples(), tokenizer, config).select([0, 1])
+    model = JaxCommunicationModel(_model_config(config, tokenizer))
+    variables = model.init(
+        {"params": jax.random.PRNGKey(0)},
+        jnp.asarray(batch.agent_1_token_ids),
+        jnp.asarray(batch.agent_2_token_ids),
+        jnp.asarray(batch.question_token_ids),
+        jnp.asarray(batch.answer_token_ids),
+        deterministic=True,
+    )
+
+    output = model.apply(
+        variables,
+        jnp.asarray(batch.agent_1_token_ids),
+        jnp.asarray(batch.agent_2_token_ids),
+        jnp.asarray(batch.question_token_ids),
+        jnp.asarray(batch.answer_token_ids),
+        deterministic=True,
+    )
+    sender_gate_parameters = variables["params"]["sender"]["role_gate"]
+    receiver_gate_parameters = variables["params"]["receiver"]["role_gate"]
+
+    assert output.sender_gate_1 is not None
+    assert output.sender_gate_2 is not None
+    assert output.receiver_gate is not None
+    assert output.sender_gate_1.shape == (2, config.message_length, config.role_gate_channels)
+    assert output.sender_gate_2.shape == output.sender_gate_1.shape
+    assert output.receiver_gate.shape == (
+        2,
+        config.message_length * 2 + config.max_question_length,
+        config.role_gate_channels,
+    )
+    assert sender_gate_parameters["candidate_projection"]["kernel"].shape == (16, 4)
+    assert receiver_gate_parameters["candidate_projection"]["kernel"].shape == (16, 4)
+    assert jnp.all(sender_gate_parameters["output_projection"]["kernel"] == 0)
+    assert jnp.all(receiver_gate_parameters["output_projection"]["kernel"] == 0)
+    expected_initial_gate = jax.nn.sigmoid(jnp.array(-2.0))
+    assert jnp.allclose(output.sender_gate_1, expected_initial_gate)
+    assert jnp.allclose(output.receiver_gate, expected_initial_gate)
+
+
+def test_role_gate_diagnostics_are_finite_fractions() -> None:
+    """Logged role-gate summaries should remain finite and bounded."""
+    tokenizer = TextTokenizer(["buffalo", "chapel"])
+    config = replace(
+        _small_config(),
+        tie_sender_receiver_encoder=True,
+        role_gate_channels=4,
+    )
+    batch = tokenize_examples(_examples(), tokenizer, config).select([0, 1])
+    model = JaxCommunicationModel(_model_config(config, tokenizer))
+    initial_state = _initialize_state(model, optax.identity(), batch, config.seed)
+    replicated_state = jax.device_put_replicated(initial_state, jax.local_devices())
+
+    _updated_state, device_metrics = build_parallel_train_step(model)(
+        replicated_state,
+        shard_batch(batch, jax.local_device_count()),
+        jax.random.split(jax.random.PRNGKey(1), jax.local_device_count()),
+    )
+    host_metrics, _generated_token_ids = _read_step_metrics(device_metrics)
+
+    for key in (
+        "sender_gate_mean",
+        "sender_gate_near_zero_fraction",
+        "sender_gate_near_one_fraction",
+        "receiver_gate_mean",
+        "receiver_gate_near_zero_fraction",
+        "receiver_gate_near_one_fraction",
+    ):
+        assert np.isfinite(host_metrics[key])
+        assert 0.0 <= host_metrics[key] <= 1.0
 
 
 def test_default_keeps_sender_and_receiver_encoders_separate() -> None:

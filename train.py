@@ -73,6 +73,7 @@ class TrainConfig:
     hidden_size: int = 128
     output_hidden_size: int | None = None
     tie_sender_receiver_encoder: bool = False
+    role_gate_channels: int | None = None
     message_length: int = 4
     max_answer_length: int = 4
     max_text_length: int = 512
@@ -123,6 +124,8 @@ class TrainConfig:
             raise ValueError("hidden size must be divisible by the number of attention heads")
         if self.output_hidden_size is not None and self.output_hidden_size < 1:
             raise ValueError("output hidden size must be positive when configured")
+        if self.role_gate_channels is not None and self.role_gate_channels < 1:
+            raise ValueError("role gate channels must be positive when configured")
         if not 0 <= self.dropout < 1:
             raise ValueError("dropout must be in [0, 1)")
         if (
@@ -230,6 +233,7 @@ def _model_config(config: TrainConfig, tokenizer: TextTokenizer) -> JaxCommunica
         hidden_size=config.hidden_size,
         output_hidden_size=config.output_hidden_size,
         tie_sender_receiver_encoder=config.tie_sender_receiver_encoder,
+        role_gate_channels=config.role_gate_channels,
         message_length=config.message_length,
         max_answer_length=config.max_answer_length,
         max_text_length=config.max_text_length,
@@ -453,6 +457,18 @@ def _selected_gradient_norm(
     return optax.global_norm(selected)
 
 
+def _gate_activation_statistics(gate: Array) -> Array:
+    """Return globally averaged gate mean and near-zero/near-one fractions."""
+    local_statistics = jnp.stack(
+        (
+            jnp.mean(gate),
+            jnp.mean((gate < 0.05).astype(jnp.float32)),
+            jnp.mean((gate > 0.95).astype(jnp.float32)),
+        )
+    )
+    return jax.lax.pmean(local_statistics, axis_name="devices")
+
+
 def build_parallel_train_step(
     model: JaxCommunicationModel,
     collect_path_gradients: bool = True,
@@ -558,6 +574,22 @@ def build_parallel_train_step(
             metrics["weight_norm_shared_encoder"] = optax.global_norm(
                 state.params["shared_sender_receiver_encoder"]
             )
+        if model.config.role_gate_channels is not None:
+            assert output.sender_gate_1 is not None
+            assert output.sender_gate_2 is not None
+            assert output.receiver_gate is not None
+            sender_gate_statistics = _gate_activation_statistics(
+                jnp.concatenate((output.sender_gate_1, output.sender_gate_2), axis=1)
+            )
+            receiver_gate_statistics = _gate_activation_statistics(output.receiver_gate)
+            metrics.update({
+                "sender_gate_mean": sender_gate_statistics[0],
+                "sender_gate_near_zero_fraction": sender_gate_statistics[1],
+                "sender_gate_near_one_fraction": sender_gate_statistics[2],
+                "receiver_gate_mean": receiver_gate_statistics[0],
+                "receiver_gate_near_zero_fraction": receiver_gate_statistics[1],
+                "receiver_gate_near_one_fraction": receiver_gate_statistics[2],
+            })
         if collect_path_gradients:
             # These reuse the update's dropout key so each path is a slice of the same noise.
             receiver_gradients = component_gradients(

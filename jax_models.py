@@ -27,6 +27,7 @@ class JaxCommunicationModelConfig:
     hidden_size: int = 128
     output_hidden_size: int | None = None
     tie_sender_receiver_encoder: bool = False
+    role_gate_channels: int | None = None
     message_length: int = 4
     max_answer_length: int = 4
     max_text_length: int = 512
@@ -54,6 +55,8 @@ class JaxCommunicationModelConfig:
             raise ValueError("hidden_size must be divisible by num_heads")
         if self.output_hidden_size is not None and self.output_hidden_size < 1:
             raise ValueError("output_hidden_size must be positive when configured")
+        if self.role_gate_channels is not None and self.role_gate_channels < 1:
+            raise ValueError("role_gate_channels must be positive when configured")
         lengths = (
             self.message_length,
             self.max_answer_length,
@@ -82,6 +85,9 @@ class JaxCommunicationOutput(NamedTuple):
     message_1: Array
     message_2: Array
     receiver_activation: Array
+    sender_gate_1: Array | None
+    sender_gate_2: Array | None
+    receiver_gate: Array | None
 
 
 def _attention_mask(query_valid: Array, key_valid: Array) -> Array:
@@ -251,6 +257,42 @@ class EncoderStack(nn.Module):
         return hidden
 
 
+class ResidualRoleGate(nn.Module):
+    """Apply a bottleneck gate whose residual path starts as the identity."""
+
+    hidden_size: int
+    gate_channels: int
+    dtype: jnp.dtype
+
+    @nn.compact
+    def __call__(self, hidden: Array) -> tuple[Array, Array]:
+        """Return gated hidden states and their bottleneck gate activations."""
+        candidate = nn.Dense(
+            self.gate_channels,
+            dtype=self.dtype,
+            param_dtype=jnp.float32,
+            name="candidate_projection",
+        )(hidden)
+        candidate = jax.nn.relu(candidate)
+        gate = nn.Dense(
+            self.gate_channels,
+            dtype=self.dtype,
+            param_dtype=jnp.float32,
+            kernel_init=nn.initializers.zeros_init(),
+            bias_init=nn.initializers.constant(-2.0),
+            name="gate_projection",
+        )(hidden)
+        gate = jax.nn.sigmoid(gate)
+        update = nn.Dense(
+            self.hidden_size,
+            dtype=self.dtype,
+            param_dtype=jnp.float32,
+            kernel_init=nn.initializers.zeros_init(),
+            name="output_projection",
+        )(candidate * gate)
+        return hidden + update, gate
+
+
 class DecoderBlock(nn.Module):
     """Apply one post-norm Transformer decoder block."""
 
@@ -353,8 +395,13 @@ class Sender(nn.Module):
     shared_encoder: EncoderStack | None = None
 
     @nn.compact
-    def __call__(self, text_embeddings: Array, token_ids: Array, deterministic: bool) -> Array:
-        """Encode text into message vectors of shape batch by message by hidden."""
+    def __call__(
+        self,
+        text_embeddings: Array,
+        token_ids: Array,
+        deterministic: bool,
+    ) -> tuple[Array, Array | None]:
+        """Encode text into message vectors and optional sender gate activations."""
         config = self.config
         batch_size = token_ids.shape[0]
         query_embedding = self.param(
@@ -382,7 +429,16 @@ class Sender(nn.Module):
                 )
         else:
             hidden = self.shared_encoder(hidden, valid, deterministic)
-        return hidden[:, : config.message_length]
+        messages = hidden[:, : config.message_length]
+        gate = None
+        if config.role_gate_channels is not None:
+            messages, gate = ResidualRoleGate(
+                config.hidden_size,
+                config.role_gate_channels,
+                config.dtype,
+                name="role_gate",
+            )(messages)
+        return messages, gate
 
 
 class Receiver(nn.Module):
@@ -400,8 +456,8 @@ class Receiver(nn.Module):
         answer_embeddings: Array,
         answer_input_ids: Array,
         deterministic: bool,
-    ) -> tuple[Array, Array]:
-        """Return answer logits and the decoder state before the output projection."""
+    ) -> tuple[Array, Array, Array | None]:
+        """Return answer logits, decoder state, and optional receiver gate activations."""
         config = self.config
         batch_size = messages.shape[0]
         message_count = config.message_length * 2
@@ -428,6 +484,14 @@ class Receiver(nn.Module):
                 )
         else:
             memory = self.shared_encoder(memory, memory_valid, deterministic)
+        gate = None
+        if config.role_gate_channels is not None:
+            memory, gate = ResidualRoleGate(
+                config.hidden_size,
+                config.role_gate_channels,
+                config.dtype,
+                name="role_gate",
+            )(memory)
         hidden = answer_embeddings
         answer_valid = answer_input_ids != config.padding_id
         for layer_index in range(config.num_layers):
@@ -453,7 +517,7 @@ class Receiver(nn.Module):
             param_dtype=jnp.float32,
             name="output_projection",
         )(output_hidden)
-        return logits, output_hidden
+        return logits, output_hidden, gate
 
 
 class JaxCommunicationModel(nn.Module):
@@ -488,9 +552,31 @@ class JaxCommunicationModel(nn.Module):
         deterministic: bool,
     ) -> Array:
         """Encode both private passages with the shared sender."""
-        message_1 = self.sender(self.token_embedding(agent_1_token_ids), agent_1_token_ids, deterministic)
-        message_2 = self.sender(self.token_embedding(agent_2_token_ids), agent_2_token_ids, deterministic)
-        return jnp.concatenate((message_1, message_2), axis=1)
+        messages, _sender_gate_1, _sender_gate_2 = self._encode_messages_with_gates(
+            agent_1_token_ids,
+            agent_2_token_ids,
+            deterministic,
+        )
+        return messages
+
+    def _encode_messages_with_gates(
+        self,
+        agent_1_token_ids: Array,
+        agent_2_token_ids: Array,
+        deterministic: bool,
+    ) -> tuple[Array, Array | None, Array | None]:
+        """Encode both private passages and preserve role-gate telemetry."""
+        message_1, sender_gate_1 = self.sender(
+            self.token_embedding(agent_1_token_ids),
+            agent_1_token_ids,
+            deterministic,
+        )
+        message_2, sender_gate_2 = self.sender(
+            self.token_embedding(agent_2_token_ids),
+            agent_2_token_ids,
+            deterministic,
+        )
+        return jnp.concatenate((message_1, message_2), axis=1), sender_gate_1, sender_gate_2
 
     def answer_logits(
         self,
@@ -500,7 +586,7 @@ class JaxCommunicationModel(nn.Module):
         deterministic: bool,
     ) -> Array:
         """Score answer inputs from encoded messages and a question."""
-        logits, _receiver_activation = self.receiver(
+        logits, _receiver_activation, _receiver_gate = self.receiver(
             messages,
             self.token_embedding(question_token_ids),
             question_token_ids,
@@ -526,7 +612,11 @@ class JaxCommunicationModel(nn.Module):
         batch_size = answer_token_ids.shape[0]
         beginning = jnp.full((batch_size, 1), self.config.bos_id, dtype=jnp.int32)
         answer_input_ids = jnp.concatenate((beginning, answer_token_ids[:, :-1]), axis=1)
-        messages = self.encode_messages(agent_1_token_ids, agent_2_token_ids, deterministic)
+        messages, sender_gate_1, sender_gate_2 = self._encode_messages_with_gates(
+            agent_1_token_ids,
+            agent_2_token_ids,
+            deterministic,
+        )
         message_1 = messages[:, : self.config.message_length]
         message_2 = messages[:, self.config.message_length :]
         if stop_message_1:
@@ -538,7 +628,7 @@ class JaxCommunicationModel(nn.Module):
         if stop_receiver_tokens:
             question_embeddings = jax.lax.stop_gradient(question_embeddings)
             answer_embeddings = jax.lax.stop_gradient(answer_embeddings)
-        logits, receiver_activation = self.receiver(
+        logits, receiver_activation, receiver_gate = self.receiver(
             jnp.concatenate((message_1, message_2), axis=1),
             question_embeddings,
             question_token_ids,
@@ -559,6 +649,9 @@ class JaxCommunicationModel(nn.Module):
             message_1=message_1,
             message_2=message_2,
             receiver_activation=receiver_activation,
+            sender_gate_1=sender_gate_1,
+            sender_gate_2=sender_gate_2,
+            receiver_gate=receiver_gate,
         )
 
     def greedy_answer_token_ids(
