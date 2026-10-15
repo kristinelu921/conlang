@@ -87,6 +87,14 @@ Never collapse a failed zero-step attempt into a later successful retry. Use a n
 - Recovery: fail closed before starting any worker, preserve the attempt as a zero-step failure, and record the new holder's worker, PID, numeric UID, and command without terminating it in this final gate. Any permitted foreign-holder reclaim must occur separately through the guarded candidate-claim workflow on an exact authorized `kristine` TPU. If a run is owned by somebody else on a non-`kristine` TPU, never edit, stop, touch, or interrupt it.
 - Prevention: after source, runtime, and data setup, rerun the occupancy helper on every worker and inspect both VFIO and `/tmp/libtpu_lockfile` immediately before opening the foreground fan-out. Require every worker to remain idle; never reuse the earlier preflight result. Implement the final gate as a dedicated read-only occupancy check; never reuse a setup preflight that can initialize, delete, move, or otherwise repair state.
 
+### Launch wrapper matches its own future trainer command
+
+- Symptom: the final occupancy helper reports the TPU available, but the foreground wrapper exits before Python, the launcher log, W&B initialization, or the output directory exists.
+- Cause: a fuzzy full-command-line `pgrep` inside the remote wrapper matches that same shell because its command text also contains the later `python ... train.py` launch argv.
+- Recovery: preserve the attempt as a zero-step failure, prove that no trainer, VFIO holder, lockfile, output directory, launcher log, or W&B run was created, and use a fresh run identity.
+- Prevention: do not embed a fuzzy trainer `pgrep` in the same remote command that contains the future trainer argv. Use the canonical dedicated read-only occupancy helper immediately before fan-out, or perform exact `/proc` argv-token inspection in a separate command whose own text cannot match the launch target.
+- Observed: `20261015-conlang-jax-v5e8-b256-steps2000-wandb-retry1` exited before Python because `[p]ython.*train.py` matched its containing launch shell even though the TPU was idle.
+
 ### Exact-target claim guard exits on a terminated zombie
 
 - Symptom: the initial and final all-worker occupancy checks are clean, but JAX then reports `TPU is already in use`; the separately authorized exact-target guard logged `TERM` followed by `REFUSED_RACE`, and revalidation showed the signaled process as `<defunct>`.
@@ -463,9 +471,11 @@ Never collapse a failed zero-step attempt into a later successful retry. Use a n
 
 ### Cloud SDK lacks GA `gcloud storage`
 
-- Symptom: `gcloud storage` reports `Invalid choice: 'storage'`; legacy alpha storage may also lack flags such as `du --summarize`.
+- Symptom: `gcloud storage` reports `Invalid choice: 'storage'`; legacy alpha storage may also lack flags such as `du --summarize`. A trainer can initialize W&B and then fail before step 1 when its regional-data resolver invokes `gcloud storage buckets describe`, even if the verified node-local dataset is already present.
 - Cause: an older v4 image has a Cloud SDK predating the GA storage surface.
-- Recovery: use `gcloud storage` when supported and otherwise use installed `gsutil` equivalents for `du`, `rsync`, `cp`, and `rm`; verify exact bytes and dataset metadata. If `gsutil` has the OpenSSL failure documented above, reject the image rather than using incompatible alpha syntax.
+- Recovery: preserve the zero-step W&B run and output identity. Use `gcloud storage` when supported; only when its stderr proves that the storage surface is unavailable, use installed `gsutil` equivalents for the required operation. For bucket location, parse `Location constraint` from `gsutil ls -Lb` and keep the exact TPU-region equality check. For a regional copy, fall back to `gsutil cp` and verify exact bytes and dataset metadata. Do not catch unrelated authentication, permissions, missing-bucket, or network failures. If `gsutil` has the OpenSSL failure documented above, reject the image rather than using incompatible alpha syntax.
+- Prevention: exercise the application resolver's exact bucket-location command on the selected worker before W&B initialization, not only generic transfer helpers. Keep focused tests that prove both the legacy fallback and propagation of unrelated `gcloud` failures.
+- Observed: `20261015-conlang-jax-v4-8-b256-steps2000-wandb-retry4` created W&B run `pcutw300` and failed at step 0 on Cloud SDK `384.0.1`; `gsutil 5.10` reported `US-CENTRAL2`, and retry 5 completed after the narrowly gated resolver fallback.
 
 ### Missing `sacrebleu`
 
