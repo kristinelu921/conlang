@@ -208,6 +208,12 @@ def test_config_rejects_invalid_relative_attention_buckets() -> None:
         ).validate()
 
 
+def test_config_rejects_nonpositive_output_hidden_size() -> None:
+    """An enabled output hidden layer should have a positive width."""
+    with pytest.raises(ValueError, match="output hidden size must be positive"):
+        replace(TrainConfig(), output_hidden_size=0).validate()
+
+
 def test_tpu_config_requires_regional_cache_and_node_local_output() -> None:
     """TPU runs should fail before launch when locality paths are missing."""
     config = TrainConfig(device="tpu", throughput_warmup_steps=1, steps=2)
@@ -434,6 +440,40 @@ def test_each_sender_emits_four_message_vectors() -> None:
 
     assert config.message_length == 4
     assert messages.shape == (2, 8, config.hidden_size)
+
+
+def test_output_hidden_size_is_independent_of_transformer_width() -> None:
+    """The optional output MLP should widen only the answer head."""
+    tokenizer = TextTokenizer(["buffalo", "chapel"])
+    config = replace(_small_config(), output_hidden_size=24)
+    batch = tokenize_examples(_examples(), tokenizer, config).select([0, 1])
+    model = JaxCommunicationModel(_model_config(config, tokenizer))
+    variables = model.init(
+        {"params": jax.random.PRNGKey(0)},
+        jnp.asarray(batch.agent_1_token_ids),
+        jnp.asarray(batch.agent_2_token_ids),
+        jnp.asarray(batch.question_token_ids),
+        jnp.asarray(batch.answer_token_ids),
+        deterministic=True,
+    )
+
+    output = model.apply(
+        variables,
+        jnp.asarray(batch.agent_1_token_ids),
+        jnp.asarray(batch.agent_2_token_ids),
+        jnp.asarray(batch.question_token_ids),
+        jnp.asarray(batch.answer_token_ids),
+        deterministic=True,
+    )
+    receiver_parameters = variables["params"]["receiver"]
+
+    assert output.message_1.shape[-1] == config.hidden_size
+    assert output.receiver_activation.shape[-1] == config.output_hidden_size
+    assert receiver_parameters["output_hidden_projection"]["kernel"].shape == (16, 24)
+    assert receiver_parameters["output_projection"]["kernel"].shape == (
+        24,
+        tokenizer.vocab_size,
+    )
 
 
 def test_relative_buckets_separate_nearby_offsets_and_clamp_far_ones() -> None:

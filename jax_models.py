@@ -25,6 +25,7 @@ class JaxCommunicationModelConfig:
 
     vocab_size: int
     hidden_size: int = 128
+    output_hidden_size: int | None = None
     message_length: int = 4
     max_answer_length: int = 4
     max_text_length: int = 512
@@ -50,6 +51,8 @@ class JaxCommunicationModelConfig:
             raise ValueError("vocab_size must include the special tokens")
         if self.hidden_size % self.num_heads != 0:
             raise ValueError("hidden_size must be divisible by num_heads")
+        if self.output_hidden_size is not None and self.output_hidden_size < 1:
+            raise ValueError("output_hidden_size must be positive when configured")
         lengths = (
             self.message_length,
             self.max_answer_length,
@@ -409,13 +412,22 @@ class Receiver(nn.Module):
                 memory_valid,
                 deterministic,
             )
+        output_hidden = hidden
+        if config.output_hidden_size is not None:
+            output_hidden = nn.Dense(
+                config.output_hidden_size,
+                dtype=config.dtype,
+                param_dtype=jnp.float32,
+                name="output_hidden_projection",
+            )(output_hidden)
+            output_hidden = jax.nn.relu(output_hidden)
         logits = nn.Dense(
             config.vocab_size,
             dtype=jnp.float32,
             param_dtype=jnp.float32,
             name="output_projection",
-        )(hidden)
-        return logits, hidden
+        )(output_hidden)
+        return logits, output_hidden
 
 
 class JaxCommunicationModel(nn.Module):

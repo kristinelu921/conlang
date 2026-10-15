@@ -12,6 +12,7 @@ and a receiver must answer a question from the two messages alone.
 | Message | 4 vectors, each of size 128, per agent | You asked for 4 tokens and a hidden size of 128. The 4 positions are learned query slots read out of the encoder, so the channel length is fixed even when the passage is hundreds of characters. |
 | Receiver input | Those 8 vectors, then the question | The receiver never sees either passage. Concatenating the messages in agent order keeps which sender said what. |
 | Receiver output | Up to 4 answer tokens | You asked for an answer of at most 4 tokens. Decoding stops at the end token. |
+| Output head | Direct linear projection by default; optional independent hidden width | A configured output hidden size adds one ReLU projection before the vocabulary logits without changing the sender, messages, or Transformer width. |
 | Width and depth | Hidden 128, 2 layers, 4 heads, feedforward 512 | 128 was requested. Two layers and four heads keep it a small encoder-decoder. Feedforward width is the usual 4 times the hidden size from Attention Is All You Need. Each head is 32 wide. |
 | Attention KV | Standard multi-head attention | One fused query/key/value projection per block, full keys and values for every head. No grouped-query or multi-query attention, and no KV cache. |
 | Channel contents | Continuous hidden states | The joint answer log probability has to train both messages. Continuous vectors let that gradient pass through the sender. A discrete codebook would need an extra sampling step that was not requested. |
@@ -51,8 +52,10 @@ shape `(batch, 8, 128)`.
    messages.
 3. A 2-layer encoder mixes the messages with the question. Its output is the
    memory the decoder cross-attends to.
-4. A 2-layer decoder predicts the answer under a causal mask. The output head
-   is a separate linear map from 128 to the vocabulary.
+4. A 2-layer decoder predicts the answer under a causal mask. The default
+   output head is a separate linear map from 128 to the vocabulary. Setting
+   `output_hidden_size` adds a ReLU hidden projection of that width immediately
+   before the vocabulary map while leaving the Transformer width unchanged.
 
 Each block is post-norm with ReLU and dropout 0.1, built from Flax
 `MultiHeadDotProductAttention` and `Dense`. Attention softmax runs in float32.

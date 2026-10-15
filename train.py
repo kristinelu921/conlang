@@ -71,6 +71,7 @@ class TrainConfig:
     wandb_run_name: str | None = None
     wandb_enabled: bool = True
     hidden_size: int = 128
+    output_hidden_size: int | None = None
     message_length: int = 4
     max_answer_length: int = 4
     max_text_length: int = 512
@@ -119,6 +120,8 @@ class TrainConfig:
             raise ValueError("dataset prefix must be an object path inside the regional bucket")
         if self.hidden_size % self.num_heads != 0:
             raise ValueError("hidden size must be divisible by the number of attention heads")
+        if self.output_hidden_size is not None and self.output_hidden_size < 1:
+            raise ValueError("output hidden size must be positive when configured")
         if not 0 <= self.dropout < 1:
             raise ValueError("dropout must be in [0, 1)")
         if (
@@ -224,6 +227,7 @@ def _model_config(config: TrainConfig, tokenizer: TextTokenizer) -> JaxCommunica
     return JaxCommunicationModelConfig(
         vocab_size=tokenizer.vocab_size,
         hidden_size=config.hidden_size,
+        output_hidden_size=config.output_hidden_size,
         message_length=config.message_length,
         max_answer_length=config.max_answer_length,
         max_text_length=config.max_text_length,
