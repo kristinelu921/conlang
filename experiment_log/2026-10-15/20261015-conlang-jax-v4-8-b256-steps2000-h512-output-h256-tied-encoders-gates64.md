@@ -5,9 +5,9 @@
 | Field | Value |
 |---|---|
 | Run ID | `20261015-conlang-jax-v4-8-b256-steps2000-h512-output-h256-tied-encoders-gates64` |
-| Status | `planned` |
-| Started | not recorded |
-| Finished | not recorded |
+| Status | `completed` |
+| Started | `2026-10-15T18:25:12Z` |
+| Finished | `2026-10-15T18:36:46Z` (W&B runtime 694.36 seconds) |
 | Baseline | `20261015-conlang-jax-v4-8-b256-steps2000-h512-output-h256-tied-encoders` |
 | Git revision | reviewed source and configuration `35b35b83774e6104d8e9709307feb276f7e9a54a` |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` |
@@ -66,7 +66,19 @@ The transformer/message hidden size remains 512, the output hidden dimension rem
 
 ## Results
 
-Pending.
+| Metric | Result | Hidden-512 tied baseline | Delta |
+|---|---:|---:|---:|
+| Final train loss | 3.924996 | 3.949685 | -0.024689 |
+| Final exact match | 0.0390625 | 0.046875 | -0.0078125 (-0.78 percentage points) |
+| Final mean joint log probability | -4.060502 | -4.053905 | -0.006597 |
+| Median throughput | 2549.58 examples/s | 2588.58 examples/s | -39.00 examples/s (-1.51%) |
+| Mean throughput | 2546.59 examples/s | 2583.63 examples/s | -37.03 examples/s (-1.43%) |
+
+- The metrics file contains 200 training records, 20 evaluation records, and 199 post-warmup throughput measurements. Throughput ranged from 2414.87 to 2563.51 examples/s.
+- The maximum logged pre-clipping gradient norm was 6.333854 and the final value was 1.635575. All recorded gate statistics were finite and bounded.
+- Sender gate mean changed from 0.108426 at step 10 to 0.069375 at step 2,000; its final near-zero and near-one fractions were 0.602638 and 0.006935.
+- Receiver gate mean changed from 0.086442 at step 10 to 0.047198 at step 2,000; its final near-zero and near-one fractions were 0.728441 and 0. The receiver statistics exclude padded memory positions.
+- Every one of the 200 training records contains a compact generated-vocabulary histogram. The observed histograms contain 3 to 18 populated top-token bins, never exceed the configured 100-token cap, and have matching token-ID/count/edge dimensions.
 
 ## Artifacts
 
@@ -77,14 +89,18 @@ Pending.
 | Source snapshot | `/kmh-nfs-ssd-us-mount/staging/kristine/elf/20261015-conlang-jax-v4-8-b256-steps2000-h512-output-h256-tied-encoders-gates64-20261015T181932.284820169Z`; remote path with the same basename under `/home/kristinelu/elf-runs/source/` | yes; local and remote both contain 41 files and 355884 bytes with relative SHA-256-manifest digest `9925550dd13a2929a08b7084979ff5cf5e1c89213354a890bf2be9552ebd8733` |
 | Regional dataset | `/home/kristinelu/elf-data/conlangs-v1` | yes; generated deterministically on the Central2 TPU after the matching US-CENTRAL2 bucket prefix was confirmed absent; 7 files, 11643131 bytes, 15625 worlds, 125000 questions, manifest SHA-256 `a839b6ac98ba33a008caaebdde40dea7bc1e639106e93aab25ab2af3c29588e8` |
 | Runtime | `/home/kristinelu/elf-runs/runtime/venv` | yes; pinned JAX 0.6.2 profile, freeze SHA-256 `42d44c5882ca2ce9933a0891abf430e9426142616b448939265565d17c2ee18c`, W&B authenticated |
-| Checkpoint | `/home/kristinelu/elf-runs/20261015-conlang-jax-v4-8-b256-steps2000-h512-output-h256-tied-encoders-gates64/checkpoint.msgpack` | no; launch pending |
-| Tracking run | not recorded | no; launch pending |
+| Checkpoint | `/home/kristinelu/elf-runs/20261015-conlang-jax-v4-8-b256-steps2000-h512-output-h256-tied-encoders-gates64/checkpoint.msgpack` | yes; 200769242 bytes, SHA-256 `a814550cd59d03c6707f3147604211f586afd26e9718e52979c6994835d52da8`, CPU restore verified step 2,000 |
+| Tracking run | `https://wandb.ai/kaynelu921-massachusetts-institute-of-technology/conlangs/runs/a36jxlly` | yes; W&B state `finished`, summary step 2,000, config identity verified, five metadata/log files and no media/table files |
+| Metrics | `experiment_log/2026-10-15/artifacts/20261015-conlang-jax-v4-8-b256-steps2000-h512-output-h256-tied-encoders-gates64/metrics.jsonl` | yes; 220 lines, SHA-256 `26262f00149a864b0d1dbc56823dcd62625b1d5d95c38b581698d6680080b743` |
+| Generated outputs | `experiment_log/2026-10-15/artifacts/20261015-conlang-jax-v4-8-b256-steps2000-h512-output-h256-tied-encoders-gates64/outputs.jsonl` | yes; 200 lines, SHA-256 `ecaa788451a93b5956f1b376050de75bc185a0e1e6c46fc065e34af648f13a9c` |
+| Effective config | `experiment_log/2026-10-15/artifacts/20261015-conlang-jax-v4-8-b256-steps2000-h512-output-h256-tied-encoders-gates64/config.yml` | yes; SHA-256 `bd042314a95f1db1cae29f681a4878d5ed92a0412d06543c7db256b1c712bd63` |
+| Canonical launcher log | `experiment_log/2026-10-15/artifacts/20261015-conlang-jax-v4-8-b256-steps2000-h512-output-h256-tied-encoders-gates64/launcher.log` and deterministic gzip | yes; 264 lines, raw SHA-256 `513a8864cde5b876f7dc9726d2d1578a7ace9d0faa847da5174410396c9a8067`, gzip SHA-256 `54b03e174d32ea38a50701a138149a508880c482cf49f1b1b82729b92eebf1b6` |
 
 ## Failure Details
 
-- Last known step: not applicable
+- Last known step: `2000`
 - Error summary: not applicable
-- Detailed output: not recorded
+- Detailed output: canonical launcher log listed above; no fatal marker found
 
 ## Observations
 
@@ -95,11 +111,17 @@ Pending.
 - Runtime initialization was scoped to this selected idle TPU. The pinned runtime then passed a fresh no-initialize readiness probe.
 - The regional bucket location is `US-CENTRAL2`; its `kristine/datasets/conlangs` prefix was absent, so the established seed-1729 starter dataset was regenerated node-locally and fully verified rather than copied across regions.
 - Remote preflight reported 84 GiB free for data and outputs, an absent run output path, and an idle TPU device.
+- JAX reported the TPU backend and four devices before training. The canonical process-zero log contains exactly one terminal completion sentinel at step 2,000 and no fatal marker.
+- After completion, the exact trainer was absent, `/tmp/libtpu_lockfile` was absent, all VFIO devices were idle, and the TPU remained `READY` and `HEALTHY`.
+- W&B finished with the intended hidden size 512, output hidden size 256, tied encoder, 64 gate channels, 2,000 steps, and seed 1730. It contains 200 compact vocabulary histograms and no large table or media artifact.
 
 ## Interpretation
 
-- This run isolates separate 64-channel sender and receiver residual gates relative to the completed hidden-512 tied-encoder baseline. One seed and a 2,000-step horizon can establish mechanics and a directional result, but not a general quality claim.
+- This run isolates separate 64-channel sender and receiver residual gates relative to the completed hidden-512 tied-encoder baseline. The gates trained away from their initial mostly-open sigmoid values toward sparse activation, more strongly for the receiver.
+- At this seed and horizon, the gated treatment improved final train loss by 0.024689 but reduced exact match by 0.78 percentage points and made mean joint log probability 0.006597 more negative. Median throughput fell 1.51% while parameter count rose 1.197%. These mixed changes do not support a quality improvement claim from one seed.
 
 ## Updates
 
 - `2026-10-15T18:22:32Z`: The reviewed source/config closure was pushed to PR 1, the pinned runtime and deterministic regional data were initialized and verified on the selected TPU, the immutable source snapshot matched locally and remotely, and remote preflight passed. Launch remains pending the final occupancy gate.
+- `2026-10-15T18:25:12Z`: Final cloud and occupancy checks reported `READY`, `HEALTHY`, and `AVAILABLE`; launched the immutable source snapshot on the selected Kristine v4-8 and registered W&B run `a36jxlly`.
+- `2026-10-15T18:36:46Z`: Training completed at step 2,000. W&B, checkpoint restore, artifact hashes, terminal log, process absence, VFIO idleness, and TPU health were independently verified.
