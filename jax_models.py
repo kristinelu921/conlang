@@ -70,11 +70,14 @@ class JaxCommunicationModelConfig:
 
 
 class JaxCommunicationOutput(NamedTuple):
-    """Answer logits, per-example probability, and scalar loss."""
+    """Answer logits, probability, loss, and the activations used for metrics."""
 
     logits: Array
     joint_log_probability: Array
     loss: Array
+    message_1: Array
+    message_2: Array
+    receiver_activation: Array
 
 
 def _attention_mask(query_valid: Array, key_valid: Array) -> Array:
@@ -371,8 +374,8 @@ class Receiver(nn.Module):
         answer_embeddings: Array,
         answer_input_ids: Array,
         deterministic: bool,
-    ) -> Array:
-        """Return answer logits for fixed-shape message, question, and answer inputs."""
+    ) -> tuple[Array, Array]:
+        """Return answer logits and the decoder state before the output projection."""
         config = self.config
         batch_size = messages.shape[0]
         message_count = config.message_length * 2
@@ -406,12 +409,13 @@ class Receiver(nn.Module):
                 memory_valid,
                 deterministic,
             )
-        return nn.Dense(
+        logits = nn.Dense(
             config.vocab_size,
             dtype=jnp.float32,
             param_dtype=jnp.float32,
             name="output_projection",
         )(hidden)
+        return logits, hidden
 
 
 class JaxCommunicationModel(nn.Module):
@@ -452,7 +456,7 @@ class JaxCommunicationModel(nn.Module):
         deterministic: bool,
     ) -> Array:
         """Score answer inputs from encoded messages and a question."""
-        return self.receiver(
+        logits, _receiver_activation = self.receiver(
             messages,
             self.token_embedding(question_token_ids),
             question_token_ids,
@@ -460,6 +464,7 @@ class JaxCommunicationModel(nn.Module):
             answer_input_ids,
             deterministic,
         )
+        return logits
 
     def __call__(
         self,
@@ -468,13 +473,35 @@ class JaxCommunicationModel(nn.Module):
         question_token_ids: Array,
         answer_token_ids: Array,
         deterministic: bool = False,
+        *,
+        stop_message_1: bool = False,
+        stop_message_2: bool = False,
+        stop_receiver_tokens: bool = False,
     ) -> JaxCommunicationOutput:
         """Teacher-force answers and return their joint log probability."""
         batch_size = answer_token_ids.shape[0]
         beginning = jnp.full((batch_size, 1), self.config.bos_id, dtype=jnp.int32)
         answer_input_ids = jnp.concatenate((beginning, answer_token_ids[:, :-1]), axis=1)
         messages = self.encode_messages(agent_1_token_ids, agent_2_token_ids, deterministic)
-        logits = self.answer_logits(messages, question_token_ids, answer_input_ids, deterministic)
+        message_1 = messages[:, : self.config.message_length]
+        message_2 = messages[:, self.config.message_length :]
+        if stop_message_1:
+            message_1 = jax.lax.stop_gradient(message_1)
+        if stop_message_2:
+            message_2 = jax.lax.stop_gradient(message_2)
+        question_embeddings = self.token_embedding(question_token_ids)
+        answer_embeddings = self.token_embedding(answer_input_ids)
+        if stop_receiver_tokens:
+            question_embeddings = jax.lax.stop_gradient(question_embeddings)
+            answer_embeddings = jax.lax.stop_gradient(answer_embeddings)
+        logits, receiver_activation = self.receiver(
+            jnp.concatenate((message_1, message_2), axis=1),
+            question_embeddings,
+            question_token_ids,
+            answer_embeddings,
+            answer_input_ids,
+            deterministic,
+        )
         log_probabilities = jax.nn.log_softmax(logits.astype(jnp.float32), axis=-1)
         token_log_probabilities = jnp.take_along_axis(
             log_probabilities, answer_token_ids[..., None], axis=-1
@@ -485,6 +512,9 @@ class JaxCommunicationModel(nn.Module):
             logits=logits,
             joint_log_probability=joint_log_probability,
             loss=-joint_log_probability.mean(),
+            message_1=message_1,
+            message_2=message_2,
+            receiver_activation=receiver_activation,
         )
 
     def greedy_answer_token_ids(

@@ -144,9 +144,16 @@ The JAX path uses AdamW with learning rate `3e-4`, matrix-only weight decay
 uses bfloat16 model compute with float32 log-softmax and loss calculations.
 Evaluation disables dropout and reports greedy exact match.
 
-The optimized trainer logs loss, global gradient norm, and steady-state
-examples per second at a configurable interval. Throughput accounting excludes
-compilation and warmup. On TPU, omitting `dataset_dir` makes the trainer verify
+At the logging interval, the trainer writes one `outputs.jsonl` record with the
+greedy answer token ids, decoded strings, targets, and the fraction whose second
+token is the end token. It also records loss, the full gradient norm, separate
+gradient norms for the agent-1 sender path, the agent-2 sender path, and the
+receiver, weight norms, activation root-mean-squares, and fixed-bin histograms
+of the two message vectors and the receiver activation. Generated vocabulary
+telemetry is a compact token-ID histogram containing only the 100 most frequent
+generated tokens at that step; W&B receives no vocabulary table or
+full-vocabulary array. Throughput accounting excludes compilation, warmup,
+evaluation, and W&B logging. On TPU, omitting `dataset_dir` makes the trainer verify
 the TPU zone, require the matching regional bucket, and use the configured
 node-local cache under `/home/<user>/elf-data/`.
 

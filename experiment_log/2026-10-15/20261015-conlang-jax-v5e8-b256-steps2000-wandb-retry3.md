@@ -51,3 +51,13 @@ No scientific or telemetry changes from retry 2. W&B remains enabled. Compact 32
 - This fresh run identity preserves both earlier zero-step failures without overwriting them.
 - Before staging, the selected v5e-8 was claimed by a healthy current-user LaVin-DiT validation that held all eight VFIO devices for more than 40 minutes. It was identified read-only and left untouched.
 - This identity was never staged or launched and created no output directory, launcher log, W&B run, metrics, or checkpoint. The capacity fallback uses the distinct retry-4 identity.
+
+## Terminal Reconciliation
+
+- This planning identity was superseded before staging by retry 4 and is not a
+  runnable entry point in the finalized change.
+- Its YAML was removed from the finalized configuration closure. The historical
+  source remains available in Git commit `d417f52`.
+- Every `pending` field above records the preserved pre-launch planning state;
+  each is terminally resolved as not applicable because the run never launched.
+- Successor evidence is recorded in `20261015-conlang-jax-v4-8-b256-steps2000-wandb-retry4.md`.

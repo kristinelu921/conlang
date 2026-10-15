@@ -519,6 +519,26 @@ Never collapse a failed zero-step attempt into a later successful retry. Use a n
 - Cause: credentials verified only on worker 0 even though process 0 placement is not fixed.
 - Recovery: require authentication on every worker or disable W&B explicitly. Never print credentials.
 
+### Vocabulary-sized W&B histogram exceeds the serialization limit
+
+- Symptom: training reaches a logged step, then `wandb.Histogram` raises
+  `ValueError: The maximum length of a histogram is 512`; the trainer exits
+  before the next step even though model, optimizer, data, and TPU execution
+  were healthy.
+- Cause: telemetry supplies one count for every vocabulary item, so a normal
+  vocabulary produces thousands of bins and exceeds W&B's histogram limit.
+- Recovery: preserve the failed attempt and use a fresh run/output identity.
+  Build one host-side token-ID histogram from only the 100 most frequent
+  generated tokens, send only its counts and edges to W&B, and keep any exact
+  token-ID list local rather than creating a W&B table.
+- Prevention: enforce the 100-bin limit again at the W&B conversion boundary,
+  require exactly one more edge than count, and test that token IDs and any
+  full-vocabulary arrays are absent from the W&B payload. Keep W&B conversion
+  and enqueue time outside the measured training-throughput interval.
+- Observed: `20261015-conlang-jax-v5e8-b256-full2` reached step 10, then its
+  2,191-bin token-output histogram failed before step 20. The failure was
+  telemetry-only and produced no checkpoint.
+
 ### W&B helper opens a conflicting libtpu client
 
 - Symptoms: W&B initializes, a second timestamped libtpu process appears on the tracking worker, its `tokio-rt-worker` may segfault, and the first distributed program later halts with an unexpected peer or different launch ID.

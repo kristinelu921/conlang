@@ -21,7 +21,7 @@ import yaml
 from flax import jax_utils, serialization
 from flax.training.train_state import TrainState
 
-from jax_models import JaxCommunicationModel, JaxCommunicationModelConfig
+from jax_models import JaxCommunicationModel, JaxCommunicationModelConfig, JaxCommunicationOutput
 from linked_facts.generate_dataset import verify_dataset
 from tokenizer import TextTokenizer, build_task_tokenizer
 from regional_data import DATASET_PREFIX, resolve_training_dataset
@@ -268,8 +268,207 @@ def _optimizer_for_params(config: TrainConfig, params: Any) -> optax.GradientTra
     )
 
 
-def build_parallel_train_step(model: JaxCommunicationModel) -> Any:
+ACTIVATION_HISTOGRAM_EDGES = tuple(float(edge) for edge in np.linspace(-5.0, 5.0, 33))
+TOP_VOCABULARY_HISTOGRAM_SIZE = 100
+
+
+def _activation_histogram_counts(values: Array) -> Array:
+    """Count activation values into fixed bins from -5 to 5."""
+    edges = jnp.asarray(ACTIVATION_HISTOGRAM_EDGES)
+    flat = values.astype(jnp.float32).ravel()
+    indexes = jnp.digitize(flat, edges[1:-1])
+    indexes = jnp.clip(indexes, 0, edges.shape[0] - 2)
+    return jnp.bincount(indexes, length=edges.shape[0] - 1)
+
+
+def _global_root_mean_square(values: Array) -> Array:
+    """Return the root mean square after summing squares across devices."""
+    flat = values.astype(jnp.float32).ravel()
+    sum_squares = jax.lax.psum(jnp.sum(jnp.square(flat)), axis_name="devices")
+    count = jax.lax.psum(jnp.asarray(flat.size, dtype=jnp.float32), axis_name="devices")
+    return jnp.sqrt(sum_squares / count)
+
+
+def _json_metric_value(value: Any) -> Any:
+    """Convert one device metric into a JSON-ready scalar or list."""
+    array = np.asarray(value)
+    if array.ndim == 0:
+        return float(array)
+    return array.tolist()
+
+
+def _top_vocabulary_histogram(
+    generated_token_ids: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Build a token-ID histogram for the 100 most frequent generated tokens."""
+    token_id_array = np.asarray(generated_token_ids, dtype=np.int64)
+    assert token_id_array.ndim == 2 and token_id_array.size > 0
+    unique_token_ids, token_counts = np.unique(token_id_array, return_counts=True)
+    frequency_order = np.lexsort((unique_token_ids, -token_counts))
+    selected_indexes = frequency_order[:TOP_VOCABULARY_HISTOGRAM_SIZE]
+    selected_token_ids = unique_token_ids[selected_indexes]
+    selected_counts = token_counts[selected_indexes]
+    token_id_order = np.argsort(selected_token_ids)
+    selected_token_ids = selected_token_ids[token_id_order]
+    selected_counts = selected_counts[token_id_order]
+    token_id_values = selected_token_ids.astype(np.float64)
+    if token_id_values.size == 1:
+        histogram_edges = np.array(
+            [token_id_values[0] - 0.5, token_id_values[0] + 0.5],
+            dtype=np.float64,
+        )
+    else:
+        midpoints = (token_id_values[:-1] + token_id_values[1:]) / 2.0
+        histogram_edges = np.concatenate(
+            ([token_id_values[0] - 0.5], midpoints, [token_id_values[-1] + 0.5])
+        )
+    return selected_token_ids, selected_counts, histogram_edges
+
+
+def _host_training_record(
+    step: int,
+    host_metrics: Mapping[str, Any],
+    examples_per_second: float | None,
+    generated_token_ids: np.ndarray | None = None,
+) -> dict[str, Any]:
+    """Build the scalar and histogram record saved for one logged step."""
+    record: dict[str, Any] = {
+        "step": float(step),
+        "train_loss": float(host_metrics["loss"]),
+        "gradient_norm": float(host_metrics["gradient_norm"]),
+    }
+    if examples_per_second is not None:
+        record["examples_per_second"] = examples_per_second
+    for key, value in host_metrics.items():
+        if key in {"loss", "gradient_norm", "generated_token_ids"}:
+            continue
+        record[key] = _json_metric_value(value)
+    if "message_1_histogram" in record:
+        record["activation_histogram_edges"] = list(ACTIVATION_HISTOGRAM_EDGES)
+    if generated_token_ids is not None:
+        token_ids, token_counts, histogram_edges = _top_vocabulary_histogram(
+            generated_token_ids
+        )
+        record["generated_vocabulary_top_token_ids"] = token_ids.tolist()
+        record["generated_vocabulary_histogram"] = token_counts.tolist()
+        record["generated_vocabulary_histogram_edges"] = histogram_edges.tolist()
+    return record
+
+
+def _as_wandb_log(record: Mapping[str, Any]) -> dict[str, Any]:
+    """Turn compact histogram lists into W&B histograms and keep scalar metrics."""
+    import wandb
+
+    activation_edges = np.asarray(
+        record.get("activation_histogram_edges", ACTIVATION_HISTOGRAM_EDGES),
+        dtype=np.float64,
+    )
+    vocabulary_edges = record.get("generated_vocabulary_histogram_edges")
+    payload: dict[str, Any] = {}
+    for key, value in record.items():
+        if key in {
+            "activation_histogram_edges",
+            "generated_vocabulary_histogram_edges",
+            "generated_vocabulary_top_token_ids",
+        }:
+            continue
+        if key == "generated_vocabulary_histogram":
+            vocabulary_counts = np.asarray(value)
+            if vocabulary_edges is None:
+                raise ValueError("generated vocabulary histogram edges are required")
+            if vocabulary_counts.size > TOP_VOCABULARY_HISTOGRAM_SIZE:
+                raise ValueError("generated vocabulary histogram exceeds the 100-token limit")
+            payload[key] = wandb.Histogram(
+                np_histogram=(vocabulary_counts, np.asarray(vocabulary_edges, dtype=np.float64))
+            )
+            continue
+        if key.endswith("_histogram"):
+            payload[key] = wandb.Histogram(
+                np_histogram=(np.asarray(value), activation_edges)
+            )
+            continue
+        payload[key] = value
+    return payload
+
+
+def _unshard_token_ids(token_ids: Array) -> np.ndarray:
+    """Flatten a pmapped token array back to host batch order."""
+    array = np.asarray(jax.device_get(token_ids))
+    return array.reshape(-1, array.shape[-1])
+
+
+def _append_model_outputs(
+    outputs_path: Path,
+    step: int,
+    generated_token_ids: np.ndarray,
+    target_token_ids: np.ndarray,
+    tokenizer: TextTokenizer,
+) -> None:
+    """Append one step's greedy answers and targets to the outputs file."""
+    generated_rows = np.asarray(generated_token_ids, dtype=np.int32)
+    target_rows = np.asarray(target_token_ids, dtype=np.int32)
+    record = {
+        "step": step,
+        "generated_token_ids": generated_rows.tolist(),
+        "target_token_ids": target_rows.tolist(),
+        "generated_text": [tokenizer.decode_answer(row) for row in generated_rows.tolist()],
+        "target_text": [tokenizer.decode_answer(row) for row in target_rows.tolist()],
+        "second_position_eos_fraction": float(np.mean(generated_rows[:, 1] == tokenizer.eos_id)),
+    }
+    with outputs_path.open("a", encoding="utf-8") as outputs_file:
+        outputs_file.write(json.dumps(record, sort_keys=True) + "\n")
+
+
+def _read_step_metrics(device_metrics: Mapping[str, Array]) -> tuple[dict[str, Any], np.ndarray | None]:
+    """Copy one step's replicated metrics to the host, unsharding generated tokens."""
+    generated = None
+    if "generated_token_ids" in device_metrics:
+        generated = _unshard_token_ids(device_metrics["generated_token_ids"])
+    host_metrics = {
+        key: np.asarray(jax.device_get(value[0]))
+        for key, value in device_metrics.items()
+        if key != "generated_token_ids"
+    }
+    return host_metrics, generated
+
+
+def build_parallel_train_step(
+    model: JaxCommunicationModel,
+    collect_path_gradients: bool = True,
+    collect_diagnostics: bool = True,
+) -> Any:
     """Compile one data-parallel optimization step across local TPU devices."""
+    if collect_path_gradients and not collect_diagnostics:
+        raise ValueError("path gradients require diagnostic collection")
+
+    def component_gradient_norm(
+        params: Any,
+        batch: JaxExampleBatch,
+        dropout_key: Array,
+        stop_message_1: bool,
+        stop_message_2: bool,
+        stop_receiver_tokens: bool,
+        parts: tuple[str, ...],
+    ) -> Array:
+        """Return the norm of one sender or receiver slice of the training gradient."""
+
+        def loss_function(current_params: Any) -> Array:
+            return model.apply(
+                {"params": current_params},
+                batch.agent_1_token_ids,
+                batch.agent_2_token_ids,
+                batch.question_token_ids,
+                batch.answer_token_ids,
+                deterministic=False,
+                stop_message_1=stop_message_1,
+                stop_message_2=stop_message_2,
+                stop_receiver_tokens=stop_receiver_tokens,
+                rngs={"dropout": dropout_key},
+            ).loss
+
+        component_gradients = jax.lax.pmean(jax.grad(loss_function)(params), axis_name="devices")
+        selected = {part: component_gradients[part] for part in parts}
+        return optax.global_norm(selected)
 
     def train_step(
         state: TrainState,
@@ -278,7 +477,7 @@ def build_parallel_train_step(model: JaxCommunicationModel) -> Any:
     ) -> tuple[TrainState, dict[str, Array]]:
         """Average gradients across devices and apply one optimizer update."""
 
-        def loss_function(params: Any) -> Array:
+        def loss_function(params: Any) -> tuple[Array, JaxCommunicationOutput]:
             output = model.apply(
                 {"params": params},
                 batch.agent_1_token_ids,
@@ -288,16 +487,64 @@ def build_parallel_train_step(model: JaxCommunicationModel) -> Any:
                 deterministic=False,
                 rngs={"dropout": dropout_key},
             )
-            return output.loss
+            return output.loss, output
 
-        loss, gradients = jax.value_and_grad(loss_function)(state.params)
+        (loss, output), gradients = jax.value_and_grad(loss_function, has_aux=True)(state.params)
         gradients = jax.lax.pmean(gradients, axis_name="devices")
         loss = jax.lax.pmean(loss, axis_name="devices")
-        gradient_norm = optax.global_norm(gradients)
+        params_for_path_gradients = state.params
         state = state.apply_gradients(grads=gradients)
-        return state, {"loss": loss, "gradient_norm": gradient_norm}
+        metrics = {
+            "loss": loss,
+            "gradient_norm": optax.global_norm(gradients),
+        }
+        if not collect_diagnostics:
+            return state, metrics
+        generated_token_ids = model.apply(
+            {"params": state.params},
+            batch.agent_1_token_ids,
+            batch.agent_2_token_ids,
+            batch.question_token_ids,
+            method=model.greedy_answer_token_ids,
+        )
+        metrics.update({
+            "weight_norm": optax.global_norm(state.params),
+            "weight_norm_embedding": optax.global_norm(state.params["token_embedding"]),
+            "weight_norm_sender": optax.global_norm(state.params["sender"]),
+            "weight_norm_receiver": optax.global_norm(state.params["receiver"]),
+            "activation_rms_message_1": _global_root_mean_square(output.message_1),
+            "activation_rms_message_2": _global_root_mean_square(output.message_2),
+            "activation_rms_receiver": _global_root_mean_square(output.receiver_activation),
+            "message_1_histogram": jax.lax.psum(
+                _activation_histogram_counts(output.message_1), axis_name="devices"
+            ),
+            "message_2_histogram": jax.lax.psum(
+                _activation_histogram_counts(output.message_2), axis_name="devices"
+            ),
+            "receiver_activation_histogram": jax.lax.psum(
+                _activation_histogram_counts(output.receiver_activation), axis_name="devices"
+            ),
+            "second_position_eos_fraction": jax.lax.pmean(
+                jnp.mean((generated_token_ids[:, 1] == model.config.eos_id).astype(jnp.float32)),
+                axis_name="devices",
+            ),
+            "generated_token_ids": generated_token_ids,
+        })
+        if collect_path_gradients:
+            # These reuse the update's dropout key so each path is a slice of the same noise.
+            metrics["gradient_norm_agent_1"] = component_gradient_norm(
+                params_for_path_gradients, batch, dropout_key, False, True, True, ("sender", "token_embedding")
+            )
+            metrics["gradient_norm_agent_2"] = component_gradient_norm(
+                params_for_path_gradients, batch, dropout_key, True, False, True, ("sender", "token_embedding")
+            )
+            metrics["gradient_norm_receiver"] = component_gradient_norm(
+                params_for_path_gradients, batch, dropout_key, True, True, False, ("receiver", "token_embedding")
+            )
+        return state, metrics
 
     return jax.pmap(train_step, axis_name="devices")
+
 
 
 def build_parallel_evaluation_step(model: JaxCommunicationModel) -> Any:
@@ -438,7 +685,7 @@ def _append_metrics(metrics_path: Path | None, metrics: Mapping[str, float]) -> 
         metrics_file.write(json.dumps(dict(metrics), sort_keys=True) + "\n")
 
 
-def train(config: TrainConfig) -> dict[str, float]:
+def train(config: TrainConfig) -> dict[str, Any]:
     """Train the Flax communication model and return final evaluation metrics."""
     config.validate()
     output_directory = config.output_path.parent if config.output_path is not None else None
@@ -483,9 +730,15 @@ def train(config: TrainConfig) -> dict[str, float]:
         optimizer = _optimizer_for_params(config, initial_state.params)
         state = TrainState.create(apply_fn=model.apply, params=initial_state.params, tx=optimizer)
         replicated_state = jax_utils.replicate(state)
-        parallel_train_step = build_parallel_train_step(model)
+        parallel_train_step = build_parallel_train_step(
+            model,
+            collect_path_gradients=False,
+            collect_diagnostics=False,
+        )
+        parallel_logged_train_step = build_parallel_train_step(model, collect_path_gradients=True)
         parallel_evaluation_step = build_parallel_evaluation_step(model)
         metrics_path = None if output_directory is None else output_directory / "metrics.jsonl"
+        outputs_path = None if output_directory is None else output_directory / "outputs.jsonl"
         print(
             f"run_id={config.run_id} backend={devices[0].platform} devices={jax.device_count()} "
             f"dataset={dataset_directory} verified_questions={verified_dataset['questions']} "
@@ -494,59 +747,71 @@ def train(config: TrainConfig) -> dict[str, float]:
         )
         interval_started_at = time.perf_counter()
         interval_start_step = 0
-        last_metrics: dict[str, float] = {"step": 0.0, "train_loss": 0.0}
+        last_metrics: dict[str, Any] = {"step": 0.0, "train_loss": 0.0}
         base_dropout_key = jax.random.PRNGKey(config.seed + 1)
         for step in range(1, config.steps + 1):
             batch = first_batch if step == 1 else next(batch_iterator)
             sharded_batch = shard_batch(batch, local_device_count)
             dropout_keys = jax.random.split(jax.random.fold_in(base_dropout_key, step), local_device_count)
-            replicated_state, device_metrics = parallel_train_step(
+            should_log_scalars = step == config.throughput_warmup_steps or (
+                step > config.throughput_warmup_steps and (step % config.log_every == 0 or step == config.steps)
+            )
+            step_function = parallel_logged_train_step if should_log_scalars else parallel_train_step
+            replicated_state, device_metrics = step_function(
                 replicated_state, sharded_batch, dropout_keys
             )
-            if step == config.throughput_warmup_steps:
-                host_metrics = jax.device_get(
-                    jax.tree_util.tree_map(lambda value: value[0], device_metrics)
+            should_evaluate = step % config.eval_every == 0 or step == config.steps
+            host_metrics = None
+            generated_token_ids = None
+            if should_log_scalars:
+                host_metrics, generated_token_ids = _read_step_metrics(device_metrics)
+                if outputs_path is not None and generated_token_ids is not None:
+                    _append_model_outputs(
+                        outputs_path,
+                        step,
+                        generated_token_ids,
+                        batch.answer_token_ids,
+                        tokenizer,
+                    )
+            pending_wandb: dict[str, Any] | None = None
+            reset_interval_timer = False
+            if step == config.throughput_warmup_steps and host_metrics is not None:
+                warmup_record = _host_training_record(
+                    step,
+                    host_metrics,
+                    None,
+                    generated_token_ids,
                 )
-                warmup_record = {
-                    "step": float(step),
-                    "train_loss": float(host_metrics["loss"]),
-                    "gradient_norm": float(host_metrics["gradient_norm"]),
-                }
                 print(
                     f"step={step} train_loss={warmup_record['train_loss']:.4f} "
                     f"gradient_norm={warmup_record['gradient_norm']:.4f} throughput=warmup"
                 )
                 _append_metrics(metrics_path, warmup_record)
-                if wandb_run is not None:
-                    wandb_run.log(warmup_record, step=step)
-                interval_started_at = time.perf_counter()
-                interval_start_step = step
-            if step > config.throughput_warmup_steps and (
-                step % config.log_every == 0 or step == config.steps
+                pending_wandb = warmup_record
+                reset_interval_timer = True
+            if (
+                step > config.throughput_warmup_steps
+                and (step % config.log_every == 0 or step == config.steps)
+                and host_metrics is not None
             ):
-                host_metrics = jax.device_get(
-                    jax.tree_util.tree_map(lambda value: value[0], device_metrics)
-                )
                 elapsed = time.perf_counter() - interval_started_at
                 interval_steps = step - interval_start_step
                 examples_per_second = interval_steps * config.batch_size / elapsed
-                last_metrics = {
-                    "step": float(step),
-                    "train_loss": float(host_metrics["loss"]),
-                    "gradient_norm": float(host_metrics["gradient_norm"]),
-                    "examples_per_second": examples_per_second,
-                }
+                last_metrics = _host_training_record(
+                    step,
+                    host_metrics,
+                    examples_per_second,
+                    generated_token_ids,
+                )
                 print(
                     f"step={step} train_loss={last_metrics['train_loss']:.4f} "
                     f"gradient_norm={last_metrics['gradient_norm']:.4f} "
                     f"examples_per_second={examples_per_second:.2f}"
                 )
                 _append_metrics(metrics_path, last_metrics)
-                if wandb_run is not None:
-                    wandb_run.log(last_metrics, step=step)
-                interval_started_at = time.perf_counter()
-                interval_start_step = step
-            if step % config.eval_every == 0 or step == config.steps:
+                pending_wandb = last_metrics
+                reset_interval_timer = True
+            if should_evaluate:
                 evaluation = evaluate_exact_match(
                     replicated_state.params,
                     tokenized_validation,
@@ -561,8 +826,12 @@ def train(config: TrainConfig) -> dict[str, float]:
                 )
                 evaluation_record = {"step": float(step), **evaluation}
                 _append_metrics(metrics_path, evaluation_record)
-                if wandb_run is not None:
-                    wandb_run.log({f"eval/{key}": value for key, value in evaluation.items()}, step=step)
+                eval_payload = {f"eval/{key}": value for key, value in evaluation.items()}
+                pending_wandb = eval_payload if pending_wandb is None else {**pending_wandb, **eval_payload}
+                reset_interval_timer = True
+            if pending_wandb is not None and wandb_run is not None:
+                wandb_run.log(_as_wandb_log(pending_wandb), step=step)
+            if reset_interval_timer:
                 interval_started_at = time.perf_counter()
                 interval_start_step = step
         if config.output_path is not None:
