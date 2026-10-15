@@ -13,6 +13,7 @@ and a receiver must answer a question from the two messages alone.
 | Receiver input | Those 8 vectors, then the question | The receiver never sees either passage. Concatenating the messages in agent order keeps which sender said what. |
 | Receiver output | Up to 4 answer tokens | You asked for an answer of at most 4 tokens. Decoding stops at the end token. |
 | Output head | Direct linear projection by default; optional independent hidden width | A configured output hidden size adds one ReLU projection before the vocabulary logits without changing the sender, messages, or Transformer width. |
+| Role gates | Disabled by default; optional separate sender and receiver bottleneck gates | A configured gate width lets each role adapt the tied encoder output without duplicating the encoder. The residual output starts at zero, so enabling gates preserves the initial ungated function. |
 | Width and depth | Hidden 128, 2 layers, 4 heads, feedforward 512 | 128 was requested. Two layers and four heads keep it a small encoder-decoder. Feedforward width is the usual 4 times the hidden size from Attention Is All You Need. Each head is 32 wide. |
 | Attention KV | Standard multi-head attention | One fused query/key/value projection per block, full keys and values for every head. No grouped-query or multi-query attention, and no KV cache. |
 | Channel contents | Continuous hidden states | The joint answer log probability has to train both messages. Continuous vectors let that gradient pass through the sender. A discrete codebook would need an extra sampling step that was not requested. |
@@ -61,6 +62,14 @@ Setting `tie_sender_receiver_encoder` makes the sender and receiver reuse one
 Transformer encoder stack. Their already-shared token embedding remains tied,
 while the sender query embeddings, receiver decoder, and receiver output head
 remain separate because they have distinct roles and parameter structures.
+
+Setting `role_gate_channels` adds distinct residual adapters after the sender's
+message readout and after the receiver's encoder memory. Each adapter projects
+the hidden state into the configured bottleneck twice: one ReLU candidate and
+one sigmoid gate whose bias starts at `-2`. Their product is projected back to
+the Transformer width and added to the original state. The final projection is
+zero-initialized, so the adapter begins as an exact identity. Sender and
+receiver gate parameters remain separate even when their encoder stack is tied.
 
 Each block is post-norm with ReLU and dropout 0.1, built from Flax
 `MultiHeadDotProductAttention` and `Dense`. Attention softmax runs in float32.
