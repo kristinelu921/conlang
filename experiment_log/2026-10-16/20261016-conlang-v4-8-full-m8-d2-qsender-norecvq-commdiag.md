@@ -106,3 +106,4 @@ Pending launch and verified completion.
 - `2026-10-16`: Added a matched within-world wrong-question control so the next evaluation can distinguish question identity from generic learned-message dependence.
 - `2026-10-16T09:36:15Z`: Created immutable launch snapshot `88a296a353902e74bfe44c5d4874c8c164e7b20e` and verified its 55-file local manifest.
 - `2026-10-16T09:40:31Z`: Verified an identical node-local source manifest, JAX `0.6.2` runtime imports, the complete regional dataset, 85 GiB free space, and idle TPU devices; the exact run and output paths were absent.
+- `2026-10-16T09:43:30Z`: Preflight imports created three current-user `linked_facts/__pycache__/*.pyc` files in the remote source. With no trainer active, removed only those regenerable caches and their empty directory, then restored and reverified the exact 55-file, 418494-byte snapshot and digest. Further import checks use `PYTHONDONTWRITEBYTECODE=1`.
