@@ -9,7 +9,7 @@
 | Started | `not recorded; not launched` |
 | Finished | `not recorded; not launched` |
 | Baseline | `20261016-conlang-v4-8-full-m4-d2-commdiag` |
-| Git revision | primary implementation/configuration commit `c7e51f09de68e490c5682a612644c22bf398c9f8`; correctness/cleanup-reviewed closure and immutable launch snapshot pending |
+| Git revision | primary implementation/configuration commit `c7e51f00729c6bda3fb0550571778bfa17022e8a`; correctness/cleanup-reviewed closure and immutable launch snapshot pending |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` |
 | Primary configuration | `configs/conlang-jax-v4-8-full-m4-d2-qquery-msgkv-commdiag.yaml` |
 | Command | `/snap/google-cloud-cli/current/bin/gcloud compute tpus tpu-vm ssh kmh-tpuvm-v4-8-spot-kristine-14-23-12-28-N-us-central2-b --project=he-vision-group --zone=us-central2-b --worker=all --internal-ip --ssh-flag=-F --ssh-flag=/dev/null --command='set -euo pipefail; mkdir -p /home/kristinelu/elf-runs; test ! -e /home/kristinelu/elf-runs/20261016-conlang-v4-8-full-m4-d2-qquery-msgkv-commdiag; test ! -e /tmp/libtpu_lockfile; test -z "$(sudo fuser /dev/vfio/* 2>/dev/null || true)"; cd /home/kristinelu/elf-runs/source/20261016-conlang-v4-8-full-m4-d2-qquery-msgkv-commdiag; export JAX_PLATFORMS=tpu CUDA_VISIBLE_DEVICES= ELF_TPU_WORKER_INDEX=0 PYTHONPATH="$PWD" HF_HOME=/home/kristinelu/elf-runs/hf-cache PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1; ulimit -c 0; /home/kristinelu/elf-runs/runtime/venv/bin/python -u train.py --config configs/conlang-jax-v4-8-full-m4-d2-qquery-msgkv-commdiag.yaml 2>&1 | tee /home/kristinelu/elf-runs/20261016-conlang-v4-8-full-m4-d2-qquery-msgkv-commdiag.launcher.log'` |
@@ -88,7 +88,7 @@ Pending launch and verified completion.
 
 | Artifact | Path or URL | Verified |
 |---|---|---|
-| Configuration | `configs/conlang-jax-v4-8-full-m4-d2-qquery-msgkv-commdiag.yaml` | committed in `c7e51f09de68e490c5682a612644c22bf398c9f8`, parses and validates locally; review, push, and remote hash pending |
+| Configuration | `configs/conlang-jax-v4-8-full-m4-d2-qquery-msgkv-commdiag.yaml` | committed in `c7e51f00729c6bda3fb0550571778bfa17022e8a`, parses and validates locally; review, push, and remote hash pending |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` | existing PR; update pending |
 | Source snapshot | `not recorded; pending immutable staging` | no |
 | Regional dataset | `/home/kristinelu/elf-data/conlangs-v1` | previously verified Central2 copy; fresh preflight pending |
