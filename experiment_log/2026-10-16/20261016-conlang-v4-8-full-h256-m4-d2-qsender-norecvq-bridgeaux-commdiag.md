@@ -5,8 +5,8 @@
 | Field | Value |
 |---|---|
 | Run ID | `20261016-conlang-v4-8-full-h256-m4-d2-qsender-norecvq-bridgeaux-commdiag` |
-| Status | `planned` |
-| Started | not started |
+| Status | `running` |
+| Started | `2026-10-16T12:14:53Z` |
 | Finished | not applicable |
 | Baseline | `20261016-conlang-v4-8-full-m4-d2-qsender-norecvq-bridgeaux-commdiag` |
 | Git revision | primary configuration commit `570334c62e6ed33d0fe1f6e3b2b30061ace79b7c`; final reviewed configuration/report closure `d45924a8816df48be91e2f8588fd285d063599f4`; immutable launch snapshot HEAD `68a819dad88d1d2bd705af3b696081dabdd9ee00` |
@@ -89,7 +89,7 @@ Pending launch and verified completion.
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` | reviewed configuration closure pushed to `codex/jax-tpu-training` |
 | Source snapshot | `/kmh-nfs-ssd-us-mount/staging/kristine/elf/20261016-conlang-v4-8-full-h256-m4-d2-qsender-norecvq-bridgeaux-commdiag-20261016T120728.329172883Z`; remote `/home/kristinelu/elf-runs/source/20261016-conlang-v4-8-full-h256-m4-d2-qsender-norecvq-bridgeaux-commdiag` | local and remote matched before launch: 58 files, 442420 bytes, relative SHA-256-manifest digest `f950b1800036e09fbaab6da482b73cecf9d41ddc5e0bea761df84a7e268a8d56`; selected-config SHA-256 `454571ea9d0625088324f58cb5efb55e305217c2f2b84346d6c0eb11297530b9`; no bytecode or test caches |
 | Regional dataset | `/home/kristinelu/elf-data/conlangs-v1` | complete Central2 data revalidated: 15,625 worlds / 125,000 questions / 8 questions per world; manifest SHA-256 `a839b6ac98ba33a008caaebdde40dea7bc1e639106e93aab25ab2af3c29588e8` |
-| Tracking run | pending | W&B enabled; final run identity must match the selected configuration |
+| Tracking run | `https://wandb.ai/kaynelu921-massachusetts-institute-of-technology/conlangs/runs/zhd3x4ld` | authenticated, exact configured run name, and currently running |
 | Checkpoint | `/home/kristinelu/elf-runs/20261016-conlang-v4-8-full-h256-m4-d2-qsender-norecvq-bridgeaux-commdiag/checkpoint.msgpack` | pending |
 
 ## Review and Verification
@@ -98,7 +98,7 @@ Pending launch and verified completion.
 - Correctness review passed for the committed configuration/report closure after correcting the coupled-width and output-projection descriptions.
 - Cleanup review identified two report-only provenance/projection clarifications; cleanup re-review passed at `d45924a8816df48be91e2f8588fd285d063599f4`.
 - Remote node-local snapshot, region-local dataset, JAX `0.6.2` runtime, authenticated W&B file presence, writable `/tmp/tpu_logs`, 85 GiB free space, fresh output path, process absence, and TPU-device idleness passed preflight.
-- Pending final mandatory TPU availability and launch-boundary VFIO/lock/output checks immediately before the foreground launch.
+- The exact Kristine v4-8 remained in the final mandatory `AVAILABLE` table immediately before launch; the launch-boundary output, lock, and VFIO checks passed.
 - The mandatory checker listed the exact Kristine v4-8 in its final `AVAILABLE` table, and `tpu_scripts/run_staging.sh` created the verified immutable 58-file snapshot at HEAD `68a819dad88d1d2bd705af3b696081dabdd9ee00`.
 
 ## Failure Details
@@ -112,3 +112,4 @@ Pending launch and verified completion.
 - `2026-10-16T12:07:28Z`: The exact same Kristine v4-8 appeared in the mandatory final `AVAILABLE` table; created and verified the immutable local launch snapshot, selected-config hash, and cache exclusions.
 - `2026-10-16`: Recovered the zero-file SCP attempt without changing the run identity, copied the full snapshot directory including dotfiles, and verified the exact remote file count, byte count, manifest digest, and selected-config hash.
 - `2026-10-16`: Revalidated JAX `0.6.2`, Flax `0.10.5`, Optax `0.2.8`, W&B `0.28.1`, the complete regional dataset, 85 GiB free space, fresh output path, W&B authentication-file presence, writable `/tmp/tpu_logs`, and idle TPU devices.
+- `2026-10-16T12:14:53Z`: Launched on the exact same Kristine v4-8 after it remained in the mandatory final `AVAILABLE` table and all launch-boundary freshness/lock/VFIO checks passed; W&B run `zhd3x4ld` authenticated and began syncing.
