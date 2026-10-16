@@ -1,6 +1,6 @@
 # Overnight communication investigation
 
-Status: `running`
+Status: `completed`
 
 ## Current evidence
 
@@ -33,8 +33,8 @@ The exact 256-example validation prefix has a 0.03515625 empirical baseline when
 1. **Question-only shortcut dominates optimization — confirmed for the baseline.** The receiver learns the answer prior for each relation type while assigning no measurable causal weight to the messages. Intact, zero, and wrong-world messages produce identical exact predictions and nearly identical likelihoods.
 2. **Four query slots are too narrow for eight facts per sender — ruled out as the primary blocker.** Doubling to eight vectors leaves exact predictions unchanged across all message interventions and makes the sender/receiver gradient imbalance larger.
 3. **Two layers are too shallow for character parsing, fact selection, and a two-hop join — ruled out as the primary blocker.** Depth 4 halves throughput but keeps intact messages no better than zero or wrong-world messages.
-4. **Capacity helps only after the channel and depth are adequate.** Hidden 512 alone already failed to move beyond the shortcut regime. Test width 256 only after another intervention identifies a communicating architecture.
-5. **Tying and role gates are secondary.** Existing matched small-prefix pairs and full-data runs show no robust benefit. Re-test shared versus unshared weights only on the best communicating architecture, so the comparison measures generalization rather than prior-fitting.
+4. **Capacity did not become a useful stacked improvement after communication was established.** Hidden 512 alone had already failed to move beyond the shortcut regime. Retesting width 256 on the bridge-supervised communicating architecture preserved passage use, but reduced answer accuracy and the causal passage gap while lowering throughput.
+5. **Tying and role gates are secondary and did not improve the best communicating architecture.** Earlier matched small-prefix pairs and full-data runs showed no robust benefit. The controlled hidden-256 bridge-supervised comparison then found that tying modestly improved raw accuracy and efficiency while weakening the passage-specific causal advantage.
 6. **Question conditioning alone shortens the path but does not repair credit assignment — ruled out as a sufficient intervention.** Target-question/wrong-passages matches intact exact accuracy and improves likelihood, while sender gradients become even smaller relative to the receiver.
 7. **Channel capacity matters only after the shortcut is blocked — ruled out as the private-fact blocker.** Message length 8 makes the active channel's question content explicit: wrong-question re-encoding loses 7/256 exact answers and 6.28 nats. Wrong passages still match intact exact accuracy and slightly improve likelihood, so extra slots do not create private-fact transport.
 8. **The tested synchronous second exchange supplies the missing join path — ruled out as a sufficient architectural fix.** The exchange gives either sender the other sender's first-round representation, yet wrong passages preserve all 10 exact answers and slightly improve likelihood. This interaction design remains passage-flat.
