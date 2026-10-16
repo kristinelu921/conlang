@@ -86,8 +86,8 @@ Pending launch and verified completion.
 |---|---|---|
 | Configuration | `configs/conlang-jax-v4-8-full-m8-d2-qsender-norecvq-commdiag.yaml` | parses; correctness and cleanup reviews passed |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` | reviewed launch closure pushed |
-| Source snapshot | `/kmh-nfs-ssd-us-mount/staging/kristine/elf/20261016-conlang-v4-8-full-m8-d2-qsender-norecvq-commdiag-20261016T093615.911531509Z`; remote path pending | local snapshot verified: 55 files, 418494 bytes, relative SHA-256-manifest digest `81784292bc60f6e727f4c6c928b3fa31ffc30c2a54262fd2c6c0e51fcfd02eab`; remote verification pending |
-| Regional dataset | `/home/kristinelu/elf-data/conlangs-v1` | previously verified; must revalidate before launch |
+| Source snapshot | `/kmh-nfs-ssd-us-mount/staging/kristine/elf/20261016-conlang-v4-8-full-m8-d2-qsender-norecvq-commdiag-20261016T093615.911531509Z`; remote `/home/kristinelu/elf-runs/source/20261016-conlang-v4-8-full-m8-d2-qsender-norecvq-commdiag` | local and remote match: 55 files, 418494 bytes, relative SHA-256-manifest digest `81784292bc60f6e727f4c6c928b3fa31ffc30c2a54262fd2c6c0e51fcfd02eab`; selected-config SHA-256 `9a747238adf2db764b51874f101f3263847c5fe2b43faf7eb1c9bf0fe8f4a2c6` |
+| Regional dataset | `/home/kristinelu/elf-data/conlangs-v1` | revalidated on the TPU: 15,625 worlds / 125,000 questions / 8 questions per world; manifest SHA-256 `a839b6ac98ba33a008caaebdde40dea7bc1e639106e93aab25ab2af3c29588e8` |
 | Tracking run | pending | pending |
 | Checkpoint | pending | pending |
 | Metrics | pending | pending |
@@ -105,3 +105,4 @@ Pending launch and verified completion.
 - `2026-10-16`: Selected message length 8 as the next controlled interaction after the receiver-question bypass established learned-message necessity but not useful private-content transport.
 - `2026-10-16`: Added a matched within-world wrong-question control so the next evaluation can distinguish question identity from generic learned-message dependence.
 - `2026-10-16T09:36:15Z`: Created immutable launch snapshot `88a296a353902e74bfe44c5d4874c8c164e7b20e` and verified its 55-file local manifest.
+- `2026-10-16T09:40:31Z`: Verified an identical node-local source manifest, JAX `0.6.2` runtime imports, the complete regional dataset, 85 GiB free space, and idle TPU devices; the exact run and output paths were absent.
