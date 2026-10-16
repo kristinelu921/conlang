@@ -9,7 +9,7 @@
 | Started | not started |
 | Finished | not applicable |
 | Baseline | `20261016-conlang-v4-8-full-h256-m4-d2-qsender-norecvq-bridgeaux-commdiag` |
-| Git revision | configuration closure and immutable launch snapshot pending |
+| Git revision | primary configuration and correctness-reviewed report commit `a8358bcb425953a4ca668fab675ed6e9b8f25a81`; immutable launch snapshot pending |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` |
 | Primary configuration | `configs/conlang-jax-v4-8-full-h256-m4-d2-qsender-norecvq-bridgeaux-tied-commdiag.yaml` |
 | Command | not recorded; pending immutable snapshot and launch-boundary verification |
@@ -85,8 +85,8 @@ Pending launch and verified completion.
 
 | Artifact | Path or URL | Verified |
 |---|---|---|
-| Configuration | `configs/conlang-jax-v4-8-full-h256-m4-d2-qsender-norecvq-bridgeaux-tied-commdiag.yaml` | parses and validates locally; immutable commit and review pending |
-| Pull request | `https://github.com/kristinelu921/conlang/pull/1` | pending update with exact configuration closure |
+| Configuration | `configs/conlang-jax-v4-8-full-h256-m4-d2-qsender-norecvq-bridgeaux-tied-commdiag.yaml` | committed in `a8358bcb425953a4ca668fab675ed6e9b8f25a81`, parses and validates locally, and passed correctness review |
+| Pull request | `https://github.com/kristinelu921/conlang/pull/1` | pending push of the reviewed configuration closure |
 | Source snapshot | pending | must be produced by `tpu_scripts/run_staging.sh` before launch |
 | Regional dataset | `/home/kristinelu/elf-data/conlangs-v1` | must revalidate the complete Central2 manifest before launch |
 | Tracking run | pending | W&B enabled; final run identity must match the selected configuration |
@@ -95,7 +95,8 @@ Pending launch and verified completion.
 ## Review and Verification
 
 - The configuration parses and validates locally. Its exact YAML diff from the completed hidden-256 untied bridge-supervised baseline is limited to run identity/output fields plus `tie_sender_receiver_encoder: false` to `true`.
-- Pending correctness review followed by cleanup review of the immutable configuration closure.
+- Correctness review passed for the committed configuration/report closure, including five focused CPU cases in 63.84 seconds.
+- Cleanup review identified this report-only provenance update; cleanup re-review is pending the correction.
 - Pending mandatory same-TPU availability check, node-local snapshot verification, regional-data integrity check, runtime preflight, and launch-boundary VFIO/process/output checks.
 
 ## Failure Details
