@@ -7,7 +7,7 @@
 | Run ID | `20261016-conlang-v4-8-full-m4-d2-qsender-norecvq-r2-commdiag` |
 | Status | `planned` |
 | Baseline | `20261016-conlang-v4-8-full-m4-d2-qsender-norecvq-commdiag` |
-| Git revision | reviewed implementation/configuration closure `a74ed6fbf1630a625f89c64e026c4b86f0696f5c`; immutable launch snapshot pending |
+| Git revision | immutable launch snapshot HEAD `9b471b0362605a4b7c0583af4ae2998ebd8735ed`; reviewed implementation/configuration closure `a74ed6fbf1630a625f89c64e026c4b86f0696f5c` |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` |
 | Primary configuration | `configs/conlang-jax-v4-8-full-m4-d2-qsender-norecvq-r2-commdiag.yaml` |
 | Command | `/snap/google-cloud-cli/current/bin/gcloud compute tpus tpu-vm ssh kmh-tpuvm-v4-8-spot-kristine-14-23-12-28-N-us-central2-b --project=he-vision-group --zone=us-central2-b --worker=all --internal-ip --ssh-flag=-F --ssh-flag=/dev/null --command='set -euo pipefail; mkdir -p /home/kristinelu/elf-runs; test ! -e /home/kristinelu/elf-runs/20261016-conlang-v4-8-full-m4-d2-qsender-norecvq-r2-commdiag; test ! -e /tmp/libtpu_lockfile; test -z "$(sudo fuser /dev/vfio/* 2>/dev/null \|\| true)"; cd /home/kristinelu/elf-runs/source/20261016-conlang-v4-8-full-m4-d2-qsender-norecvq-r2-commdiag; export JAX_PLATFORMS=tpu CUDA_VISIBLE_DEVICES= ELF_TPU_WORKER_INDEX=0 PYTHONPATH="$PWD" HF_HOME=/home/kristinelu/elf-runs/hf-cache PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1; ulimit -c 0; /home/kristinelu/elf-runs/runtime/venv/bin/python -u train.py --config configs/conlang-jax-v4-8-full-m4-d2-qsender-norecvq-r2-commdiag.yaml 2>&1 \| tee /home/kristinelu/elf-runs/20261016-conlang-v4-8-full-m4-d2-qsender-norecvq-r2-commdiag.launcher.log'` |
@@ -85,8 +85,8 @@ Pending launch and verified completion.
 | Artifact | Path or URL | Verified |
 |---|---|---|
 | Configuration | `configs/conlang-jax-v4-8-full-m4-d2-qsender-norecvq-r2-commdiag.yaml` | parses; correctness and cleanup reviews passed |
-| Pull request | `https://github.com/kristinelu921/conlang/pull/1` | reviewed implementation/configuration closure prepared on the PR branch |
-| Source snapshot | pending | immutable snapshot required before launch |
+| Pull request | `https://github.com/kristinelu921/conlang/pull/1` | reviewed implementation/configuration closure pushed |
+| Source snapshot | `/kmh-nfs-ssd-us-mount/staging/kristine/elf/20261016-conlang-v4-8-full-m4-d2-qsender-norecvq-r2-commdiag-20261016T103711.365431876Z`; planned remote `/home/kristinelu/elf-runs/source/20261016-conlang-v4-8-full-m4-d2-qsender-norecvq-r2-commdiag` | 56 files, 425946 bytes, relative SHA-256-manifest digest `a49cb431a00c35980c0f9ef381b1db54ba8c0e710bd3b564b2879aee16998d05`; selected-config SHA-256 `9289846b850928bed986db8f8be2af6d7b96a8c3df44d45bd9d32b5987d66ad1`; remote copy pending |
 | Regional dataset | `/home/kristinelu/elf-data/conlangs-v1` | launch-time revalidation pending; expected manifest SHA-256 `a839b6ac98ba33a008caaebdde40dea7bc1e639106e93aab25ab2af3c29588e8` |
 | Tracking run | pending | W&B enabled |
 | Checkpoint | pending | expected at the configured node-local output path |
@@ -106,3 +106,4 @@ Pending launch and verified completion.
 
 - `2026-10-16`: Selected a synchronous second exchange after the message-8 bypass proved question transport but showed no beneficial private-fact transport.
 - `2026-10-16`: Correctness and cleanup reviews passed for the exact implementation/configuration closure; the selected YAML remains the sole run configuration in that closure.
+- `2026-10-16T10:37:11Z`: After the exact Kristine v4-8 appeared in the mandatory final `AVAILABLE` table, created immutable launch snapshot `9b471b0362605a4b7c0583af4ae2998ebd8735ed` and verified its 56-file local manifest.
