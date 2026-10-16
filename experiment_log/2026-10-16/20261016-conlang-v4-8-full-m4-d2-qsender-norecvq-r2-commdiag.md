@@ -7,7 +7,7 @@
 | Run ID | `20261016-conlang-v4-8-full-m4-d2-qsender-norecvq-r2-commdiag` |
 | Status | `planned` |
 | Baseline | `20261016-conlang-v4-8-full-m4-d2-qsender-norecvq-commdiag` |
-| Git revision | implementation/configuration closure pending commit and review; immutable launch snapshot pending |
+| Git revision | reviewed implementation/configuration closure `a74ed6fbf1630a625f89c64e026c4b86f0696f5c`; immutable launch snapshot pending |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` |
 | Primary configuration | `configs/conlang-jax-v4-8-full-m4-d2-qsender-norecvq-r2-commdiag.yaml` |
 | Command | `/snap/google-cloud-cli/current/bin/gcloud compute tpus tpu-vm ssh kmh-tpuvm-v4-8-spot-kristine-14-23-12-28-N-us-central2-b --project=he-vision-group --zone=us-central2-b --worker=all --internal-ip --ssh-flag=-F --ssh-flag=/dev/null --command='set -euo pipefail; mkdir -p /home/kristinelu/elf-runs; test ! -e /home/kristinelu/elf-runs/20261016-conlang-v4-8-full-m4-d2-qsender-norecvq-r2-commdiag; test ! -e /tmp/libtpu_lockfile; test -z "$(sudo fuser /dev/vfio/* 2>/dev/null \|\| true)"; cd /home/kristinelu/elf-runs/source/20261016-conlang-v4-8-full-m4-d2-qsender-norecvq-r2-commdiag; export JAX_PLATFORMS=tpu CUDA_VISIBLE_DEVICES= ELF_TPU_WORKER_INDEX=0 PYTHONPATH="$PWD" HF_HOME=/home/kristinelu/elf-runs/hf-cache PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1; ulimit -c 0; /home/kristinelu/elf-runs/runtime/venv/bin/python -u train.py --config configs/conlang-jax-v4-8-full-m4-d2-qsender-norecvq-r2-commdiag.yaml 2>&1 \| tee /home/kristinelu/elf-runs/20261016-conlang-v4-8-full-m4-d2-qsender-norecvq-r2-commdiag.launcher.log'` |
@@ -84,8 +84,8 @@ Pending launch and verified completion.
 
 | Artifact | Path or URL | Verified |
 |---|---|---|
-| Configuration | `configs/conlang-jax-v4-8-full-m4-d2-qsender-norecvq-r2-commdiag.yaml` | parses; review pending |
-| Pull request | `https://github.com/kristinelu921/conlang/pull/1` | implementation/configuration update pending review and push |
+| Configuration | `configs/conlang-jax-v4-8-full-m4-d2-qsender-norecvq-r2-commdiag.yaml` | parses; correctness and cleanup reviews passed |
+| Pull request | `https://github.com/kristinelu921/conlang/pull/1` | reviewed implementation/configuration closure prepared on the PR branch |
 | Source snapshot | pending | immutable snapshot required before launch |
 | Regional dataset | `/home/kristinelu/elf-data/conlangs-v1` | launch-time revalidation pending; expected manifest SHA-256 `a839b6ac98ba33a008caaebdde40dea7bc1e639106e93aab25ab2af3c29588e8` |
 | Tracking run | pending | W&B enabled |
@@ -95,7 +95,7 @@ Pending launch and verified completion.
 
 - Focused CPU verification passed 11 cases covering one-round regression behavior, config validation, crossed two-round dependencies in both directions, tied and untied encoders, unchanged parameter trees, and matched wrong-question and wrong-passage controls across both round counts.
 - Full CPU regression closure passed 60 tests with two existing Pydantic warnings in 157.54 seconds.
-- Correctness and cleanup reviews are pending for the exact implementation/configuration closure.
+- Correctness and cleanup reviews passed for exact implementation/configuration range `df823a4f7c869be72a6b89b8e49c5b340b3b528b..a74ed6fbf1630a625f89c64e026c4b86f0696f5c`.
 
 ## Failure Details
 
@@ -105,3 +105,4 @@ Pending launch and verified completion.
 ## Updates
 
 - `2026-10-16`: Selected a synchronous second exchange after the message-8 bypass proved question transport but showed no beneficial private-fact transport.
+- `2026-10-16`: Correctness and cleanup reviews passed for the exact implementation/configuration closure; the selected YAML remains the sole run configuration in that closure.
