@@ -9,7 +9,7 @@
 | Started | not started |
 | Finished | not applicable |
 | Baseline | `20261016-conlang-v4-8-full-h256-m4-d2-qsender-norecvq-bridgeaux-commdiag` |
-| Git revision | primary configuration and correctness-reviewed report commit `a8358bcb425953a4ca668fab675ed6e9b8f25a81`; immutable launch snapshot pending |
+| Git revision | primary configuration commit `a8358bcb425953a4ca668fab675ed6e9b8f25a81`; final reviewed configuration/report closure `9adb7ee7096c91fe4b50b50e63d0f2a62761f91a`; immutable launch snapshot pending |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` |
 | Primary configuration | `configs/conlang-jax-v4-8-full-h256-m4-d2-qsender-norecvq-bridgeaux-tied-commdiag.yaml` |
 | Command | not recorded; pending immutable snapshot and launch-boundary verification |
@@ -85,7 +85,7 @@ Pending launch and verified completion.
 
 | Artifact | Path or URL | Verified |
 |---|---|---|
-| Configuration | `configs/conlang-jax-v4-8-full-h256-m4-d2-qsender-norecvq-bridgeaux-tied-commdiag.yaml` | committed in `a8358bcb425953a4ca668fab675ed6e9b8f25a81`, parses and validates locally, and passed correctness review |
+| Configuration | `configs/conlang-jax-v4-8-full-h256-m4-d2-qsender-norecvq-bridgeaux-tied-commdiag.yaml` | committed in `a8358bcb425953a4ca668fab675ed6e9b8f25a81`, parses and validates locally, and passed correctness and cleanup review |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` | pending push of the reviewed configuration closure |
 | Source snapshot | pending | must be produced by `tpu_scripts/run_staging.sh` before launch |
 | Regional dataset | `/home/kristinelu/elf-data/conlangs-v1` | must revalidate the complete Central2 manifest before launch |
@@ -96,7 +96,7 @@ Pending launch and verified completion.
 
 - The configuration parses and validates locally. Its exact YAML diff from the completed hidden-256 untied bridge-supervised baseline is limited to run identity/output fields plus `tie_sender_receiver_encoder: false` to `true`.
 - Correctness review passed for the committed configuration/report closure, including five focused CPU cases in 63.84 seconds.
-- Cleanup review identified this report-only provenance update; cleanup re-review is pending the correction.
+- Cleanup review identified this report-only provenance update; cleanup re-review passed at `9adb7ee7096c91fe4b50b50e63d0f2a62761f91a`.
 - Pending mandatory same-TPU availability check, node-local snapshot verification, regional-data integrity check, runtime preflight, and launch-boundary VFIO/process/output checks.
 
 ## Failure Details
