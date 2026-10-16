@@ -116,7 +116,7 @@ Keep the wider channel only if intact messages gain materially over target-quest
 | Artifact | Path or URL | Verified |
 |---|---|---|
 | Configuration | `configs/conlang-jax-v4-8-full-m8-d2-qsender-norecvq-commdiag.yaml` | parses; correctness and cleanup reviews passed |
-| Pull request | `https://github.com/kristinelu921/conlang/pull/1` | reviewed launch closure pushed; completed result update pending |
+| Pull request | `https://github.com/kristinelu921/conlang/pull/1` | reviewed launch closure pushed; completed-result correctness and cleanup reviews passed |
 | Source snapshot | `/kmh-nfs-ssd-us-mount/staging/kristine/elf/20261016-conlang-v4-8-full-m8-d2-qsender-norecvq-commdiag-20261016T093615.911531509Z`; remote `/home/kristinelu/elf-runs/source/20261016-conlang-v4-8-full-m8-d2-qsender-norecvq-commdiag` | local and remote matched before launch: 55 files, 418494 bytes, relative SHA-256-manifest digest `81784292bc60f6e727f4c6c928b3fa31ffc30c2a54262fd2c6c0e51fcfd02eab`; selected-config SHA-256 `9a747238adf2db764b51874f101f3263847c5fe2b43faf7eb1c9bf0fe8f4a2c6`; all 55 snapshot files remained byte-identical after the run, excluding W&B's separate run directory |
 | Regional dataset | `/home/kristinelu/elf-data/conlangs-v1` | revalidated on the TPU: 15,625 worlds / 125,000 questions / 8 questions per world; manifest SHA-256 `a839b6ac98ba33a008caaebdde40dea7bc1e639106e93aab25ab2af3c29588e8` |
 | Tracking run | `https://wandb.ai/kaynelu921-massachusetts-institute-of-technology/conlangs/runs/0cs19yd6` | synced and finalized by the canonical launcher |
@@ -130,7 +130,8 @@ Keep the wider channel only if intact messages gain materially over target-quest
 - The full CPU regression closure passed 54 tests with two existing Pydantic warnings.
 - Focused tests verify that the wrong-question arm keeps passage rows fixed, rotates questions only within aligned world blocks, preserves the target receiver question in teacher-forced scoring, works in greedy decoding, and appears only for conditioned senders.
 - Correctness and cleanup reviews passed for the exact implementation/configuration closure.
-- Terminal verification found the exact trainer absent, VFIO idle, a canonical `TRAINING_COMPLETE ... step=2000` sentinel, a CPU-restorable step-2000 checkpoint, and the TPU still `READY` / `HEALTHY`. Completed-result review is pending.
+- Correctness and cleanup reviews passed for exact completed-result range `3a6dffb075e5293589f8adf47d5f62562bea85f4..7597b5c5a962eaa4a7275a2d771516c2a6e5c508`.
+- Terminal verification found the exact trainer absent, VFIO idle, a canonical `TRAINING_COMPLETE ... step=2000` sentinel, a CPU-restorable step-2000 checkpoint, and the TPU still `READY` / `HEALTHY`.
 
 ## Failure Details
 
@@ -148,3 +149,4 @@ Keep the wider channel only if intact messages gain materially over target-quest
 - `2026-10-16T09:46:38Z`: Launched after the exact same Kristine v4-8 passed the final mandatory `AVAILABLE` audit and launch-boundary path, lock, and VFIO checks; W&B run `0cs19yd6` authenticated and synced.
 - `2026-10-16T09:52:39Z`: Completed step 2000, all seven causal arms, checkpoint save, and W&B finalization.
 - `2026-10-16T09:57:20Z`: Verified the canonical completion sentinel, exact process absence, VFIO idleness, checkpoint restore, artifact hashes, unchanged snapshot files, and TPU `READY` / `HEALTHY` state.
+- `2026-10-16`: Correctness and cleanup reviews passed for the exact completed-result update; all reported metrics, causal deltas, artifact hashes, provenance, and qualified interpretations were independently verified.
