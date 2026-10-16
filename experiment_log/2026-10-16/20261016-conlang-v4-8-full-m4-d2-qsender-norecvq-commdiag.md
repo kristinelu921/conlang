@@ -112,11 +112,11 @@ Useful communication required intact messages to outperform both zero messages a
 
 ## Interpretation
 
-- The messages now carry indispensable question information: zeroing them drops exact match from 9/256 to 2/256 and mean joint log probability by `6.20582`.
+- Learned messages are now causally necessary: zeroing them drops exact match from 9/256 to 2/256 and mean joint log probability by `6.20582`. This is consistent with question transport, but zero is an out-of-distribution tensor and the current arms do not isolate question identity.
 - Private passage evidence is still not useful at the task level. Target-question/wrong-passages preserves 9/256 and changes mean joint log probability by only `-0.0002813`; this tiny favorable sign for intact passages is not a convincing or practically useful private-content gap in a single 256-example evaluation.
 - Sender credit assignment improves sharply. The receiver gradient is about 51 times agent 1's and 62 times agent 2's, versus about 476--673 times in the matched direct-question arm. This supports the direct receiver question path as a major source of sender gradient starvation.
-- Exact accuracy remains at the 3.5% question-prior level. The architecture has learned to relay the question through messages, not to bind the two private hops into an answer.
-- Because messages are now causally active, channel capacity can be retested as an interaction: message length 8 may give each mixed passage enough slots to preserve its four answer-side mappings plus question-selected evidence. If that remains passage-flat, the next intervention should directly supervise intermediate content or add sequential cross-agent exchange.
+- Exact accuracy remains at the 3.5% question-prior level. A matched wrong-question sender re-encoding control is required to distinguish question identity from generic learned-message dependence.
+- Because messages are now causally active, channel capacity can be retested as an interaction: message length 8 may give each mixed passage enough slots to preserve its four answer-side mappings plus question-selected evidence. The next evaluation must include both wrong-question and wrong-passage controls. If the wider channel remains passage-flat, directly supervise intermediate content or add sequential cross-agent exchange.
 
 ## Failure Details
 

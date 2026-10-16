@@ -12,7 +12,7 @@ The current model sends four continuous hidden vectors from each sender. A recei
 | Full data, hidden 128 | untied, no gates, message 8, depth 2 | 0.0390625 | -4.052503585815430 | All six causal arms are exactly 0.0390625; longer messages create no beneficial causal gap |
 | Full data, hidden 128 | untied, no gates, message 4, depth 4 | 0.0390625 | -4.059023857116699 | Wrong-world reaches 0.04296875 and zero has better likelihood; extra depth creates no beneficial causal gap |
 | Full data, hidden 128 | question-conditioned senders, untied, message 4, depth 2 | 0.0390625 | -4.055914878845215 | Target-question/wrong-passages also reaches 0.0390625 with better likelihood; conditioning creates no beneficial passage-specific gap |
-| Full data, hidden 128 | question-conditioned senders, receiver question masked, message 4, depth 2 | 0.03515625 | -4.054939270019531 | Zero messages collapse to 0.0078125 / -10.2608, but wrong passages retain 0.03515625; messages relay the question, not useful facts |
+| Full data, hidden 128 | question-conditioned senders, receiver question masked, message 4, depth 2 | 0.03515625 | -4.054939270019531 | Zero messages collapse to 0.0078125 / -10.2608, but wrong passages retain 0.03515625; learned messages are necessary, while question identity remains unisolated |
 | Full data, hidden 128 | tied encoder, output width 256 | 0.0390625 | -4.04714298248291 | Tying did not improve exact match |
 | Full data, hidden 512 | tied encoder, output width 256 | 0.046875 | -4.053905487060547 | Fourfold width did not establish strong generalization |
 | Full data, hidden 512 | tied plus 64-channel role gates | 0.0390625 | -4.060502052307129 | Gates did not improve the result |
@@ -32,7 +32,7 @@ The exact 256-example validation prefix has a 0.03515625 empirical baseline when
 5. **Tying and role gates are secondary.** Existing matched small-prefix pairs and full-data runs show no robust benefit. Re-test shared versus unshared weights only on the best communicating architecture, so the comparison measures generalization rather than prior-fitting.
 6. **Question conditioning alone shortens the path but does not repair credit assignment — ruled out as a sufficient intervention.** Target-question/wrong-passages matches intact exact accuracy and improves likelihood, while sender gradients become even smaller relative to the receiver.
 7. **The end-to-end likelihood objective supplies too little sender learning signal — leading hypothesis.** Test an explicit sender-content objective before stacking more width, depth, or weight sharing.
-8. **Channel capacity may matter only after the shortcut is blocked — reopened as an interaction.** The bypass creates strong message dependence and roughly tenfold larger sender gradients. Re-test message length 8 on this architecture before adding more invasive supervision.
+8. **Channel capacity may matter only after the shortcut is blocked — reopened as an interaction.** The bypass creates strong learned-message dependence and roughly tenfold larger sender gradients. Re-test message length 8 with separate wrong-question and wrong-passage controls before adding more invasive supervision.
 
 ## Controlled sequence
 
@@ -51,7 +51,7 @@ Every arm uses seed 1730, the same Central2 dataset, the same Kristine v4-8, bat
 
 ## Current belief
 
-The baseline is definitively in a question-only shortcut/local minimum, not merely weak at communication. Raw width, message length, depth, and question-conditioned sender selection all failed while the receiver retained its direct question path. Masking that path creates the first strong causal message dependence: zero messages lose 7/256 exact answers and 6.21 nats, and sender gradients rise roughly tenfold. Yet target-question/wrong-passages remains tied with intact at 9/256 and differs by only 0.00028 in likelihood. The model has learned to relay the question through messages, not to bind private facts. Because the channel is finally active, the next matched interaction test is message length 8 on this bypass architecture; if private-passage sensitivity remains negligible, use explicit intermediate supervision or sequential cross-agent exchange rather than more generic width/depth/tie stacking.
+The baseline is definitively in a question-only shortcut/local minimum, not merely weak at communication. Raw width, message length, depth, and question-conditioned sender selection all failed while the receiver retained its direct question path. Masking that path creates the first strong learned-message dependence: zero messages lose 7/256 exact answers and 6.21 nats, and sender gradients rise roughly tenfold. Yet target-question/wrong-passages remains tied with intact at 9/256 and differs by only 0.00028 in likelihood. This establishes message necessity but not question transport, because all-zero messages are out of distribution; a matched wrong-question control is still required. The next interaction test is message length 8 on this bypass architecture with separate wrong-question and wrong-passage arms. If private-passage sensitivity remains negligible, use explicit intermediate supervision or sequential cross-agent exchange rather than more generic width/depth/tie stacking.
 
 ## Evidence limitations
 
