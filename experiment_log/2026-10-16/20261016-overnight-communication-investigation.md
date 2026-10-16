@@ -4,7 +4,7 @@ Status: `running`
 
 ## Current evidence
 
-The current model sends four continuous hidden vectors from each sender. A receiver encoder mixes the eight vectors with the question, and a decoder predicts one answer token plus EOS. Each source world contains eight linked chains and eight questions; every sender passage contains one hop from every chain, while the complementary hop is in the other passage.
+The baseline model sends four continuous hidden vectors from each sender. Its receiver encoder mixes the eight vectors with the question, and a decoder predicts one answer token plus EOS. The current bypass arm masks the receiver's direct question input and exposes the question only to the senders. Each source world contains eight linked chains and eight questions; every sender passage contains one hop from every chain, while the complementary hop is in the other passage.
 
 | Run family | Key change | Final validation exact match | Final validation joint log probability | Observation |
 |---|---|---:|---:|---|
@@ -21,7 +21,7 @@ The current model sends four continuous hidden vectors from each sender. A recei
 | 32-example prefix | tied / untied | 0.015625 / 0.01171875 | -18.459566354751587 / -17.76997447013855 | Both nearly memorized the prefix but generalized poorly |
 | One example | tied / untied | 0.0 / 0.0 | -37.64824861288071 / -35.6571341753006 | Mechanics can memorize; no held-out transfer |
 
-The exact 256-example validation prefix has a 0.03515625 empirical baseline when the answer is guessed from only the relation domain inferred from the question. A full-data question-template lookup reaches 0.0703125. The trained full-data runs' 0.0390625--0.046875 range is therefore consistent with a question-only shortcut. The direct causal baseline confirms it: intact, zero, wrong-world, swapped, agent-1-only, and agent-2-only messages all yield the same 10 correct answers. Zeroing messages improves mean joint log probability by 0.0022974. Final sender-path gradient norms are 0.00452 and 0.00540 while the receiver path is 1.13643, about 210--251 times larger.
+The exact 256-example validation prefix has a 0.03515625 empirical baseline when the answer is guessed from only the relation domain inferred from the question. A full-data question-template lookup reaches 0.0703125. The direct-question full-data runs' 0.0390625--0.046875 range is therefore consistent with a question-only shortcut. The direct causal baseline confirms it: intact, zero, wrong-world, swapped, agent-1-only, and agent-2-only messages all yield the same 10 correct answers. Zeroing messages improves mean joint log probability by 0.0022974. Final sender-path gradient norms are 0.00452 and 0.00540 while the receiver path is 1.13643, about 210--251 times larger.
 
 ## Ranked hypotheses and tests
 
@@ -31,8 +31,8 @@ The exact 256-example validation prefix has a 0.03515625 empirical baseline when
 4. **Capacity helps only after the channel and depth are adequate.** Hidden 512 alone already failed to move beyond the shortcut regime. Test width 256 only after another intervention identifies a communicating architecture.
 5. **Tying and role gates are secondary.** Existing matched small-prefix pairs and full-data runs show no robust benefit. Re-test shared versus unshared weights only on the best communicating architecture, so the comparison measures generalization rather than prior-fitting.
 6. **Question conditioning alone shortens the path but does not repair credit assignment — ruled out as a sufficient intervention.** Target-question/wrong-passages matches intact exact accuracy and improves likelihood, while sender gradients become even smaller relative to the receiver.
-7. **The end-to-end likelihood objective supplies too little sender learning signal — leading hypothesis.** Test an explicit sender-content objective before stacking more width, depth, or weight sharing.
-8. **Channel capacity may matter only after the shortcut is blocked — reopened as an interaction.** The bypass creates strong learned-message dependence and roughly tenfold larger sender gradients. Re-test message length 8 with separate wrong-question and wrong-passage controls before adding more invasive supervision.
+7. **Channel capacity may matter only after the shortcut is blocked — leading interaction hypothesis.** The bypass creates strong learned-message dependence and roughly tenfold larger sender gradients. Re-test message length 8 with separate wrong-question and wrong-passage controls before adding more invasive supervision.
+8. **The end-to-end likelihood objective may still supply too little fact-binding signal — fallback hypothesis.** If the wider active channel remains passage-flat, test an explicit sender-content objective or sequential exchange before stacking generic width, depth, or weight sharing.
 
 ## Controlled sequence
 
@@ -56,5 +56,5 @@ The baseline is definitively in a question-only shortcut/local minimum, not mere
 ## Evidence limitations
 
 - Existing comparisons are single-seed experiments on the first 256 validation examples.
-- Prior runs did not include causal message interventions, so their message use is inferred from output concentration and gradient imbalance rather than directly measured.
+- The earlier tied-width, role-gate, small-prefix, and one-example runs did not include causal message interventions, so their message use is inferred from output concentration and gradient imbalance rather than directly measured.
 - The read-only W&B reconciliation could enumerate projects but not runs; all values above come from checked-in effective configs, metrics JSONL, outputs JSONL, launcher logs, and reports.
