@@ -5,7 +5,9 @@
 | Field | Value |
 |---|---|
 | Run ID | `20261016-conlang-v4-8-full-m8-d2-qsender-norecvq-commdiag` |
-| Status | `planned` |
+| Status | `completed` |
+| Started | `2026-10-16T09:46:38Z` |
+| Finished | `2026-10-16T09:52:39Z` |
 | Baseline | `20261016-conlang-v4-8-full-m4-d2-qsender-norecvq-commdiag` |
 | Git revision | immutable launch snapshot HEAD `88a296a353902e74bfe44c5d4874c8c164e7b20e`; reviewed implementation/configuration closure `45550aa07ed5cf5b01ef10c7c3cdc30fa8c90514` |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` |
@@ -78,27 +80,63 @@ Keep the wider channel only if intact messages gain materially over target-quest
 
 ## Results
 
-Pending launch and verified completion.
+| Dataset / split | Metric | Value | Step | Direction | Source |
+|---|---|---:|---:|---|---|
+| Validation | Intact-message exact match | `0.03515625` (9/256) | 2000 | max | `metrics.jsonl` |
+| Validation | Intact-message mean joint log probability | `-4.0538139343` | 2000 | max | `metrics.jsonl` |
+| Validation | Wrong-question exact match | `0.0078125` (2/256) | 2000 | diagnostic | `metrics.jsonl` |
+| Validation | Wrong-question mean joint log probability | `-10.3296432495` | 2000 | diagnostic | `metrics.jsonl` |
+| Validation | Target-question/wrong-passages exact match | `0.03515625` (9/256) | 2000 | diagnostic | `metrics.jsonl` |
+| Validation | Target-question/wrong-passages mean joint log probability | `-4.0534553528` | 2000 | diagnostic | `metrics.jsonl` |
+| Validation | Zero-message exact match | `0.0078125` (2/256) | 2000 | diagnostic | `metrics.jsonl` |
+| Validation | Zero-message mean joint log probability | `-6.2542524338` | 2000 | diagnostic | `metrics.jsonl` |
+| Validation | Swapped-sender exact match | `0.03515625` (9/256) | 2000 | diagnostic | `metrics.jsonl` |
+| Validation | Swapped-sender mean joint log probability | `-4.0536913872` | 2000 | diagnostic | `metrics.jsonl` |
+| Validation | Agent-1-only exact match | `0.03515625` (9/256) | 2000 | diagnostic | `metrics.jsonl` |
+| Validation | Agent-1-only mean joint log probability | `-4.0534548759` | 2000 | diagnostic | `metrics.jsonl` |
+| Validation | Agent-2-only exact match | `0.03515625` (9/256) | 2000 | diagnostic | `metrics.jsonl` |
+| Validation | Agent-2-only mean joint log probability | `-4.0553836823` | 2000 | diagnostic | `metrics.jsonl` |
+| Train | Loss | `3.9214277267` | 2000 | min | `metrics.jsonl` |
+| Train | Throughput | `4412.9498 examples/s` | 2000 | max | `metrics.jsonl` |
+| Train | Agent-1 gradient norm | `0.7966639996` | 2000 | diagnostic | `metrics.jsonl` |
+| Train | Agent-2 gradient norm | `0.3486467302` | 2000 | diagnostic | `metrics.jsonl` |
+| Train | Receiver gradient norm | `1.2140392065` | 2000 | diagnostic | `metrics.jsonl` |
+
+## Interpretation
+
+- The matched control establishes beneficial question-identity transport through learned messages. Re-encoding the same passages with another question from the same world drops exact match from 9/256 to 2/256 and mean joint log probability by `6.2758293` nats. This conclusion does not rely on the out-of-distribution all-zero arm.
+- Private-passage transport remains absent under the task decision rule. Target-question/wrong-passages preserves all 9 exact answers and improves mean joint log probability by `0.0003586`; doubling message length therefore does not produce a beneficial passage-specific causal gap.
+- The all-zero arm also falls to 2/256, but its likelihood gap is only `2.2004385` nats. Wrong-question messages are substantially worse than zeros in likelihood, consistent with the receiver expecting question-selective message content rather than merely nonzero activations.
+- Exact accuracy remains at the 9/256 question-domain-prior baseline. Message length 8 successfully exposes what the active channel carries—question identity—but does not make the two agents bind their complementary private hops.
+- The final-step sender gradients spike to `0.7966640` and `0.3486467`, but the last-50 logged medians are only `0.0576564` and `0.0471884` versus receiver `1.2445597`. This is more sender signal than message length 4, but it still does not translate into private-fact use.
+- Throughput is `0.84%` below the message-length-4 bypass (`4412.95` versus `4450.50 examples/s`), so the wider channel has negligible compute cost but no fact-communication benefit. Per the preregistered rule, do not retain it as a solved communication setting; the next intervention should directly supervise intermediate content or add sequential cross-agent exchange.
 
 ## Artifacts
 
 | Artifact | Path or URL | Verified |
 |---|---|---|
 | Configuration | `configs/conlang-jax-v4-8-full-m8-d2-qsender-norecvq-commdiag.yaml` | parses; correctness and cleanup reviews passed |
-| Pull request | `https://github.com/kristinelu921/conlang/pull/1` | reviewed launch closure pushed |
-| Source snapshot | `/kmh-nfs-ssd-us-mount/staging/kristine/elf/20261016-conlang-v4-8-full-m8-d2-qsender-norecvq-commdiag-20261016T093615.911531509Z`; remote `/home/kristinelu/elf-runs/source/20261016-conlang-v4-8-full-m8-d2-qsender-norecvq-commdiag` | local and remote match: 55 files, 418494 bytes, relative SHA-256-manifest digest `81784292bc60f6e727f4c6c928b3fa31ffc30c2a54262fd2c6c0e51fcfd02eab`; selected-config SHA-256 `9a747238adf2db764b51874f101f3263847c5fe2b43faf7eb1c9bf0fe8f4a2c6` |
+| Pull request | `https://github.com/kristinelu921/conlang/pull/1` | reviewed launch closure pushed; completed result update pending |
+| Source snapshot | `/kmh-nfs-ssd-us-mount/staging/kristine/elf/20261016-conlang-v4-8-full-m8-d2-qsender-norecvq-commdiag-20261016T093615.911531509Z`; remote `/home/kristinelu/elf-runs/source/20261016-conlang-v4-8-full-m8-d2-qsender-norecvq-commdiag` | local and remote matched before launch: 55 files, 418494 bytes, relative SHA-256-manifest digest `81784292bc60f6e727f4c6c928b3fa31ffc30c2a54262fd2c6c0e51fcfd02eab`; selected-config SHA-256 `9a747238adf2db764b51874f101f3263847c5fe2b43faf7eb1c9bf0fe8f4a2c6`; all 55 snapshot files remained byte-identical after the run, excluding W&B's separate run directory |
 | Regional dataset | `/home/kristinelu/elf-data/conlangs-v1` | revalidated on the TPU: 15,625 worlds / 125,000 questions / 8 questions per world; manifest SHA-256 `a839b6ac98ba33a008caaebdde40dea7bc1e639106e93aab25ab2af3c29588e8` |
-| Tracking run | pending | pending |
-| Checkpoint | pending | pending |
-| Metrics | pending | pending |
-| Generated outputs | pending | pending |
-| Canonical launcher log | pending | pending |
+| Tracking run | `https://wandb.ai/kaynelu921-massachusetts-institute-of-technology/conlangs/runs/0cs19yd6` | synced and finalized by the canonical launcher |
+| Checkpoint | `/home/kristinelu/elf-runs/20261016-conlang-v4-8-full-m8-d2-qsender-norecvq-commdiag/checkpoint.msgpack` | 26,424,281 bytes; SHA-256 `9e134e2ece80a67bfe3c4b3b6180acc6b74f235cfbe5749b8f5c122f6709fabf`; CPU-only restore verified step 2000 |
+| Metrics | `experiment_log/2026-10-16/artifacts/20261016-conlang-v4-8-full-m8-d2-qsender-norecvq-commdiag/metrics.jsonl` | 348,736 bytes; SHA-256 `e1b1db2df4d94b808e559e6c6cb4e21b0c484684ce3af8b0f6e616161f908587` |
+| Generated outputs | `experiment_log/2026-10-16/artifacts/20261016-conlang-v4-8-full-m8-d2-qsender-norecvq-commdiag/outputs.jsonl` | 2,809,638 bytes; SHA-256 `1dd61639830fba7c1cc74de109af77d9d57d0cd8e4903fa1e6c8c211c6d59cf5` |
+| Canonical launcher log | `experiment_log/2026-10-16/artifacts/20261016-conlang-v4-8-full-m8-d2-qsender-norecvq-commdiag/launcher.log.gz` | 3,953 bytes; compressed SHA-256 `780b360f4390b08bbcf5367bc3efe1b8e949dd2c9b66b206b15f49bbe46024e9`; uncompressed remote SHA-256 `4b4b835ccc8074d2d9a45450fdb20d730b1949d088e434b2ba3f79749b3cd563` |
 
 ## Review and Verification
 
 - The full CPU regression closure passed 54 tests with two existing Pydantic warnings.
 - Focused tests verify that the wrong-question arm keeps passage rows fixed, rotates questions only within aligned world blocks, preserves the target receiver question in teacher-forced scoring, works in greedy decoding, and appears only for conditioned senders.
 - Correctness and cleanup reviews passed for the exact implementation/configuration closure.
+- Terminal verification found the exact trainer absent, VFIO idle, a canonical `TRAINING_COMPLETE ... step=2000` sentinel, a CPU-restorable step-2000 checkpoint, and the TPU still `READY` / `HEALTHY`. Completed-result review is pending.
+
+## Failure Details
+
+- Last known step: `2000`.
+- Training and evaluation completed successfully. The only pre-launch issue was the documented bytecode-cache contamination created by a read-only import check; the exact caches were removed and the source manifest was restored before launch.
+- W&B finalized, the exact training process exited, VFIO became idle, all 55 snapshot files remained byte-identical, and the TPU remained `READY` / `HEALTHY`.
 
 ## Updates
 
@@ -107,3 +145,6 @@ Pending launch and verified completion.
 - `2026-10-16T09:36:15Z`: Created immutable launch snapshot `88a296a353902e74bfe44c5d4874c8c164e7b20e` and verified its 55-file local manifest.
 - `2026-10-16T09:40:31Z`: Verified an identical node-local source manifest, JAX `0.6.2` runtime imports, the complete regional dataset, 85 GiB free space, and idle TPU devices; the exact run and output paths were absent.
 - `2026-10-16T09:43:30Z`: Preflight imports created three current-user `linked_facts/__pycache__/*.pyc` files in the remote source. With no trainer active, removed only those regenerable caches and their empty directory, then restored and reverified the exact 55-file, 418494-byte snapshot and digest. Further import checks use `PYTHONDONTWRITEBYTECODE=1`.
+- `2026-10-16T09:46:38Z`: Launched after the exact same Kristine v4-8 passed the final mandatory `AVAILABLE` audit and launch-boundary path, lock, and VFIO checks; W&B run `0cs19yd6` authenticated and synced.
+- `2026-10-16T09:52:39Z`: Completed step 2000, all seven causal arms, checkpoint save, and W&B finalization.
+- `2026-10-16T09:57:20Z`: Verified the canonical completion sentinel, exact process absence, VFIO idleness, checkpoint restore, artifact hashes, unchanged snapshot files, and TPU `READY` / `HEALTHY` state.
