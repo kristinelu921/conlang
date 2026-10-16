@@ -9,10 +9,10 @@
 | Started | not started |
 | Finished | not applicable |
 | Baseline | `20261016-conlang-v4-8-full-h256-m4-d2-qsender-norecvq-bridgeaux-commdiag` |
-| Git revision | primary configuration commit `a8358bcb425953a4ca668fab675ed6e9b8f25a81`; final reviewed configuration/report closure `9adb7ee7096c91fe4b50b50e63d0f2a62761f91a`; immutable launch snapshot pending |
+| Git revision | primary configuration commit `a8358bcb425953a4ca668fab675ed6e9b8f25a81`; final reviewed configuration/report closure `9adb7ee7096c91fe4b50b50e63d0f2a62761f91a`; immutable launch snapshot HEAD `ea94b35523da4d1e5758ec8bb706afb210e56c98` |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` |
 | Primary configuration | `configs/conlang-jax-v4-8-full-h256-m4-d2-qsender-norecvq-bridgeaux-tied-commdiag.yaml` |
-| Command | not recorded; pending immutable snapshot and launch-boundary verification |
+| Command | `/snap/google-cloud-cli/current/bin/gcloud compute tpus tpu-vm ssh kmh-tpuvm-v4-8-spot-kristine-14-23-12-28-N-us-central2-b --project=he-vision-group --zone=us-central2-b --worker=all --internal-ip --ssh-flag=-F --ssh-flag=/dev/null --command='set -euo pipefail; mkdir -p /home/kristinelu/elf-runs; test ! -e /home/kristinelu/elf-runs/20261016-conlang-v4-8-full-h256-m4-d2-qsender-norecvq-bridgeaux-tied-commdiag; test ! -e /tmp/libtpu_lockfile; test -z "$(sudo fuser /dev/vfio/* 2>/dev/null \|\| true)"; cd /home/kristinelu/elf-runs/source/20261016-conlang-v4-8-full-h256-m4-d2-qsender-norecvq-bridgeaux-tied-commdiag; export JAX_PLATFORMS=tpu CUDA_VISIBLE_DEVICES= ELF_TPU_WORKER_INDEX=0 PYTHONPATH="$PWD" HF_HOME=/home/kristinelu/elf-runs/hf-cache PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1; ulimit -c 0; /home/kristinelu/elf-runs/runtime/venv/bin/python -u train.py --config configs/conlang-jax-v4-8-full-h256-m4-d2-qsender-norecvq-bridgeaux-tied-commdiag.yaml 2>&1 \| tee /home/kristinelu/elf-runs/20261016-conlang-v4-8-full-h256-m4-d2-qsender-norecvq-bridgeaux-tied-commdiag.launcher.log'` |
 | Seed | `1730` |
 | Hardware | exact same authorized TPU only: `kmh-tpuvm-v4-8-spot-kristine-14-23-12-28-N-us-central2-b`, `us-central2-b`, Spot `v4-8`, topology `2x2x1`, one host, four TPU devices |
 
@@ -86,8 +86,8 @@ Pending launch and verified completion.
 | Artifact | Path or URL | Verified |
 |---|---|---|
 | Configuration | `configs/conlang-jax-v4-8-full-h256-m4-d2-qsender-norecvq-bridgeaux-tied-commdiag.yaml` | committed in `a8358bcb425953a4ca668fab675ed6e9b8f25a81`, parses and validates locally, and passed correctness and cleanup review |
-| Pull request | `https://github.com/kristinelu921/conlang/pull/1` | pending push of the reviewed configuration closure |
-| Source snapshot | pending | must be produced by `tpu_scripts/run_staging.sh` before launch |
+| Pull request | `https://github.com/kristinelu921/conlang/pull/1` | reviewed configuration closure pushed to `codex/jax-tpu-training` |
+| Source snapshot | `/kmh-nfs-ssd-us-mount/staging/kristine/elf/20261016-conlang-v4-8-full-h256-m4-d2-qsender-norecvq-bridgeaux-tied-commdiag-20261016T124907.241580898Z`; planned remote `/home/kristinelu/elf-runs/source/20261016-conlang-v4-8-full-h256-m4-d2-qsender-norecvq-bridgeaux-tied-commdiag` | local snapshot verified: 59 files, 443635 bytes, relative SHA-256-manifest digest `028745fe8092d4599664871869e6360d926cc2d030529c40c4066dde05397451`; selected-config SHA-256 `b493f9b5a3af7a407ff53930bcef2f2424675baad906850f5e612b980d72bac6`; no bytecode or test caches; remote verification pending |
 | Regional dataset | `/home/kristinelu/elf-data/conlangs-v1` | must revalidate the complete Central2 manifest before launch |
 | Tracking run | pending | W&B enabled; final run identity must match the selected configuration |
 | Checkpoint | `/home/kristinelu/elf-runs/20261016-conlang-v4-8-full-h256-m4-d2-qsender-norecvq-bridgeaux-tied-commdiag/checkpoint.msgpack` | pending |
@@ -97,7 +97,8 @@ Pending launch and verified completion.
 - The configuration parses and validates locally. Its exact YAML diff from the completed hidden-256 untied bridge-supervised baseline is limited to run identity/output fields plus `tie_sender_receiver_encoder: false` to `true`.
 - Correctness review passed for the committed configuration/report closure, including five focused CPU cases in 63.84 seconds.
 - Cleanup review identified this report-only provenance update; cleanup re-review passed at `9adb7ee7096c91fe4b50b50e63d0f2a62761f91a`.
-- Pending mandatory same-TPU availability check, node-local snapshot verification, regional-data integrity check, runtime preflight, and launch-boundary VFIO/process/output checks.
+- The mandatory checker listed the exact Kristine v4-8 in its final `AVAILABLE` table, and `tpu_scripts/run_staging.sh` created the verified immutable 59-file snapshot at HEAD `ea94b35523da4d1e5758ec8bb706afb210e56c98`.
+- Pending remote node-local snapshot verification, regional-data integrity check, runtime preflight, and launch-boundary VFIO/process/output checks.
 
 ## Failure Details
 
@@ -107,3 +108,4 @@ Pending launch and verified completion.
 ## Updates
 
 - `2026-10-16`: Selected encoder tying as the next single-variable test after hidden width 256 preserved private-passage use but failed the capacity stacking rule.
+- `2026-10-16T12:49:07Z`: The exact same Kristine v4-8 appeared in the mandatory final `AVAILABLE` table; created and verified the immutable local launch snapshot, selected-config hash, and cache exclusions.
