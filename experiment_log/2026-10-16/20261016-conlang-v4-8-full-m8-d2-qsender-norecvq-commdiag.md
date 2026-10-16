@@ -84,7 +84,7 @@ Pending launch and verified completion.
 
 | Artifact | Path or URL | Verified |
 |---|---|---|
-| Configuration | `configs/conlang-jax-v4-8-full-m8-d2-qsender-norecvq-commdiag.yaml` | parses; review pending |
+| Configuration | `configs/conlang-jax-v4-8-full-m8-d2-qsender-norecvq-commdiag.yaml` | parses; correctness passed; cleanup re-review pending |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` | existing run PR; update pending |
 | Source snapshot | pending | pending |
 | Regional dataset | `/home/kristinelu/elf-data/conlangs-v1` | previously verified; must revalidate before launch |
@@ -98,7 +98,7 @@ Pending launch and verified completion.
 
 - The full CPU regression closure passed 54 tests with two existing Pydantic warnings.
 - Focused tests verify that the wrong-question arm keeps passage rows fixed, rotates questions only within aligned world blocks, preserves the target receiver question in teacher-forced scoring, works in greedy decoding, and appears only for conditioned senders.
-- Correctness and cleanup reviews are pending for the exact implementation/configuration closure.
+- Correctness review passed for the exact implementation/configuration closure. Cleanup findings were addressed; focused re-review is pending.
 
 ## Updates
 

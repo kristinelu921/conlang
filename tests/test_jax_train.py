@@ -36,7 +36,7 @@ from train import (
     _read_step_metrics,
     _selected_gradient_norm,
     _top_vocabulary_histogram,
-    _validated_wrong_world_shift,
+    _validated_world_block_size,
     build_parallel_evaluation_step,
     build_parallel_train_step,
     evaluate_exact_match,
@@ -386,7 +386,7 @@ def test_throughput_timing_excludes_evaluation_delay(monkeypatch: pytest.MonkeyP
     )
     monkeypatch.setattr(
         "train.build_parallel_evaluation_step",
-        lambda model, collect_message_interventions=False, wrong_world_shift=1: object(),
+        lambda model, collect_message_interventions=False, world_block_size=1: object(),
     )
     monkeypatch.setattr("train.evaluate_exact_match", fake_evaluation)
     monkeypatch.setattr("train._initialize_wandb", lambda current_config: FakeWandbRun())
@@ -443,7 +443,7 @@ def test_outputs_follow_logging_cadence(
     )
     monkeypatch.setattr(
         "train.build_parallel_evaluation_step",
-        lambda model, collect_message_interventions=False, wrong_world_shift=1: object(),
+        lambda model, collect_message_interventions=False, world_block_size=1: object(),
     )
     monkeypatch.setattr(
         "train.evaluate_exact_match",
@@ -673,7 +673,7 @@ def test_conditioned_wrong_world_control_keeps_the_target_question(
         answer_token_ids,
         deterministic=True,
         message_intervention="wrong_world",
-        wrong_world_shift=1,
+        world_block_size=1,
     )
     expected_messages = model.apply(
         variables,
@@ -704,7 +704,7 @@ def test_conditioned_wrong_world_control_keeps_the_target_question(
         agent_2_token_ids,
         question_token_ids,
         message_intervention="wrong_world",
-        wrong_world_shift=1,
+        world_block_size=1,
         method=model.greedy_answer_token_ids,
     )
     expected_tokens = model.apply(
@@ -751,7 +751,7 @@ def test_conditioned_wrong_question_control_keeps_passages_and_receiver_question
         answer_token_ids,
         deterministic=True,
         message_intervention="wrong_question",
-        wrong_world_shift=2,
+        world_block_size=2,
     )
     expected_messages = model.apply(
         variables,
@@ -797,7 +797,7 @@ def test_conditioned_wrong_question_control_keeps_passages_and_receiver_question
         agent_2_token_ids,
         question_token_ids,
         message_intervention="wrong_question",
-        wrong_world_shift=2,
+        world_block_size=2,
         method=sender_only_model.greedy_answer_token_ids,
     )
     expected_tokens = sender_only_model.apply(
@@ -848,13 +848,13 @@ def test_message_interventions_apply_the_requested_causal_controls() -> None:
         apply_message_intervention(messages[:1], 3, "wrong_world")
 
 
-def test_wrong_world_shift_requires_two_aligned_worlds_per_device() -> None:
+def test_world_block_size_requires_two_aligned_worlds_per_device() -> None:
     """Wrong-world evaluation should fail before any same-world pairing is possible."""
-    assert _validated_wrong_world_shift(256, 4, 8) == 8
+    assert _validated_world_block_size(256, 4, 8) == 8
     with pytest.raises(ValueError, match="world-aligned"):
-        _validated_wrong_world_shift(24, 4, 8)
+        _validated_world_block_size(24, 4, 8)
     with pytest.raises(ValueError, match="at least two worlds"):
-        _validated_wrong_world_shift(32, 4, 8)
+        _validated_world_block_size(32, 4, 8)
 
 
 @pytest.mark.parametrize("sender_question_conditioning", [False, True])
@@ -888,7 +888,7 @@ def test_evaluation_reports_every_message_intervention(
         build_parallel_evaluation_step(
             model,
             collect_message_interventions=True,
-            wrong_world_shift=2,
+            world_block_size=2,
         ),
     )
 

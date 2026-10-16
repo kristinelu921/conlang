@@ -677,7 +677,7 @@ def build_parallel_train_step(
 def build_parallel_evaluation_step(
     model: JaxCommunicationModel,
     collect_message_interventions: bool = False,
-    wrong_world_shift: int = 1,
+    world_block_size: int = 1,
 ) -> Any:
     """Compile exact-match evaluation across TPU devices."""
 
@@ -703,7 +703,7 @@ def build_parallel_evaluation_step(
                 batch.answer_token_ids,
                 deterministic=True,
                 message_intervention=intervention,
-                wrong_world_shift=wrong_world_shift,
+                world_block_size=world_block_size,
             )
             generated = model.apply(
                 {"params": params},
@@ -711,7 +711,7 @@ def build_parallel_evaluation_step(
                 batch.agent_2_token_ids,
                 batch.question_token_ids,
                 message_intervention=intervention,
-                wrong_world_shift=wrong_world_shift,
+                world_block_size=world_block_size,
                 method=model.greedy_answer_token_ids,
             )
             correct = jnp.all(generated == batch.answer_token_ids, axis=-1).sum()
@@ -737,7 +737,7 @@ def build_parallel_evaluation_step(
     return jax.pmap(evaluation_step, axis_name="devices")
 
 
-def _validated_wrong_world_shift(
+def _validated_world_block_size(
     batch_size: int,
     local_device_count: int,
     questions_per_world: int,
@@ -893,9 +893,9 @@ def train(config: TrainConfig) -> dict[str, Any]:
             cache_dir=config.dataset_cache_dir,
         )
         verified_dataset = verify_dataset(dataset_directory)
-        wrong_world_shift = 1
+        world_block_size = 1
         if config.evaluation_message_interventions:
-            wrong_world_shift = _validated_wrong_world_shift(
+            world_block_size = _validated_world_block_size(
                 config.batch_size,
                 local_device_count,
                 verified_dataset["questions_per_world"],
@@ -929,7 +929,7 @@ def train(config: TrainConfig) -> dict[str, Any]:
         parallel_evaluation_step = build_parallel_evaluation_step(
             model,
             collect_message_interventions=config.evaluation_message_interventions,
-            wrong_world_shift=wrong_world_shift,
+            world_block_size=world_block_size,
         )
         metrics_path = None if output_directory is None else output_directory / "metrics.jsonl"
         outputs_path = None if output_directory is None else output_directory / "outputs.jsonl"

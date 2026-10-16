@@ -51,18 +51,18 @@ def _prepare_sender_inputs_for_message_intervention(
     question_token_ids: Array,
     sender_question_conditioning: bool,
     intervention: str,
-    wrong_world_shift: int,
+    world_block_size: int,
 ) -> tuple[Array, Array, Array, str]:
     """Prepare matched passage or question controls before sender encoding."""
     if intervention == "wrong_question":
         if not sender_question_conditioning:
             raise ValueError("wrong-question intervention requires conditioned senders")
         batch_size = question_token_ids.shape[0]
-        if wrong_world_shift < 2 or batch_size % wrong_world_shift != 0:
+        if world_block_size < 2 or batch_size % world_block_size != 0:
             raise ValueError("wrong-question intervention requires aligned question blocks")
         grouped_questions = question_token_ids.reshape(
-            batch_size // wrong_world_shift,
-            wrong_world_shift,
+            batch_size // world_block_size,
+            world_block_size,
             question_token_ids.shape[1],
         )
         wrong_questions = jnp.roll(grouped_questions, shift=1, axis=1).reshape(
@@ -71,11 +71,11 @@ def _prepare_sender_inputs_for_message_intervention(
         return agent_1_token_ids, agent_2_token_ids, wrong_questions, "intact"
     if not sender_question_conditioning or intervention != "wrong_world":
         return agent_1_token_ids, agent_2_token_ids, question_token_ids, intervention
-    if wrong_world_shift < 1 or wrong_world_shift >= agent_1_token_ids.shape[0]:
+    if world_block_size < 1 or world_block_size >= agent_1_token_ids.shape[0]:
         raise ValueError("wrong-world shift must select another row in the local batch")
     return (
-        jnp.roll(agent_1_token_ids, shift=wrong_world_shift, axis=0),
-        jnp.roll(agent_2_token_ids, shift=wrong_world_shift, axis=0),
+        jnp.roll(agent_1_token_ids, shift=world_block_size, axis=0),
+        jnp.roll(agent_2_token_ids, shift=world_block_size, axis=0),
         question_token_ids,
         "intact",
     )
@@ -703,7 +703,7 @@ class JaxCommunicationModel(nn.Module):
         stop_message_2: bool = False,
         stop_receiver_tokens: bool = False,
         message_intervention: str = "intact",
-        wrong_world_shift: int = 1,
+        world_block_size: int = 1,
     ) -> JaxCommunicationOutput:
         """Teacher-force answers and return their joint log probability."""
         batch_size = answer_token_ids.shape[0]
@@ -720,7 +720,7 @@ class JaxCommunicationModel(nn.Module):
             question_token_ids,
             self.config.sender_question_conditioning,
             message_intervention,
-            wrong_world_shift,
+            world_block_size,
         )
         messages, sender_gate_1, sender_gate_2 = self._encode_messages_with_gates(
             agent_1_token_ids,
@@ -738,7 +738,7 @@ class JaxCommunicationModel(nn.Module):
             jnp.concatenate((message_1, message_2), axis=1),
             self.config.message_length,
             encoded_message_intervention,
-            wrong_world_shift,
+            world_block_size,
         )
         message_1 = messages[:, : self.config.message_length]
         message_2 = messages[:, self.config.message_length :]
@@ -781,7 +781,7 @@ class JaxCommunicationModel(nn.Module):
         agent_2_token_ids: Array,
         question_token_ids: Array,
         message_intervention: str = "intact",
-        wrong_world_shift: int = 1,
+        world_block_size: int = 1,
     ) -> Array:
         """Generate a fixed-shape greedy answer without data-dependent control flow."""
         batch_size = agent_1_token_ids.shape[0]
@@ -802,7 +802,7 @@ class JaxCommunicationModel(nn.Module):
             question_token_ids,
             self.config.sender_question_conditioning,
             message_intervention,
-            wrong_world_shift,
+            world_block_size,
         )
         messages = self.encode_messages(
             agent_1_token_ids,
@@ -814,7 +814,7 @@ class JaxCommunicationModel(nn.Module):
             messages,
             self.config.message_length,
             encoded_message_intervention,
-            wrong_world_shift,
+            world_block_size,
         )
         beginning = jnp.full((batch_size, 1), self.config.bos_id, dtype=jnp.int32)
         for position in range(self.config.max_answer_length):
