@@ -19,18 +19,6 @@ from flax.linen.attention import dot_product_attention
 Array = jax.Array
 
 
-MESSAGE_INTERVENTIONS = frozenset(
-    {
-        "intact",
-        "zero",
-        "wrong_world",
-        "swap_senders",
-        "agent_1_only",
-        "agent_2_only",
-    }
-)
-
-
 def apply_message_intervention(
     messages: Array,
     message_length: int,
@@ -38,8 +26,6 @@ def apply_message_intervention(
     wrong_world_shift: int = 1,
 ) -> Array:
     """Apply one causal intervention to two concatenated sender messages."""
-    if intervention not in MESSAGE_INTERVENTIONS:
-        raise ValueError(f"unknown message intervention: {intervention}")
     if intervention == "intact":
         return messages
     if intervention == "zero":
@@ -54,7 +40,9 @@ def apply_message_intervention(
         return jnp.concatenate((message_2, message_1), axis=1)
     if intervention == "agent_1_only":
         return jnp.concatenate((message_1, jnp.zeros_like(message_2)), axis=1)
-    return jnp.concatenate((jnp.zeros_like(message_1), message_2), axis=1)
+    if intervention == "agent_2_only":
+        return jnp.concatenate((jnp.zeros_like(message_1), message_2), axis=1)
+    raise ValueError(f"unknown message intervention: {intervention}")
 
 
 @dataclass(frozen=True)
