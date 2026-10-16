@@ -31,7 +31,7 @@ All data, seed, optimization, schedule, widths, message length, depth, weight sh
 
 The passage-only sender must learn a query-independent code for eight facts using only a weak gradient routed through the receiver, while the receiver can cheaply fit question-conditioned answer priors. Conditioning both senders on the question should make the four message vectors query-specific and strengthen the sender learning signal without increasing width, depth, or channel length.
 
-Count this as communication only if intact messages outperform zero or wrong-world messages in exact match or joint log probability. Ordinary intact exact match alone is insufficient. Keep the switch for subsequent matched sharing/width experiments only if it produces a causal message gap.
+Count this as private-content communication only if intact messages outperform the target-question/wrong-passage control in exact match or joint log probability, with zero messages as a second reference. The wrong-world arm rotates only the two private passages and re-encodes them against each target row's unchanged question, so a gap cannot be attributed merely to question mismatch. Ordinary intact exact match or a gap over zero alone is insufficient. Keep the switch for subsequent matched sharing/width experiments only if it produces that passage-specific causal gap.
 
 ## Results
 

@@ -45,6 +45,25 @@ def apply_message_intervention(
     raise ValueError(f"unknown message intervention: {intervention}")
 
 
+def _prepare_sender_inputs_for_message_intervention(
+    agent_1_token_ids: Array,
+    agent_2_token_ids: Array,
+    sender_question_conditioning: bool,
+    intervention: str,
+    wrong_world_shift: int,
+) -> tuple[Array, Array, str]:
+    """Rotate only private passages for conditioned wrong-world controls."""
+    if not sender_question_conditioning or intervention != "wrong_world":
+        return agent_1_token_ids, agent_2_token_ids, intervention
+    if wrong_world_shift < 1 or wrong_world_shift >= agent_1_token_ids.shape[0]:
+        raise ValueError("wrong-world shift must select another row in the local batch")
+    return (
+        jnp.roll(agent_1_token_ids, shift=wrong_world_shift, axis=0),
+        jnp.roll(agent_2_token_ids, shift=wrong_world_shift, axis=0),
+        "intact",
+    )
+
+
 @dataclass(frozen=True)
 class JaxCommunicationModelConfig:
     """Sizes and numeric settings for the Flax communication model."""
@@ -657,6 +676,15 @@ class JaxCommunicationModel(nn.Module):
         batch_size = answer_token_ids.shape[0]
         beginning = jnp.full((batch_size, 1), self.config.bos_id, dtype=jnp.int32)
         answer_input_ids = jnp.concatenate((beginning, answer_token_ids[:, :-1]), axis=1)
+        agent_1_token_ids, agent_2_token_ids, encoded_message_intervention = (
+            _prepare_sender_inputs_for_message_intervention(
+                agent_1_token_ids,
+                agent_2_token_ids,
+                self.config.sender_question_conditioning,
+                message_intervention,
+                wrong_world_shift,
+            )
+        )
         messages, sender_gate_1, sender_gate_2 = self._encode_messages_with_gates(
             agent_1_token_ids,
             agent_2_token_ids,
@@ -672,7 +700,7 @@ class JaxCommunicationModel(nn.Module):
         messages = apply_message_intervention(
             jnp.concatenate((message_1, message_2), axis=1),
             self.config.message_length,
-            message_intervention,
+            encoded_message_intervention,
             wrong_world_shift,
         )
         message_1 = messages[:, : self.config.message_length]
@@ -724,6 +752,15 @@ class JaxCommunicationModel(nn.Module):
             dtype=jnp.int32,
         )
         finished = jnp.zeros((batch_size,), dtype=jnp.bool_)
+        agent_1_token_ids, agent_2_token_ids, encoded_message_intervention = (
+            _prepare_sender_inputs_for_message_intervention(
+                agent_1_token_ids,
+                agent_2_token_ids,
+                self.config.sender_question_conditioning,
+                message_intervention,
+                wrong_world_shift,
+            )
+        )
         messages = self.encode_messages(
             agent_1_token_ids,
             agent_2_token_ids,
@@ -733,7 +770,7 @@ class JaxCommunicationModel(nn.Module):
         messages = apply_message_intervention(
             messages,
             self.config.message_length,
-            message_intervention,
+            encoded_message_intervention,
             wrong_world_shift,
         )
         beginning = jnp.full((batch_size, 1), self.config.bos_id, dtype=jnp.int32)

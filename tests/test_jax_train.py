@@ -555,6 +555,84 @@ def test_question_conditioned_senders_require_and_use_the_question() -> None:
         )
 
 
+@pytest.mark.parametrize("tie_sender_receiver_encoder", [False, True])
+def test_conditioned_wrong_world_control_keeps_the_target_question(
+    tie_sender_receiver_encoder: bool,
+) -> None:
+    """Wrong-world controls should rotate passages but retain each target question."""
+    tokenizer = TextTokenizer(["buffalo", "chapel"])
+    config = replace(
+        _small_config(),
+        sender_question_conditioning=True,
+        tie_sender_receiver_encoder=tie_sender_receiver_encoder,
+    )
+    batch = tokenize_examples(_examples(), tokenizer, config).select([0, 1])
+    model = JaxCommunicationModel(_model_config(config, tokenizer))
+    agent_1_token_ids = jnp.asarray(batch.agent_1_token_ids)
+    agent_2_token_ids = jnp.asarray(batch.agent_2_token_ids)
+    question_token_ids = jnp.asarray(batch.question_token_ids)
+    answer_token_ids = jnp.asarray(batch.answer_token_ids)
+    variables = model.init(
+        {"params": jax.random.PRNGKey(0)},
+        agent_1_token_ids,
+        agent_2_token_ids,
+        question_token_ids,
+        answer_token_ids,
+        deterministic=True,
+    )
+
+    wrong_world_output = model.apply(
+        variables,
+        agent_1_token_ids,
+        agent_2_token_ids,
+        question_token_ids,
+        answer_token_ids,
+        deterministic=True,
+        message_intervention="wrong_world",
+        wrong_world_shift=1,
+    )
+    expected_messages = model.apply(
+        variables,
+        jnp.roll(agent_1_token_ids, shift=1, axis=0),
+        jnp.roll(agent_2_token_ids, shift=1, axis=0),
+        deterministic=True,
+        question_token_ids=question_token_ids,
+        method=model.encode_messages,
+    )
+    source_messages = model.apply(
+        variables,
+        agent_1_token_ids,
+        agent_2_token_ids,
+        deterministic=True,
+        question_token_ids=question_token_ids,
+        method=model.encode_messages,
+    )
+    actual_messages = jnp.concatenate(
+        (wrong_world_output.message_1, wrong_world_output.message_2),
+        axis=1,
+    )
+
+    assert jnp.allclose(actual_messages, expected_messages)
+    assert not jnp.allclose(actual_messages, jnp.roll(source_messages, shift=1, axis=0))
+    wrong_world_tokens = model.apply(
+        variables,
+        agent_1_token_ids,
+        agent_2_token_ids,
+        question_token_ids,
+        message_intervention="wrong_world",
+        wrong_world_shift=1,
+        method=model.greedy_answer_token_ids,
+    )
+    expected_tokens = model.apply(
+        variables,
+        jnp.roll(agent_1_token_ids, shift=1, axis=0),
+        jnp.roll(agent_2_token_ids, shift=1, axis=0),
+        question_token_ids,
+        method=model.greedy_answer_token_ids,
+    )
+    assert jnp.array_equal(wrong_world_tokens, expected_tokens)
+
+
 def test_message_interventions_apply_the_requested_causal_controls() -> None:
     """Message controls should preserve shape while selecting the intended information."""
     messages = jnp.arange(24, dtype=jnp.float32).reshape(2, 6, 2)
