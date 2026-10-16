@@ -8,7 +8,7 @@ The current model sends four continuous hidden vectors from each sender. A recei
 
 | Run family | Key change | Final validation exact match | Final validation joint log probability | Observation |
 |---|---|---:|---:|---|
-| Full data, hidden 128 | untied, no gates, message 4, depth 2 | 0.0390625 | -4.058863639831543 | Six dominant predictions; near the question-only baseline |
+| Full data, hidden 128 | untied, no gates, message 4, depth 2 | 0.0390625 | -4.058863639831543 | All six causal arms are exactly 0.0390625; zero messages are slightly better in likelihood |
 | Full data, hidden 128 | tied encoder, output width 256 | 0.0390625 | -4.04714298248291 | Tying did not improve exact match |
 | Full data, hidden 512 | tied encoder, output width 256 | 0.046875 | -4.053905487060547 | Fourfold width did not establish strong generalization |
 | Full data, hidden 512 | tied plus 64-channel role gates | 0.0390625 | -4.060502052307129 | Gates did not improve the result |
@@ -17,11 +17,11 @@ The current model sends four continuous hidden vectors from each sender. A recei
 | 32-example prefix | tied / untied | 0.015625 / 0.01171875 | -18.459566354751587 / -17.76997447013855 | Both nearly memorized the prefix but generalized poorly |
 | One example | tied / untied | 0.0 / 0.0 | -37.64824861288071 / -35.6571341753006 | Mechanics can memorize; no held-out transfer |
 
-The exact 256-example validation prefix has a 0.03515625 empirical baseline when the answer is guessed from only the relation domain inferred from the question. A full-data question-template lookup reaches 0.0703125. The trained full-data runs' 0.0390625--0.046875 range is therefore consistent with a question-only shortcut. Their final sender-path gradient norms are about 0.004--0.006 while the receiver path is about 0.84--1.18, further motivating a direct causal test rather than another uninstrumented size sweep.
+The exact 256-example validation prefix has a 0.03515625 empirical baseline when the answer is guessed from only the relation domain inferred from the question. A full-data question-template lookup reaches 0.0703125. The trained full-data runs' 0.0390625--0.046875 range is therefore consistent with a question-only shortcut. The direct causal baseline confirms it: intact, zero, wrong-world, swapped, agent-1-only, and agent-2-only messages all yield the same 10 correct answers. Zeroing messages improves mean joint log probability by 0.0022974. Final sender-path gradient norms are 0.00452 and 0.00540 while the receiver path is 1.13643, about 210--251 times larger.
 
 ## Ranked hypotheses and tests
 
-1. **Question-only shortcut dominates optimization.** The receiver learns the answer prior for each relation type while assigning little causal weight to the messages. Test intact messages against zero messages and messages from the wrong world. Evidence for communication requires both higher exact match and higher answer log probability with intact messages.
+1. **Question-only shortcut dominates optimization — confirmed for the baseline.** The receiver learns the answer prior for each relation type while assigning no measurable causal weight to the messages. Intact, zero, and wrong-world messages produce identical exact predictions and nearly identical likelihoods.
 2. **Four query slots are too narrow for eight facts per sender.** Each sender must compress eight independently queryable facts into four vectors. Test message length 8 with every other setting fixed. A larger intact-minus-wrong-world gap would support this bottleneck hypothesis.
 3. **Two layers are too shallow for character parsing, fact selection, and a two-hop join.** Test depth 4 with message length fixed at 4. If it improves communication without message expansion, reasoning depth is the stronger bottleneck.
 4. **Capacity helps only after the channel and depth are adequate.** Hidden 512 alone already failed to move beyond the shortcut regime. Test width 256 only after message/depth experiments identify a communicating architecture.
@@ -43,7 +43,7 @@ Every arm uses seed 1730, the same Central2 dataset, the same Kristine v4-8, bat
 
 ## Current belief
 
-The most likely near-term win is not raw Transformer width. The current evidence favors a shortcut/local-minimum explanation, with the four-slot channel and two-layer reasoning stack as plausible contributors. The causal baseline is the decision gate: if intact, zero, and wrong-world messages are indistinguishable, architecture changes will be judged by whether they create a measurable message-dependence gap, not by ordinary exact match alone.
+The baseline is definitively in a question-only shortcut/local minimum, not merely weak at communication. Raw Transformer width is unlikely to fix it because hidden 512 already failed. The four-slot channel and two-layer reasoning stack remain plausible contributors, so message 8 and depth 4 are the next controlled tests. Architecture changes will be judged first by whether they create a measurable intact-minus-zero/wrong-world gap, not by ordinary exact match alone. If both capacity arms remain causally flat, the belief should shift strongly toward an objective/credit-assignment fix such as an auxiliary sender-content loss or a receiver design that cannot answer without messages.
 
 ## Evidence limitations
 

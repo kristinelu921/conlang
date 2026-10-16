@@ -5,13 +5,13 @@
 | Field | Value |
 |---|---|
 | Run ID | `20261016-conlang-v4-8-full-m4-d2-commdiag` |
-| Status | `planned` |
-| Started | `not recorded` |
-| Finished | `not recorded` |
+| Status | `completed` |
+| Started | `2026-10-16T06:52:28Z` |
+| Finished | `2026-10-16T06:57:44Z` |
 | Baseline | `20261015-conlang-jax-v4-8-b256-steps2000-output-h256-wandb-top100` |
-| Git revision | `758129f76a41f6bbe24b641fca10ad6e8f7b1feb` |
+| Git revision | snapshot HEAD `b542fee798782c922b4f75254aee71f30c72cf14`; reviewed code/config closure `758129f76a41f6bbe24b641fca10ad6e8f7b1feb` |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` |
-| Command | `/home/kristinelu/elf-runs/runtime/venv/bin/python -u train.py --config configs/conlang-jax-v4-8-full-m4-d2-commdiag.yaml` inside the immutable TPU-local snapshot; complete SSH launcher command pending staging |
+| Command | `/snap/google-cloud-cli/current/bin/gcloud compute tpus tpu-vm ssh kmh-tpuvm-v4-8-spot-kristine-14-23-12-28-N-us-central2-b --project=he-vision-group --zone=us-central2-b --worker=all --internal-ip --ssh-flag=-F --ssh-flag=/dev/null --command="set -euo pipefail; mkdir -p /home/kristinelu/elf-runs; test -O /home/kristinelu/elf-runs; test -w /home/kristinelu/elf-runs; test ! -e /home/kristinelu/elf-runs/20261016-conlang-v4-8-full-m4-d2-commdiag; test ! -e /tmp/libtpu_lockfile; test -z \"\$(sudo fuser /dev/vfio/* 2>/dev/null || true)\"; if test -e /tmp/tpu_logs; then test -w /tmp/tpu_logs; fi; cd /home/kristinelu/elf-runs/source/20261016-conlang-v4-8-full-m4-d2-commdiag; export JAX_PLATFORMS=tpu CUDA_VISIBLE_DEVICES='' ELF_TPU_WORKER_INDEX=0 PYTHONPATH=\"\$PWD\" HF_HOME=/home/kristinelu/elf-runs/hf-cache PYTHONUNBUFFERED=1; ulimit -c 0; /home/kristinelu/elf-runs/runtime/venv/bin/python -u train.py --config configs/conlang-jax-v4-8-full-m4-d2-commdiag.yaml 2>&1 | tee /home/kristinelu/elf-runs/20261016-conlang-v4-8-full-m4-d2-commdiag.launcher.log"` |
 | Seed | `1730` |
 | Hardware | `kmh-tpuvm-v4-8-spot-kristine-14-23-12-28-N-us-central2-b`, `us-central2-b`, Spot `v4-8`, topology `2x2x1`, one host, four TPU devices |
 
@@ -71,12 +71,23 @@ Training data, batch size, optimization, seed, hidden width, output width, untie
 
 | Dataset / split | Metric | Value | Step | Direction | Source |
 |---|---|---:|---:|---|---|
-| Validation | Intact-message exact match | `not recorded` | 2000 | max | pending |
-| Validation | Zero-message exact match | `not recorded` | 2000 | diagnostic | pending |
-| Validation | Wrong-world-message exact match | `not recorded` | 2000 | diagnostic | pending |
-| Validation | Swapped-sender exact match | `not recorded` | 2000 | diagnostic | pending |
-| Validation | Agent-1-only exact match | `not recorded` | 2000 | diagnostic | pending |
-| Validation | Agent-2-only exact match | `not recorded` | 2000 | diagnostic | pending |
+| Validation | Intact-message exact match | `0.0390625` (10/256) | 2000 | max | `metrics.jsonl` |
+| Validation | Intact-message mean joint log probability | `-4.0588636398` | 2000 | max | `metrics.jsonl` |
+| Validation | Zero-message exact match | `0.0390625` (10/256) | 2000 | diagnostic | `metrics.jsonl` |
+| Validation | Zero-message mean joint log probability | `-4.0565662384` | 2000 | diagnostic | `metrics.jsonl` |
+| Validation | Wrong-world-message exact match | `0.0390625` (10/256) | 2000 | diagnostic | `metrics.jsonl` |
+| Validation | Wrong-world-message mean joint log probability | `-4.0588860512` | 2000 | diagnostic | `metrics.jsonl` |
+| Validation | Swapped-sender exact match | `0.0390625` (10/256) | 2000 | diagnostic | `metrics.jsonl` |
+| Validation | Swapped-sender mean joint log probability | `-4.0589790344` | 2000 | diagnostic | `metrics.jsonl` |
+| Validation | Agent-1-only exact match | `0.0390625` (10/256) | 2000 | diagnostic | `metrics.jsonl` |
+| Validation | Agent-1-only mean joint log probability | `-4.0590910912` | 2000 | diagnostic | `metrics.jsonl` |
+| Validation | Agent-2-only exact match | `0.0390625` (10/256) | 2000 | diagnostic | `metrics.jsonl` |
+| Validation | Agent-2-only mean joint log probability | `-4.0581893921` | 2000 | diagnostic | `metrics.jsonl` |
+| Train | Loss | `3.9090199471` | 2000 | min | `metrics.jsonl` |
+| Train | Throughput | `5869.8167 examples/s` | 2000 | max | `metrics.jsonl` |
+| Train | Agent-1 gradient norm | `0.0045244885` | 2000 | diagnostic | `metrics.jsonl` |
+| Train | Agent-2 gradient norm | `0.0054018954` | 2000 | diagnostic | `metrics.jsonl` |
+| Train | Receiver gradient norm | `1.1364309788` | 2000 | diagnostic | `metrics.jsonl` |
 
 ## Artifacts
 
@@ -84,23 +95,27 @@ Training data, batch size, optimization, seed, hidden width, output width, untie
 |---|---|---|
 | Configuration | `configs/conlang-jax-v4-8-full-m4-d2-commdiag.yaml` | reviewed at `758129f76a41f6bbe24b641fca10ad6e8f7b1feb` |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` | open; update pending |
-| Source snapshot | `not recorded` | pending |
-| Regional dataset | `/home/kristinelu/elf-data/conlangs-v1` | previously verified; fresh preflight pending |
-| Checkpoint | `/home/kristinelu/elf-runs/20261016-conlang-v4-8-full-m4-d2-commdiag/checkpoint.msgpack` | pending |
-| Tracking run | `not recorded` | pending |
-| Metrics | `experiment_log/2026-10-16/artifacts/20261016-conlang-v4-8-full-m4-d2-commdiag/metrics.jsonl` | pending |
+| Source snapshot | `/kmh-nfs-ssd-us-mount/staging/kristine/elf/20261016-conlang-v4-8-full-m4-d2-commdiag-20261016T064945.610203803Z`; remote `/home/kristinelu/elf-runs/source/20261016-conlang-v4-8-full-m4-d2-commdiag` | yes; local and remote contain 50 files and 376372 bytes; relative SHA-256-manifest digest `9a8952b46b9957e0decd59ead4e96571c5eeebce726be6c1e843b0542eeed3aa` |
+| Regional dataset | `/home/kristinelu/elf-data/conlangs-v1` | yes; six gzip files passed integrity, manifest reports 15625 worlds and 125000 questions, manifest SHA-256 `a839b6ac98ba33a008caaebdde40dea7bc1e639106e93aab25ab2af3c29588e8` |
+| Checkpoint | `/home/kristinelu/elf-runs/20261016-conlang-v4-8-full-m4-d2-commdiag/checkpoint.msgpack` | yes; 26418137 bytes; SHA-256 `2596e857c843538e76f18b7325dcecdd281d7a0761818cd5de0372a2e9dbd9c4`; a temporary local copy restored at step 2000 and was not retained in Git |
+| Tracking run | `https://wandb.ai/kaynelu921-massachusetts-institute-of-technology/conlangs/runs/7v02cpjc` | synced and finalized by the canonical launcher |
+| Metrics | `experiment_log/2026-10-16/artifacts/20261016-conlang-v4-8-full-m4-d2-commdiag/metrics.jsonl` | yes; SHA-256 `e6beab96cb957af0b5b4c436652dd0b8c868b5cd42289d05b2c9f4cd3b8af5c4` |
+| Generated outputs | `experiment_log/2026-10-16/artifacts/20261016-conlang-v4-8-full-m4-d2-commdiag/outputs.jsonl` | yes; SHA-256 `997f0d8b6d0bc347edfa1d62ad92f9f0ecae2faca53ee1a18d1f074fdc4143ee` |
+| Canonical launcher log | `experiment_log/2026-10-16/artifacts/20261016-conlang-v4-8-full-m4-d2-commdiag/launcher.log.gz` | yes; compressed SHA-256 `877e98291daa7506bd95422fadf93958967b251c69eb7e87abdf2ddf975bcb5b`; uncompressed remote SHA-256 `8495eaf04d42be679f4fb15b6b89dff17af735818a63925ab6094e8603d8e30a`; contains `TRAINING_COMPLETE` |
 
 ## Failure Details
 
-- Last known step: `not recorded`
-- Error summary: not applicable; launch pending
-- Detailed output: `not recorded`
+- Last known step: `2000`
+- Error summary: training completed successfully. The first artifact SCP stream suffered intermittent SSH MAC/packet corruption and left a partial local file; a clean per-file retry produced a complete canonical archive whose hashes match the TPU copies.
+- Detailed output: `experiment_log/2026-10-16/20261016-conlang-v4-8-full-m4-d2-commdiag-artifact-transfer-retry.md`
 
 ## Observations
 
 - The treatment is evaluation-only: the optimization path is byte-for-byte identical to the established full-data message-4/depth-2 baseline until final evaluation.
 - `wrong_world_message` rotates messages by one verified eight-question world within each device-local validation shard. Each 64-example shard contains eight aligned worlds, so every example receives another world's messages rather than another question's identical same-world messages.
 - W&B inventory at `2026-10-16T06:20:15Z` reached the entity and listed 21 projects, but every project run query was inaccessible; no W&B state was inferred from the empty result. Local immutable artifacts remain the primary evidence.
+- Every intervention produced the same 10 correct examples out of 256. Zero messages improved mean joint log probability by `0.0022974` relative to intact messages; the other changes were all within `0.0006743` of intact. There is no measurable example-specific message contribution.
+- At step 2000, the receiver gradient norm was approximately 251 times agent 1's and 210 times agent 2's. This independently supports sender-path gradient starvation.
 
 ## Review and Verification
 
@@ -111,10 +126,14 @@ Training data, batch size, optimization, seed, hidden width, output width, untie
 
 ## Interpretation
 
-- If intact messages do not outperform zero or wrong-world messages, the run has not learned example-specific communication even if its ordinary exact match moves slightly.
-- Sender swapping is not expected to be harmful because each sender receives a random balanced mixture of first-hop and second-hop facts. A large swap penalty would reveal unintended positional specialization.
+- The baseline has not learned example-specific communication: intact messages neither change exact predictions nor improve likelihood over zero or wrong-world messages.
+- Sender order is not the blocker: swapping the two senders leaves both exact match and likelihood unchanged.
+- Neither sender contributes useful information alone, and keeping both does not help. The most likely immediate bottleneck is optimization/credit assignment rather than width, output width, weight tying, or sender identity.
 
 ## Updates
 
 - `2026-10-16T06:35:00Z`: Planned as the causal baseline after existing full-data, width-512, gated, tied/untied, and small-prefix runs all remained near a question-only answer-prior baseline.
 - `2026-10-16T06:47:36Z`: Correctness and cleanup review findings were fixed; the complete targeted test suite passed at immutable revision `758129f76a41f6bbe24b641fca10ad6e8f7b1feb`.
+- `2026-10-16T06:51:30Z`: The mandatory availability audit selected the requested Kristine v4-8 from the final `AVAILABLE` table. Runtime JAX 0.6.2 saw all four TPU devices, node-local source and regional data passed integrity verification, and remote preflight reported 86 GiB free with VFIO idle.
+- `2026-10-16T06:52:28Z`: Launched on the same Kristine v4-8 after a second immediate occupancy gate returned `AVAILABLE`; W&B run `7v02cpjc` authenticated and began syncing.
+- `2026-10-16T06:57:44Z`: Completed step 2000 and all six final intervention arms. The canonical process-zero log emitted `TRAINING_COMPLETE`, W&B synced and finalized, the checkpoint restored at step 2000, no run process remained, VFIO was idle, and the TPU remained `READY` / `HEALTHY`.
