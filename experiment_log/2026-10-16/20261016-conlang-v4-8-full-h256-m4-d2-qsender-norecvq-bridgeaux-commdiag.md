@@ -134,6 +134,7 @@ Doubling hidden width should improve the learned bridge representation and the r
 - The exact Kristine v4-8 remained in the final mandatory `AVAILABLE` table immediately before launch; the launch-boundary output, lock, and VFIO checks passed.
 - The mandatory checker listed the exact Kristine v4-8 in its final `AVAILABLE` table, and `tpu_scripts/run_staging.sh` created the verified immutable 58-file snapshot at HEAD `68a819dad88d1d2bd705af3b696081dabdd9ee00`.
 - Completed evidence verification parsed all 201 metrics and 200 output records, recomputed the causal gaps and last-50 medians, matched every preserved artifact hash to its remote source, restored the final checkpoint on CPU, and confirmed W&B `finished` at step 2000.
+- The completed-result correctness and cleanup reviews passed at `11d35aee4d66fb7ddd1c2eb276cd42aa21796d66`; cleanup only clarified that both completed bridge-supervised runs had separate authenticated W&B verification.
 - Terminal verification found the exact trainer absent, no stale TPU lock, idle VFIO devices, a canonical `TRAINING_COMPLETE ... step=2000` sentinel, and the TPU still `READY` / `HEALTHY`.
 
 ## Failure Details
@@ -152,3 +153,4 @@ Doubling hidden width should improve the learned bridge representation and the r
 - `2026-10-16`: Passed the launch gate with finite losses, bridge accuracy above the empirical constant baseline, active sender gradients, and approximately 3,249 examples/s.
 - `2026-10-16T12:24:21Z`: Completed step 2000, every answer and bridge causal arm, checkpoint save, and W&B finalization.
 - `2026-10-16`: Verified exact process absence, lock and VFIO idleness, 201 metrics records, 200 output records, artifact hashes, CPU checkpoint restore, W&B `finished`, and TPU `READY` / `HEALTHY` state.
+- `2026-10-16`: Completed independent correctness and cleanup review of the preserved result; both passes now report `PASS`.
