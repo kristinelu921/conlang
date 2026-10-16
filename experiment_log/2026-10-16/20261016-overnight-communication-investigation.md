@@ -37,15 +37,15 @@ The exact 256-example validation prefix has a 0.03515625 empirical baseline when
 | 1 | Message 4, depth 2 causal baseline | Measure whether the established architecture uses messages at all | No training change |
 | 2 | Message 8 only | Test channel capacity | Keep only if causal gap improves |
 | 3 | Depth 4 only | Test reasoning depth | Keep only if causal gap improves |
-| 4 | Message 8 plus depth 4 | Test complementarity | Run only after individual arms |
-| 5 | Hidden 256 on the best prior arm | Test model width after communication is present | Do not repeat hidden 512 blindly |
-| 6 | Tied versus untied on the best arm | Test sharing as a generalization constraint | Matched pair, same seed and schedule |
+| 4 | Question-conditioned senders, message 4, depth 2 | Shorten the sender credit path and make messages query-specific | Keep only if a causal message gap appears |
+| 5 | Explicit sender-content objective | Supply direct learning signal if architectural conditioning remains flat | Design from the question-conditioned result |
+| 6 | Hidden 256 and tied versus untied on the best communicating arm | Test capacity and sharing after communication is present | Matched comparisons, same seed and schedule |
 
 Every arm uses seed 1730, the same Central2 dataset, the same Kristine v4-8, batch 256, 2,000 steps, bfloat16 compute, output hidden width 256, AdamW settings, and the causal intervention evaluation unless a report explicitly records otherwise.
 
 ## Current belief
 
-The baseline is definitively in a question-only shortcut/local minimum, not merely weak at communication. Raw width, message length, and depth have all failed, while every run keeps sender gradients around two to six thousandths against receiver gradients around one. The leading explanation is now the long, weak credit path: passage-only senders must learn a query-independent code through a receiver that can cheaply fit question-conditioned answer priors. The next clean architecture test is to provide the question to both senders so each can emit query-conditioned evidence. If that remains causally flat, an explicit contrastive or auxiliary communication objective is warranted; further width/depth/tie stacking is not.
+The baseline is definitively in a question-only shortcut/local minimum, not merely weak at communication. Raw width, message length, and depth have all failed, while every run keeps sender gradients around two to six thousandths against receiver gradients around one. The leading explanation is now the long, weak credit path: passage-only senders must learn a query-independent code through a receiver that can cheaply fit question-conditioned answer priors. The next arm provides the question to both senders so each can emit query-conditioned evidence while holding every established baseline setting fixed. If that remains causally flat, an explicit contrastive or auxiliary communication objective is warranted; further width/depth/tie stacking is not.
 
 ## Evidence limitations
 

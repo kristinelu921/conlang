@@ -76,6 +76,7 @@ class TrainConfig:
     output_hidden_size: int | None = None
     tie_sender_receiver_encoder: bool = False
     role_gate_channels: int | None = None
+    sender_question_conditioning: bool = False
     message_length: int = 4
     max_answer_length: int = 4
     max_text_length: int = 512
@@ -243,6 +244,7 @@ def _model_config(config: TrainConfig, tokenizer: TextTokenizer) -> JaxCommunica
         output_hidden_size=config.output_hidden_size,
         tie_sender_receiver_encoder=config.tie_sender_receiver_encoder,
         role_gate_channels=config.role_gate_channels,
+        sender_question_conditioning=config.sender_question_conditioning,
         message_length=config.message_length,
         max_answer_length=config.max_answer_length,
         max_text_length=config.max_text_length,

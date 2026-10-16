@@ -517,6 +517,44 @@ def test_each_sender_emits_four_message_vectors() -> None:
     assert messages.shape == (2, 8, config.hidden_size)
 
 
+def test_question_conditioned_senders_require_and_use_the_question() -> None:
+    """Conditioned sender messages should change when only the question changes."""
+    tokenizer = TextTokenizer(["buffalo", "chapel"])
+    config = replace(_small_config(), sender_question_conditioning=True)
+    batch = tokenize_examples(_examples(), tokenizer, config).select([0, 1])
+    model = JaxCommunicationModel(_model_config(config, tokenizer))
+    variables = model.init(
+        {"params": jax.random.PRNGKey(0)},
+        jnp.asarray(batch.agent_1_token_ids),
+        jnp.asarray(batch.agent_2_token_ids),
+        jnp.asarray(batch.question_token_ids),
+        jnp.asarray(batch.answer_token_ids),
+        deterministic=True,
+    )
+    repeated_agent_1 = jnp.repeat(jnp.asarray(batch.agent_1_token_ids[:1]), 2, axis=0)
+    repeated_agent_2 = jnp.repeat(jnp.asarray(batch.agent_2_token_ids[:1]), 2, axis=0)
+
+    messages = model.apply(
+        variables,
+        repeated_agent_1,
+        repeated_agent_2,
+        deterministic=True,
+        question_token_ids=jnp.asarray(batch.question_token_ids),
+        method=model.encode_messages,
+    )
+
+    assert messages.shape == (2, config.message_length * 2, config.hidden_size)
+    assert not jnp.allclose(messages[0], messages[1])
+    with pytest.raises(ValueError, match="question token IDs are required"):
+        model.apply(
+            variables,
+            repeated_agent_1,
+            repeated_agent_2,
+            deterministic=True,
+            method=model.encode_messages,
+        )
+
+
 def test_message_interventions_apply_the_requested_causal_controls() -> None:
     """Message controls should preserve shape while selecting the intended information."""
     messages = jnp.arange(24, dtype=jnp.float32).reshape(2, 6, 2)

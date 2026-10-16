@@ -54,6 +54,7 @@ class JaxCommunicationModelConfig:
     output_hidden_size: int | None = None
     tie_sender_receiver_encoder: bool = False
     role_gate_channels: int | None = None
+    sender_question_conditioning: bool = False
     message_length: int = 4
     max_answer_length: int = 4
     max_text_length: int = 512
@@ -437,7 +438,10 @@ class Sender(nn.Module):
             jnp.float32,
         ).astype(config.dtype)
         text_length = text_embeddings.shape[1]
-        if text_length > config.max_text_length:
+        maximum_sender_input_length = config.max_text_length
+        if config.sender_question_conditioning:
+            maximum_sender_input_length += config.max_question_length
+        if text_length > maximum_sender_input_length:
             raise ValueError("text is longer than the configured maximum")
         queries = jnp.broadcast_to(query_embedding[None], (batch_size, *query_embedding.shape))
         hidden = jnp.concatenate((queries, text_embeddings), axis=1)
@@ -576,12 +580,14 @@ class JaxCommunicationModel(nn.Module):
         agent_1_token_ids: Array,
         agent_2_token_ids: Array,
         deterministic: bool,
+        question_token_ids: Array | None = None,
     ) -> Array:
-        """Encode both private passages with the shared sender."""
+        """Encode both private passages, optionally conditioned on the question."""
         messages, _sender_gate_1, _sender_gate_2 = self._encode_messages_with_gates(
             agent_1_token_ids,
             agent_2_token_ids,
             deterministic,
+            question_token_ids,
         )
         return messages
 
@@ -590,15 +596,26 @@ class JaxCommunicationModel(nn.Module):
         agent_1_token_ids: Array,
         agent_2_token_ids: Array,
         deterministic: bool,
+        question_token_ids: Array | None = None,
     ) -> tuple[Array, Array | None, Array | None]:
         """Encode both private passages and preserve role-gate telemetry."""
+        agent_1_embeddings = self.token_embedding(agent_1_token_ids)
+        agent_2_embeddings = self.token_embedding(agent_2_token_ids)
+        if self.config.sender_question_conditioning:
+            if question_token_ids is None:
+                raise ValueError("question token IDs are required for conditioned senders")
+            question_embeddings = self.token_embedding(question_token_ids)
+            agent_1_embeddings = jnp.concatenate((question_embeddings, agent_1_embeddings), axis=1)
+            agent_2_embeddings = jnp.concatenate((question_embeddings, agent_2_embeddings), axis=1)
+            agent_1_token_ids = jnp.concatenate((question_token_ids, agent_1_token_ids), axis=1)
+            agent_2_token_ids = jnp.concatenate((question_token_ids, agent_2_token_ids), axis=1)
         message_1, sender_gate_1 = self.sender(
-            self.token_embedding(agent_1_token_ids),
+            agent_1_embeddings,
             agent_1_token_ids,
             deterministic,
         )
         message_2, sender_gate_2 = self.sender(
-            self.token_embedding(agent_2_token_ids),
+            agent_2_embeddings,
             agent_2_token_ids,
             deterministic,
         )
@@ -644,6 +661,7 @@ class JaxCommunicationModel(nn.Module):
             agent_1_token_ids,
             agent_2_token_ids,
             deterministic,
+            question_token_ids,
         )
         message_1 = messages[:, : self.config.message_length]
         message_2 = messages[:, self.config.message_length :]
@@ -706,7 +724,12 @@ class JaxCommunicationModel(nn.Module):
             dtype=jnp.int32,
         )
         finished = jnp.zeros((batch_size,), dtype=jnp.bool_)
-        messages = self.encode_messages(agent_1_token_ids, agent_2_token_ids, deterministic=True)
+        messages = self.encode_messages(
+            agent_1_token_ids,
+            agent_2_token_ids,
+            deterministic=True,
+            question_token_ids=question_token_ids,
+        )
         messages = apply_message_intervention(
             messages,
             self.config.message_length,
