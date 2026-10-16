@@ -134,8 +134,10 @@ Pending launch and verified completion.
   selected Central2 TPU without any cross-region transfer.
 - Focused configuration validation and dataset tests passed 12 cases.
   Correctness review passed the closure at
-  `f76311fd9654de4588ff06fe74741dab6929800e`; cleanup re-review after the
-  metadata correction, immutable source staging, and remote preflight remain
+  `f76311fd9654de4588ff06fe74741dab6929800e`. Cleanup review found one stale
+  pending-metadata issue; it was corrected in
+  `a8e4115ded7db481915bc721368cc3cd0df53d5b` and the coordinator verified the
+  exact report delta. Immutable source staging and remote preflight remain
   pending.
 
 ## Failure Details
