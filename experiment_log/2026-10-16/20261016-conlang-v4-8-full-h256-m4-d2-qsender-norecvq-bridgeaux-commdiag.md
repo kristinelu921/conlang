@@ -6,10 +6,13 @@
 |---|---|
 | Run ID | `20261016-conlang-v4-8-full-h256-m4-d2-qsender-norecvq-bridgeaux-commdiag` |
 | Status | `planned` |
+| Started | not started |
+| Finished | not applicable |
 | Baseline | `20261016-conlang-v4-8-full-m4-d2-qsender-norecvq-bridgeaux-commdiag` |
 | Git revision | configuration closure and immutable launch snapshot pending |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` |
 | Primary configuration | `configs/conlang-jax-v4-8-full-h256-m4-d2-qsender-norecvq-bridgeaux-commdiag.yaml` |
+| Command | not recorded; pending immutable snapshot and launch-boundary verification |
 | Seed | `1730` |
 | Hardware | exact same authorized TPU only: `kmh-tpuvm-v4-8-spot-kristine-14-23-12-28-N-us-central2-b`, `us-central2-b`, Spot `v4-8`, topology `2x2x1`, one host, four TPU devices |
 
@@ -64,13 +67,13 @@ relative_attention_max_distance: 128
 
 | Parameter | Baseline | Current | Rationale |
 |---|---:|---:|---|
-| Transformer hidden width | `128` | `256` | Test capacity only after explicit bridge credit has produced beneficial private-passage use |
+| Transformer, embedding, and message-vector width | `128` | `256` | Test coupled model and continuous-channel capacity only after explicit bridge credit has produced beneficial private-passage use |
 
-Output hidden width remains `256`; this arm changes the transformer/embedding width, not the receiver output MLP. Data, seed, optimization, schedule, message width, depth, untied encoders, gates, sender conditioning, receiver-question masking, communication rounds, bridge objective, hardware, and evaluation interventions remain fixed.
+Output hidden width remains `256`, so the receiver output MLP stays fixed. Message length remains four slots per sender, but each continuous message vector widens from 128 to 256 features together with the transformer and token embeddings. Data, seed, optimization, schedule, depth, untied encoders, gates, sender conditioning, receiver-question masking, communication rounds, bridge objective, hardware, and evaluation interventions remain fixed.
 
 ## Hypothesis and Decision Rule
 
-The hidden-128 bridge-supervised arm is the first experiment in this campaign where intact messages beat target-question/wrong-passages messages: `17/256` versus `12/256`, with a `+0.0430698`-nat likelihood gap and `32/256` intact bridge accuracy. Its residual error may now reflect insufficient representation capacity rather than the earlier missing sender credit.
+The hidden-128 bridge-supervised arm is the first experiment in this campaign where intact messages beat target-question/wrong-passages messages: `17/256` versus `12/256`, with a `+0.0430698`-nat likelihood gap and `32/256` intact bridge accuracy. Its residual error may now reflect insufficient coupled model or continuous-channel capacity rather than the earlier missing sender credit. Because `hidden_size` controls both the transformer representation and each message vector's feature dimension, this experiment cannot isolate which of those two capacity changes causes any gain.
 
 Doubling hidden width should improve the learned bridge representation and the receiver's two-hop join while preserving the private-passage causal gap. Treat width as useful only if intact-over-wrong-passages answer exact match remains positive and preferably exceeds `5/256`, intact bridge accuracy improves beyond `32/256`, and any raw exact-match gain is not explained by question transport alone. Reject width as the next stacked setting if the matched passage gap collapses, even if intact exact match rises. After this untied arm, compare a matched hidden-256 tied-encoder arm rather than confounding width and sharing.
 
