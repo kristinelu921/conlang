@@ -125,10 +125,11 @@ updates therefore improve the model's global/type-level answer fit, but do not
 make aligned private passage content beneficial.
 
 The sharp middle-of-training loss transition is reproducible structure rather
-than a logging artifact. With the `4x` sender update, the largest post-warmup
-50-step loss-level change begins near step 830 (`5.2886` before versus `4.9078`
-after). The matched `1x` baseline shows the analogous transition around step
-980 (`5.2908` versus `4.8860`), approximately 150 steps later. In the treatment,
+than a logging artifact. With the `4x` sender update, the largest non-initial
+50-step loss-level change after step 100 begins near step 830
+(`5.2886` before versus `4.9078` after). The matched `1x` baseline shows the
+analogous transition around step 980 (`5.2908` versus `4.8860`), approximately
+150 steps later. In the treatment,
 sender-path gradients and sender update-to-weight ratios jump at step 820 before
 the loss breaks, while message RMS begins rising. However, greedy outputs remain
 one constant token across every example in each logged batch throughout this
