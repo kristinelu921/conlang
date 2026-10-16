@@ -111,7 +111,7 @@ Private-content communication required intact messages to outperform the target-
 
 ## Interpretation
 
-- Question-conditioned senders still do not use private passage content. Intact and target-question/wrong-passages both produce 10/256, and wrong passages improve mean joint log probability by `0.0001836`.
+- Question-conditioned senders show no beneficial passage-specific causal gap. Intact and target-question/wrong-passages both produce 10/256, and wrong passages improve mean joint log probability by `0.0001836`; the aggregate metrics do not rule out non-beneficial passage dependence.
 - Zero messages lose one exact answer but improve likelihood by `0.0000324`; agent 2 alone gains one answer and improves likelihood by `0.0004177`. These directions do not support a useful two-sender channel.
 - Sender credit remains extremely weak: the receiver gradient is about 476 times agent 1's and 673 times agent 2's at step 2000, worse than the passage-only baseline's roughly 210--251-fold imbalance.
 - The extra question context lowers throughput from about 5,870 to 4,462 examples/s without creating a passage-specific causal gap. Do not stack this switch into width, depth, or weight-sharing arms.
