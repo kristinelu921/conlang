@@ -7,7 +7,7 @@
 | Run ID | `20261016-conlang-v4-8-full-m4-d2-qsender-norecvq-commdiag` |
 | Status | `planned` |
 | Baseline | `20261016-conlang-v4-8-full-m4-d2-qsender-commdiag` |
-| Git revision | pending reviewed commit |
+| Git revision | reviewed implementation and configuration closure `bc4630f78867f1983fad2456da6a44a33ed0c333`; immutable launch snapshot pending |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` |
 | Command | `/home/kristinelu/elf-runs/runtime/venv/bin/python -u train.py --config configs/conlang-jax-v4-8-full-m4-d2-qsender-norecvq-commdiag.yaml` inside the immutable node-local source snapshot |
 | Seed | `1730` |
@@ -36,6 +36,13 @@ The architecture establishes useful communication only if intact messages outper
 ## Results
 
 Pending launch and verified completion.
+
+## Review and Verification
+
+- Correctness review passed for teacher-forced and greedy masking, sender conditioning, target-question/wrong-passages semantics, tied/untied compatibility, default parameter-tree compatibility, and the causal decision rule.
+- Cleanup review passed after aligning receiver documentation with optional question context.
+- The full CPU regression suite passed 52 tests with two existing Pydantic warnings.
+- The selected YAML validates and differs from the completed question-conditioned arm only by fresh run identity fields and `receiver_question_input: false`.
 
 ## Updates
 
