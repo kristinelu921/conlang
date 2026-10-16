@@ -12,7 +12,7 @@
 | Git revision | primary configuration/report commit `914c0570f242ff75f592d3e030ae05dcbbcdb886`; reviewed immutable launch source `773f1d90789dfde666b8b5abff224a7d9121148e` |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` |
 | Primary configuration | `configs/conlang-jax-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-commdiag.yaml` |
-| Command | `/snap/google-cloud-cli/current/bin/gcloud compute tpus tpu-vm ssh kmh-tpuvm-v4-8-spot-kristine-14-23-12-28-N-us-central2-b --project=he-vision-group --zone=us-central2-b --worker=all --internal-ip --ssh-flag=-F --ssh-flag=/dev/null --command='set -euo pipefail; source_dir=/home/kristinelu/elf-runs/source/20261016-conlang-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-commdiag; output_dir=/home/kristinelu/elf-runs/20261016-conlang-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-commdiag; launcher_log=/home/kristinelu/elf-runs/20261016-conlang-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-commdiag.launcher.log; test -d "$source_dir"; test ! -e "$output_dir"; test ! -e "$launcher_log"; test ! -e /tmp/libtpu_lockfile; test -z "$(sudo fuser /dev/vfio/* 2>/dev/null || true)"; cd "$source_dir"; export JAX_PLATFORMS=tpu CUDA_VISIBLE_DEVICES= ELF_TPU_WORKER_INDEX=0 PYTHONPATH="$PWD" HF_HOME=/home/kristinelu/elf-runs/hf-cache PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1; ulimit -c 0; /home/kristinelu/elf-runs/runtime/venv/bin/python -u train.py --config configs/conlang-jax-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-commdiag.yaml 2>&1 | tee "$launcher_log"' --quiet` |
+| Command | `/snap/google-cloud-cli/current/bin/gcloud compute tpus tpu-vm ssh kmh-tpuvm-v4-8-spot-kristine-14-23-12-28-N-us-central2-b --project=he-vision-group --zone=us-central2-b --worker=all --internal-ip --ssh-flag=-F --ssh-flag=/dev/null --command='set -euo pipefail; source_dir=/home/kristinelu/elf-runs/source/20261016-conlang-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-commdiag; output_dir=/home/kristinelu/elf-runs/20261016-conlang-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-commdiag; launcher_log=/home/kristinelu/elf-runs/20261016-conlang-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-commdiag.launcher.log; test -d "$source_dir"; test ! -e "$output_dir"; test ! -e "$launcher_log"; test ! -e /tmp/libtpu_lockfile; test -z "$(sudo fuser /dev/vfio/* 2>/dev/null \|\| true)"; cd "$source_dir"; export JAX_PLATFORMS=tpu CUDA_VISIBLE_DEVICES= ELF_TPU_WORKER_INDEX=0 PYTHONPATH="$PWD" HF_HOME=/home/kristinelu/elf-runs/hf-cache PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1; ulimit -c 0; /home/kristinelu/elf-runs/runtime/venv/bin/python -u train.py --config configs/conlang-jax-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-commdiag.yaml 2>&1 \| tee "$launcher_log"' --quiet` |
 | Seed | `1730` |
 | Hardware | `kmh-tpuvm-v4-8-spot-kristine-14-23-12-28-N-us-central2-b`, `us-central2-b`, Spot `v4-8`, topology `2x2x1`, one host and four TPU devices |
 
@@ -176,16 +176,19 @@ are input-pipeline events, not model loss transitions.
   free local disk. The current compressed training shard is 9,267,279 bytes;
   a tenfold deterministic expansion and approximately 4.31 GiB of fixed int32
   token arrays fit with substantial host-memory and disk headroom.
-- The matching `us-central2` bucket path
-  `gs://kmh-gcp-us-central2/kristine/datasets/conlangs-train1m` currently has no
-  objects. The dataset will therefore be generated and fully verified on the
-  selected Central2 TPU without any cross-region transfer.
+- Before staging, the matching `us-central2` bucket path
+  `gs://kmh-gcp-us-central2/kristine/datasets/conlangs-train1m` had no objects.
+  The dataset was therefore generated and fully verified on the selected
+  Central2 TPU without any cross-region transfer.
 - Focused configuration validation and dataset tests passed 12 cases.
   Correctness review passed the closure at
   `f76311fd9654de4588ff06fe74741dab6929800e`. Cleanup review found one stale
   pending-metadata issue; it was corrected in
   `a8e4115ded7db481915bc721368cc3cd0df53d5b` and the coordinator verified the
   exact report delta.
+- Completed-result correctness passed the report and evidence closure at
+  `261d91504e9dad7d17ce592dd708976d1d00616b`. Completed-result cleanup found
+  three report-only clarity issues; their correction is pending commit.
 - The immutable node-local source matched the NFS snapshot, the complete new
   dataset passed its streaming integrity verifier, and the unchanged
   validation/test split hashes match the established dataset. Remote preflight
@@ -194,8 +197,7 @@ are input-pipeline events, not model loss transitions.
 - The isolated runtime reported JAX `0.6.2`, Flax `0.10.5`, Optax `0.2.8`, W&B
   `0.28.1`, and four local TPU devices. The launched trainer confirmed the
   expected node-local dataset, 1,000,000 train examples, 256 validation
-  examples, and four TPU devices. Step 190 completed at approximately 5,700
-  examples per second before this status update.
+  examples, and four TPU devices, then sustained normal matched throughput.
 - Terminal verification found the exact completion sentinel at step 10,000,
   1,001 parseable metric records, 1,000 parseable output records spanning
   steps 10--10,000, a restorable step-10,000 checkpoint, and matching local and
