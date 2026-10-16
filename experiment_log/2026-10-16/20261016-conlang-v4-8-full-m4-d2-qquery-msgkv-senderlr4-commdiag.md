@@ -9,7 +9,7 @@
 | Started | `not recorded; not launched` |
 | Finished | `not recorded; not launched` |
 | Baseline | `20261016-conlang-v4-8-full-m4-d2-qquery-msgkv-commdiag` |
-| Git revision | primary implementation/configuration commit `f60a841729595dee407d66fbaf6b6b7f1ab07ad5`; immutable reviewed launch snapshot pending |
+| Git revision | primary implementation/configuration commit `f60a841729595dee407d66fbaf6b6b7f1ab07ad5`; correctness-fix and cleanup-reviewed closure `75dd86d259ec97bc17ddc53d3368175769ed74af`; immutable launch snapshot pending |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` |
 | Primary configuration | `configs/conlang-jax-v4-8-full-m4-d2-qquery-msgkv-senderlr4-commdiag.yaml` |
 | Command | `/snap/google-cloud-cli/current/bin/gcloud compute tpus tpu-vm ssh kmh-tpuvm-v4-8-spot-kristine-14-23-12-28-N-us-central2-b --project=he-vision-group --zone=us-central2-b --worker=all --internal-ip --ssh-flag=-F --ssh-flag=/dev/null --command='set -euo pipefail; source_dir=/home/kristinelu/elf-runs/source/20261016-conlang-v4-8-full-m4-d2-qquery-msgkv-senderlr4-commdiag; output_dir=/home/kristinelu/elf-runs/20261016-conlang-v4-8-full-m4-d2-qquery-msgkv-senderlr4-commdiag; launcher_log=/home/kristinelu/elf-runs/20261016-conlang-v4-8-full-m4-d2-qquery-msgkv-senderlr4-commdiag.launcher.log; test -d "$source_dir"; test ! -e "$output_dir"; test ! -e "$launcher_log"; test ! -e /tmp/libtpu_lockfile; test -z "$(sudo fuser /dev/vfio/* 2>/dev/null \|\| true)"; cd "$source_dir"; export JAX_PLATFORMS=tpu CUDA_VISIBLE_DEVICES= ELF_TPU_WORKER_INDEX=0 PYTHONPATH="$PWD" HF_HOME=/home/kristinelu/elf-runs/hf-cache PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1; ulimit -c 0; /home/kristinelu/elf-runs/runtime/venv/bin/python -u train.py --config configs/conlang-jax-v4-8-full-m4-d2-qquery-msgkv-senderlr4-commdiag.yaml 2>&1 \| tee "$launcher_log"'` |
@@ -123,7 +123,8 @@ Pending launch and verified completion.
 
 - Focused optimizer, default-compatibility, telemetry, and validation closure: 5 passed with two existing Pydantic warnings in 28.14 seconds.
 - `USE_TORCH_XLA=0 JAX_PLATFORMS=cpu python -m pytest -q tests/test_jax_train.py tests/test_linked_facts_generator.py`: 70 passed with the same two existing warnings in 203.53 seconds.
-- Required sequential correctness and cleanup reviews are pending the immutable implementation/configuration commit.
+- Correctness reviewed `32c72ce5e70b40b93c2c37048f4c84562a8027cb`; its matched-telemetry comparison finding was fixed in `75dd86d259ec97bc17ddc53d3368175769ed74af` by limiting update-ratio interpretation to the treatment and marking throughput instrumentation-confounded.
+- Cleanup passed on `75dd86d259ec97bc17ddc53d3368175769ed74af` with no confirmed findings.
 - The mandatory filtered TPU audit completed with three Kristine v4-8 candidates and one Kristine v5e-8 candidate in its final `AVAILABLE` table. Runtime probes returned `UNKNOWN`; the prior Central2 v4-8 remains only an intended candidate until exact readiness and occupancy gates pass.
 
 ## Failure Details
