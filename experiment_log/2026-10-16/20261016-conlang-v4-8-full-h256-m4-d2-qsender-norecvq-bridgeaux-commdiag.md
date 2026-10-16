@@ -9,7 +9,7 @@
 | Started | not started |
 | Finished | not applicable |
 | Baseline | `20261016-conlang-v4-8-full-m4-d2-qsender-norecvq-bridgeaux-commdiag` |
-| Git revision | configuration closure and immutable launch snapshot pending |
+| Git revision | primary configuration commit `570334c62e6ed33d0fe1f6e3b2b30061ace79b7c`; corrected reviewed configuration/report head `5e32f33d1ccee31688f915d6c2ee01163157bed8`; immutable launch snapshot pending |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` |
 | Primary configuration | `configs/conlang-jax-v4-8-full-h256-m4-d2-qsender-norecvq-bridgeaux-commdiag.yaml` |
 | Command | not recorded; pending immutable snapshot and launch-boundary verification |
@@ -69,7 +69,7 @@ relative_attention_max_distance: 128
 |---|---:|---:|---|
 | Transformer, embedding, and message-vector width | `128` | `256` | Test coupled model and continuous-channel capacity only after explicit bridge credit has produced beneficial private-passage use |
 
-Configured output hidden width remains `256`, so the final vocabulary projection stays fixed; the preceding output-hidden input kernel widens from `(128, 256)` to `(256, 256)` with `hidden_size`. Message length remains four slots per sender, but each continuous message vector widens from 128 to 256 features together with the transformer and token embeddings. Data, seed, optimization, schedule, depth, untied encoders, gates, sender conditioning, receiver-question masking, communication rounds, bridge objective, hardware, and evaluation interventions remain fixed.
+Configured output hidden width remains `256`, so the final answer vocabulary projection stays fixed; the preceding answer output-hidden input kernel widens from `(128, 256)` to `(256, 256)` with `hidden_size`. The bridge vocabulary projection also widens from `(128, vocab)` to `(256, vocab)` because it consumes the message representation directly. Message length remains four slots per sender, but each continuous message vector widens from 128 to 256 features together with the transformer and token embeddings. Data, seed, optimization, schedule, depth, untied encoders, gates, sender conditioning, receiver-question masking, communication rounds, bridge objective, hardware, and evaluation interventions remain fixed.
 
 ## Hypothesis and Decision Rule
 
@@ -85,8 +85,8 @@ Pending launch and verified completion.
 
 | Artifact | Path or URL | Verified |
 |---|---|---|
-| Configuration | `configs/conlang-jax-v4-8-full-h256-m4-d2-qsender-norecvq-bridgeaux-commdiag.yaml` | parses and validates locally; immutable commit and review pending |
-| Pull request | `https://github.com/kristinelu921/conlang/pull/1` | pending update with exact configuration closure |
+| Configuration | `configs/conlang-jax-v4-8-full-h256-m4-d2-qsender-norecvq-bridgeaux-commdiag.yaml` | committed in `570334c62e6ed33d0fe1f6e3b2b30061ace79b7c`, parses and validates locally, and passed correctness review after report-only corrections |
+| Pull request | `https://github.com/kristinelu921/conlang/pull/1` | pending push of the reviewed configuration closure |
 | Source snapshot | pending | must be produced by `tpu_scripts/run_staging.sh` before launch |
 | Regional dataset | `/home/kristinelu/elf-data/conlangs-v1` | must revalidate the complete Central2 manifest before launch |
 | Tracking run | pending | W&B enabled; final run identity must match the selected configuration |
@@ -95,7 +95,8 @@ Pending launch and verified completion.
 ## Review and Verification
 
 - The configuration parses and validates locally. Its exact YAML diff from the completed hidden-128 bridge-supervised baseline is limited to run identity/output fields plus `hidden_size: 128` to `256`.
-- Pending correctness review followed by cleanup review of the immutable configuration closure.
+- Correctness review passed for the committed configuration/report closure after correcting the coupled-width and output-projection descriptions.
+- Cleanup review identified two report-only provenance/projection clarifications; cleanup re-review is pending this correction.
 - Pending mandatory same-TPU availability check, node-local snapshot verification, regional-data integrity check, runtime preflight, and launch-boundary VFIO/process/output checks.
 
 ## Failure Details
