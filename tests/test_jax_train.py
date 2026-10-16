@@ -72,6 +72,11 @@ def _examples() -> list[dict[str, str]]:
     ]
 
 
+def _example_tokenizer() -> TextTokenizer:
+    """Return a tokenizer covering every token in the compact examples."""
+    return TextTokenizer(["buffalo", "chapel", "rocker"])
+
+
 def _small_config() -> TrainConfig:
     """Return a small CPU configuration for model tests."""
     return TrainConfig(
@@ -93,7 +98,7 @@ def _small_config() -> TrainConfig:
 
 def test_tokenization_produces_static_training_shapes() -> None:
     """Every host payload should use the configured static sequence lengths."""
-    tokenizer = TextTokenizer(["buffalo", "chapel", "rocker"])
+    tokenizer = _example_tokenizer()
     config = _small_config()
 
     tokenized = tokenize_examples(_examples(), tokenizer, config)
@@ -110,7 +115,7 @@ def test_tokenization_produces_static_training_shapes() -> None:
 
 def test_epoch_batches_reject_a_dataset_smaller_than_the_batch_by_default() -> None:
     """Undersized training sets should require explicit replication."""
-    tokenizer = TextTokenizer(["buffalo", "chapel", "rocker"])
+    tokenizer = _example_tokenizer()
     config = _small_config()
     tokenized = tokenize_examples(_examples()[:1], tokenizer, config)
 
@@ -122,7 +127,7 @@ def test_epoch_batches_reject_a_dataset_smaller_than_the_batch_by_default() -> N
 
 def test_epoch_batches_can_repeat_one_example_to_fill_a_device_batch() -> None:
     """Explicit replication should fill a fixed-shape batch from one unique example."""
-    tokenizer = TextTokenizer(["buffalo", "chapel", "rocker"])
+    tokenizer = _example_tokenizer()
     config = _small_config()
     tokenized = tokenize_examples(_examples()[:1], tokenizer, config)
 
@@ -144,7 +149,7 @@ def test_epoch_batches_can_repeat_one_example_to_fill_a_device_batch() -> None:
 
 def test_epoch_batches_reject_an_empty_dataset_when_replication_is_enabled() -> None:
     """Replication should fail clearly when there is no source example."""
-    tokenizer = TextTokenizer(["buffalo", "chapel", "rocker"])
+    tokenizer = _example_tokenizer()
     config = _small_config()
     tokenized = tokenize_examples([], tokenizer, config)
 
@@ -174,7 +179,7 @@ def test_regional_training_split_fits_static_sequence_limits() -> None:
 
 def test_jax_training_step_updates_parameters_and_stays_finite() -> None:
     """One pmapped JAX step should update model parameters with finite metrics."""
-    tokenizer = TextTokenizer(["buffalo", "chapel", "rocker"])
+    tokenizer = _example_tokenizer()
     config = _small_config()
     batch = tokenize_examples(_examples(), tokenizer, config).select([0, 1])
     model = JaxCommunicationModel(_model_config(config, tokenizer))
@@ -198,7 +203,7 @@ def test_jax_training_step_updates_parameters_and_stays_finite() -> None:
 
 def test_bridge_supervision_updates_its_head_and_reports_metrics() -> None:
     """The optional bridge objective should train and expose its own metrics."""
-    tokenizer = TextTokenizer(["buffalo", "chapel", "rocker"])
+    tokenizer = _example_tokenizer()
     config = replace(_small_config(), bridge_supervision_weight=1.0)
     batch = tokenize_examples(_examples(), tokenizer, config).select([0, 1])
     model = JaxCommunicationModel(_model_config(config, tokenizer))
@@ -232,7 +237,7 @@ def test_bridge_supervision_updates_its_head_and_reports_metrics() -> None:
 
 def test_bridge_supervision_selects_the_person_side_sender() -> None:
     """Bridge labels should score the sender holding the person-to-bridge fact."""
-    tokenizer = TextTokenizer(["buffalo", "chapel", "rocker"])
+    tokenizer = _example_tokenizer()
     config = replace(_small_config(), bridge_supervision_weight=1.0)
     batch = tokenize_examples(_examples(), tokenizer, config).select([0, 1])
     model = JaxCommunicationModel(_model_config(config, tokenizer))
@@ -293,7 +298,7 @@ def test_bridge_supervision_selects_the_person_side_sender() -> None:
 
 def test_default_model_has_no_bridge_projection_parameters() -> None:
     """Disabling the auxiliary objective should preserve old checkpoint trees."""
-    tokenizer = TextTokenizer(["buffalo", "chapel", "rocker"])
+    tokenizer = _example_tokenizer()
     config = _small_config()
     batch = tokenize_examples(_examples(), tokenizer, config).select([0, 1])
     model = JaxCommunicationModel(_model_config(config, tokenizer))
@@ -321,7 +326,7 @@ def test_default_model_has_no_bridge_projection_parameters() -> None:
 
 def test_eval_mode_disables_dropout() -> None:
     """A deterministic apply should be repeatable and should not require a dropout key."""
-    tokenizer = TextTokenizer(["buffalo", "chapel", "rocker"])
+    tokenizer = _example_tokenizer()
     config = replace(_small_config(), dropout=0.5)
     batch = tokenize_examples(_examples(), tokenizer, config).select([0, 1])
     model = JaxCommunicationModel(_model_config(config, tokenizer))
@@ -352,7 +357,7 @@ def test_eval_mode_disables_dropout() -> None:
 
 def test_model_forward_uses_float32_loss_with_bfloat16_compute() -> None:
     """Mixed-precision TPU compute should retain a finite float32 objective."""
-    tokenizer = TextTokenizer(["buffalo", "chapel", "rocker"])
+    tokenizer = _example_tokenizer()
     config = replace(_small_config(), precision="bfloat16")
     batch = tokenize_examples(_examples(), tokenizer, config).select([0, 1])
     model = JaxCommunicationModel(_model_config(config, tokenizer))
@@ -605,7 +610,7 @@ def test_outputs_follow_logging_cadence(
 
 def test_lightweight_train_step_skips_diagnostic_outputs() -> None:
     """Ordinary TPU steps should avoid generation and histogram diagnostics."""
-    tokenizer = TextTokenizer(["buffalo", "chapel", "rocker"])
+    tokenizer = _example_tokenizer()
     config = _small_config()
     batch = tokenize_examples(_examples(), tokenizer, config).select([0, 1])
     model = JaxCommunicationModel(_model_config(config, tokenizer))
@@ -629,7 +634,7 @@ def test_lightweight_train_step_skips_diagnostic_outputs() -> None:
 
 def test_final_checkpoint_serializes_one_local_replica(tmp_path: Path) -> None:
     """The final checkpoint should serialize a pmapped state without array indexing."""
-    tokenizer = TextTokenizer(["buffalo", "chapel", "rocker"])
+    tokenizer = _example_tokenizer()
     config = _small_config()
     batch = tokenize_examples(_examples(), tokenizer, config).select([0, 1])
     model = JaxCommunicationModel(_model_config(config, tokenizer))
@@ -645,7 +650,7 @@ def test_final_checkpoint_serializes_one_local_replica(tmp_path: Path) -> None:
 
 def test_each_sender_emits_four_message_vectors() -> None:
     """Each agent should send four vectors, and the receiver should see all eight."""
-    tokenizer = TextTokenizer(["buffalo", "chapel", "rocker"])
+    tokenizer = _example_tokenizer()
     config = _small_config()
     batch = tokenize_examples(_examples(), tokenizer, config).select([0, 1])
     model = JaxCommunicationModel(_model_config(config, tokenizer))
@@ -672,7 +677,7 @@ def test_each_sender_emits_four_message_vectors() -> None:
 
 def test_question_conditioned_senders_require_and_use_the_question() -> None:
     """Conditioned sender messages should change when only the question changes."""
-    tokenizer = TextTokenizer(["buffalo", "chapel", "rocker"])
+    tokenizer = _example_tokenizer()
     config = replace(_small_config(), sender_question_conditioning=True)
     batch = tokenize_examples(_examples(), tokenizer, config).select([0, 1])
     model = JaxCommunicationModel(_model_config(config, tokenizer))
@@ -713,7 +718,7 @@ def test_two_round_exchange_uses_the_other_senders_first_message(
     tie_sender_receiver_encoder: bool,
 ) -> None:
     """Each second-round message should depend on the other sender's passage."""
-    tokenizer = TextTokenizer(["buffalo", "chapel", "rocker"])
+    tokenizer = _example_tokenizer()
     config = replace(
         _small_config(),
         sender_question_conditioning=True,
@@ -803,7 +808,7 @@ def test_two_round_exchange_uses_the_other_senders_first_message(
 
 def test_receiver_question_input_can_be_disabled() -> None:
     """A disabled receiver question path should make logits question-invariant."""
-    tokenizer = TextTokenizer(["buffalo", "chapel", "rocker"])
+    tokenizer = _example_tokenizer()
     config = replace(
         _small_config(),
         sender_question_conditioning=True,
@@ -882,7 +887,7 @@ def test_conditioned_wrong_world_control_keeps_the_target_question(
     communication_rounds: int,
 ) -> None:
     """Wrong-world controls should rotate passages but retain each target question."""
-    tokenizer = TextTokenizer(["buffalo", "chapel", "rocker"])
+    tokenizer = _example_tokenizer()
     config = replace(
         _small_config(),
         sender_question_conditioning=True,
@@ -961,7 +966,7 @@ def test_conditioned_wrong_question_control_keeps_passages_and_receiver_question
     communication_rounds: int,
 ) -> None:
     """Wrong-question controls should change only sender-side question identity."""
-    tokenizer = TextTokenizer(["buffalo", "chapel", "rocker"])
+    tokenizer = _example_tokenizer()
     config = replace(
         _small_config(),
         sender_question_conditioning=True,
@@ -1108,7 +1113,7 @@ def test_evaluation_reports_every_message_intervention(
     sender_question_conditioning: bool,
 ) -> None:
     """Causal evaluation should emit intact and intervened metrics from one batch."""
-    tokenizer = TextTokenizer(["buffalo", "chapel", "rocker"])
+    tokenizer = _example_tokenizer()
     config = replace(
         _small_config(),
         batch_size=4,
@@ -1160,7 +1165,7 @@ def test_evaluation_reports_every_message_intervention(
 
 def test_evaluation_reports_bridge_accuracy_for_every_intervention() -> None:
     """Bridge supervision should remain measurable under every causal control."""
-    tokenizer = TextTokenizer(["buffalo", "chapel", "rocker"])
+    tokenizer = _example_tokenizer()
     config = replace(
         _small_config(),
         batch_size=4,
@@ -1206,7 +1211,7 @@ def test_evaluation_reports_bridge_accuracy_for_every_intervention() -> None:
 
 def test_output_hidden_size_is_independent_of_transformer_width() -> None:
     """The optional output MLP should widen only the answer head."""
-    tokenizer = TextTokenizer(["buffalo", "chapel", "rocker"])
+    tokenizer = _example_tokenizer()
     config = replace(_small_config(), output_hidden_size=24)
     batch = tokenize_examples(_examples(), tokenizer, config).select([0, 1])
     model = JaxCommunicationModel(_model_config(config, tokenizer))
@@ -1240,7 +1245,7 @@ def test_output_hidden_size_is_independent_of_transformer_width() -> None:
 
 def test_sender_and_receiver_can_share_one_encoder_stack() -> None:
     """The tying option should store one encoder used by both model roles."""
-    tokenizer = TextTokenizer(["buffalo", "chapel", "rocker"])
+    tokenizer = _example_tokenizer()
     config = replace(_small_config(), tie_sender_receiver_encoder=True)
     batch = tokenize_examples(_examples(), tokenizer, config).select([0, 1])
     model = JaxCommunicationModel(_model_config(config, tokenizer))
@@ -1273,7 +1278,7 @@ def test_sender_and_receiver_can_share_one_encoder_stack() -> None:
 
 def test_role_gates_are_separate_identity_initialized_adapters() -> None:
     """Sender and receiver should get distinct, initially closed residual gates."""
-    tokenizer = TextTokenizer(["buffalo", "chapel", "rocker"])
+    tokenizer = _example_tokenizer()
     config = replace(
         _small_config(),
         tie_sender_receiver_encoder=True,
@@ -1322,7 +1327,7 @@ def test_role_gates_are_separate_identity_initialized_adapters() -> None:
 
 def test_role_gate_diagnostics_are_finite_fractions() -> None:
     """Logged role-gate summaries should remain finite and bounded."""
-    tokenizer = TextTokenizer(["buffalo", "chapel", "rocker"])
+    tokenizer = _example_tokenizer()
     config = replace(
         _small_config(),
         tie_sender_receiver_encoder=True,
@@ -1376,7 +1381,7 @@ def test_gate_statistics_ignore_inactive_positions() -> None:
 
 def test_default_keeps_sender_and_receiver_encoders_separate() -> None:
     """The default model should preserve the existing independent parameter tree."""
-    tokenizer = TextTokenizer(["buffalo", "chapel", "rocker"])
+    tokenizer = _example_tokenizer()
     config = _small_config()
     batch = tokenize_examples(_examples(), tokenizer, config).select([0, 1])
     model = JaxCommunicationModel(_model_config(config, tokenizer))
@@ -1397,7 +1402,7 @@ def test_default_keeps_sender_and_receiver_encoders_separate() -> None:
 
 def test_tied_encoder_is_included_in_weight_and_path_diagnostics() -> None:
     """Diagnostics should include the shared weights in both model roles."""
-    tokenizer = TextTokenizer(["buffalo", "chapel", "rocker"])
+    tokenizer = _example_tokenizer()
     config = replace(_small_config(), tie_sender_receiver_encoder=True)
     batch = tokenize_examples(_examples(), tokenizer, config).select([0, 1])
     model = JaxCommunicationModel(_model_config(config, tokenizer))
@@ -1437,7 +1442,7 @@ def test_relative_buckets_separate_nearby_offsets_and_clamp_far_ones() -> None:
 
 def test_model_uses_relative_bias_without_absolute_positions() -> None:
     """Order should come from relative attention bias, and token order should change the logits."""
-    tokenizer = TextTokenizer(["buffalo", "chapel", "rocker"])
+    tokenizer = _example_tokenizer()
     config = _small_config()
     batch = tokenize_examples(_examples(), tokenizer, config).select([0, 1])
     model = JaxCommunicationModel(_model_config(config, tokenizer))
@@ -1507,7 +1512,7 @@ def _component_gradient_slices(
 
 def test_component_gradients_partition_the_full_gradient() -> None:
     """Sender and receiver gradient slices should add back to the full gradient."""
-    tokenizer = TextTokenizer(["buffalo", "chapel", "rocker"])
+    tokenizer = _example_tokenizer()
     config = _small_config()
     batch = tokenize_examples(_examples(), tokenizer, config).select([0, 1])
     model = JaxCommunicationModel(_model_config(config, tokenizer))
@@ -1556,7 +1561,7 @@ def test_component_gradients_partition_the_full_gradient() -> None:
 
 def test_tied_component_gradients_isolate_each_shared_encoder_use() -> None:
     """Tied path diagnostics should partition the shared encoder gradient."""
-    tokenizer = TextTokenizer(["buffalo", "chapel", "rocker"])
+    tokenizer = _example_tokenizer()
     config = replace(_small_config(), tie_sender_receiver_encoder=True)
     batch = tokenize_examples(_examples(), tokenizer, config).select([0, 1])
     model = JaxCommunicationModel(_model_config(config, tokenizer))
@@ -1610,7 +1615,7 @@ def test_tied_component_gradients_isolate_each_shared_encoder_use() -> None:
 
 def test_step_saves_one_output_record_and_logs_requested_metrics(tmp_path: Path) -> None:
     """Each step should append its greedy answers, and the log should carry the requested metrics."""
-    tokenizer = TextTokenizer(["buffalo", "chapel", "rocker"])
+    tokenizer = _example_tokenizer()
     config = _small_config()
     batch = tokenize_examples(_examples(), tokenizer, config).select([0, 1])
     model = JaxCommunicationModel(_model_config(config, tokenizer))
