@@ -9,7 +9,7 @@
 | Started | `not recorded` |
 | Finished | `not recorded` |
 | Baseline | `20261015-conlang-jax-v4-8-b256-steps2000-output-h256-wandb-top100` |
-| Git revision | `pending reviewed commit` |
+| Git revision | `758129f76a41f6bbe24b641fca10ad6e8f7b1feb` |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` |
 | Command | `/home/kristinelu/elf-runs/runtime/venv/bin/python -u train.py --config configs/conlang-jax-v4-8-full-m4-d2-commdiag.yaml` inside the immutable TPU-local snapshot; complete SSH launcher command pending staging |
 | Seed | `1730` |
@@ -82,7 +82,7 @@ Training data, batch size, optimization, seed, hidden width, output width, untie
 
 | Artifact | Path or URL | Verified |
 |---|---|---|
-| Configuration | `configs/conlang-jax-v4-8-full-m4-d2-commdiag.yaml` | pending reviewed commit |
+| Configuration | `configs/conlang-jax-v4-8-full-m4-d2-commdiag.yaml` | reviewed at `758129f76a41f6bbe24b641fca10ad6e8f7b1feb` |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` | open; update pending |
 | Source snapshot | `not recorded` | pending |
 | Regional dataset | `/home/kristinelu/elf-data/conlangs-v1` | previously verified; fresh preflight pending |
@@ -102,6 +102,13 @@ Training data, batch size, optimization, seed, hidden width, output width, untie
 - `wrong_world_message` rotates messages by one verified eight-question world within each device-local validation shard. Each 64-example shard contains eight aligned worlds, so every example receives another world's messages rather than another question's identical same-world messages.
 - W&B inventory at `2026-10-16T06:20:15Z` reached the entity and listed 21 projects, but every project run query was inaccessible; no W&B state was inferred from the empty result. Local immutable artifacts remain the primary evidence.
 
+## Review and Verification
+
+- Correctness review found that the first wrong-world control reversed rows and could therefore preserve same-world messages. Commit `c6f4c6261fbc155a9977f51e771cf38455a360d4` replaces it with a verified whole-world rotation and rejects invalid device-local layouts.
+- Cleanup review found duplicated intervention registration and fallthrough dispatch. Commit `758129f76a41f6bbe24b641fca10ad6e8f7b1feb` makes every supported intervention explicit and rejects unknown values.
+- `USE_TORCH_XLA=0 JAX_PLATFORMS=cpu python -m pytest -q tests/test_jax_train.py tests/test_linked_facts_generator.py`: 47 passed with two pre-existing Pydantic warnings.
+- `git diff --check`: passed.
+
 ## Interpretation
 
 - If intact messages do not outperform zero or wrong-world messages, the run has not learned example-specific communication even if its ordinary exact match moves slightly.
@@ -110,3 +117,4 @@ Training data, batch size, optimization, seed, hidden width, output width, untie
 ## Updates
 
 - `2026-10-16T06:35:00Z`: Planned as the causal baseline after existing full-data, width-512, gated, tied/untied, and small-prefix runs all remained near a question-only answer-prior baseline.
+- `2026-10-16T06:47:36Z`: Correctness and cleanup review findings were fixed; the complete targeted test suite passed at immutable revision `758129f76a41f6bbe24b641fca10ad6e8f7b1feb`.
