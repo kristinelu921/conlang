@@ -7,7 +7,7 @@
 | Run ID | `20261016-conlang-v4-8-full-m4-d2-qsender-commdiag` |
 | Status | `planned` |
 | Baseline | `20261016-conlang-v4-8-full-m4-d2-commdiag` |
-| Git revision | pending reviewed commit |
+| Git revision | reviewed implementation and configuration closure `7a45697391d2d36ba0ec84af37af33f0460f0131`; immutable launch snapshot pending |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` |
 | Command | `/home/kristinelu/elf-runs/runtime/venv/bin/python -u train.py --config configs/conlang-jax-v4-8-full-m4-d2-qsender-commdiag.yaml` inside the immutable node-local source snapshot |
 | Seed | `1730` |
@@ -36,6 +36,13 @@ Count this as private-content communication only if intact messages outperform t
 ## Results
 
 Pending launch and verified completion.
+
+## Review and Verification
+
+- Correctness review passed after correcting the conditioned wrong-world control to rotate only private passages while retaining each target question.
+- Cleanup review passed after aligning sender documentation with the optional question context.
+- The full CPU regression suite passed 49 tests with two existing Pydantic warnings. Focused tied/untied wrong-world oracle coverage passed both parameterized cases after the final test refinement.
+- The selected YAML validates and differs from the causal baseline only by fresh run identity fields and `sender_question_conditioning: true`.
 
 ## Updates
 
