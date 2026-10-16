@@ -273,6 +273,23 @@ def test_bridge_supervision_selects_the_person_side_sender() -> None:
     assert float(bridge_loss) < 0.01
     assert int(bridge_correct) == 2
 
+    swapped_output = output._replace(
+        bridge_logits_1=bridge_logits_2,
+        bridge_logits_2=bridge_logits_1,
+    )
+    _unchanged_channel_loss, unchanged_channel_correct = _bridge_supervision_statistics(
+        swapped_output,
+        batch,
+    )
+    swapped_loss, swapped_correct = _bridge_supervision_statistics(
+        swapped_output,
+        batch,
+        swap_sender_channels=True,
+    )
+    assert int(unchanged_channel_correct) == 0
+    assert float(swapped_loss) < 0.01
+    assert int(swapped_correct) == 2
+
 
 def test_default_model_has_no_bridge_projection_parameters() -> None:
     """Disabling the auxiliary objective should preserve old checkpoint trees."""

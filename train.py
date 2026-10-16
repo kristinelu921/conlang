@@ -513,12 +513,16 @@ def _gate_activation_statistics(gate: Array, valid: Array | None = None) -> Arra
 def _bridge_supervision_statistics(
     output: JaxCommunicationOutput,
     batch: JaxExampleBatch,
+    swap_sender_channels: bool = False,
 ) -> tuple[Array, Array]:
     """Return bridge cross-entropy and correct count for the person-side sender."""
     assert output.bridge_logits_1 is not None
     assert output.bridge_logits_2 is not None
+    person_side_agent_ids = batch.person_side_agent_ids
+    if swap_sender_channels:
+        person_side_agent_ids = 1 - person_side_agent_ids
     selected_logits = jnp.where(
-        batch.person_side_agent_ids[:, None] == 0,
+        person_side_agent_ids[:, None] == 0,
         output.bridge_logits_1,
         output.bridge_logits_2,
     )
@@ -782,7 +786,11 @@ def build_parallel_evaluation_step(
             correct = jnp.all(generated == batch.answer_token_ids, axis=-1).sum()
             bridge_correct = jnp.asarray(0, dtype=jnp.int32)
             if model.config.bridge_supervision_weight > 0:
-                _bridge_loss, bridge_correct = _bridge_supervision_statistics(output, batch)
+                _bridge_loss, bridge_correct = _bridge_supervision_statistics(
+                    output,
+                    batch,
+                    swap_sender_channels=intervention == "swap_senders",
+                )
             return correct, output.joint_log_probability.sum(), bridge_correct
 
         correct, joint_log_probability, bridge_correct = intervention_statistics("intact")
