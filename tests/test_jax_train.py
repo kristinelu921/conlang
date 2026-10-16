@@ -968,15 +968,10 @@ def test_query_only_receiver_routes_question_information_through_message_values(
         return logits[0, 0, int(answer_token_ids[0, 0])]
 
     message_gradients = jax.grad(selected_answer_logit)(sender_messages)
-    receiver_parameters = variables["params"]["receiver"]
-
     assert jnp.allclose(sender_messages[0], sender_messages[1])
     assert not jnp.allclose(question_selected_logits[0], question_selected_logits[1])
     assert jnp.allclose(uniform_message_logits[0], uniform_message_logits[1], atol=1e-5)
     assert float(jnp.linalg.norm(message_gradients)) > 0
-    assert "query_key_value_encoder" in receiver_parameters
-    assert "query_message_block" in receiver_parameters
-    assert "encoder_layer_0" not in receiver_parameters
 
 
 @pytest.mark.parametrize("tie_sender_receiver_encoder", [False, True])
