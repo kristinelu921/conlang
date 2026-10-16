@@ -429,6 +429,29 @@ def test_config_requires_one_question_path() -> None:
         ).validate()
 
 
+def test_query_only_receiver_rejects_question_leaks_and_bridge_labels() -> None:
+    """Query-only attention should keep questions out of senders and auxiliary targets."""
+    with pytest.raises(ValueError, match="requires receiver question input"):
+        replace(
+            TrainConfig(),
+            sender_question_conditioning=True,
+            receiver_question_input=False,
+            receiver_question_query_only=True,
+        ).validate()
+    with pytest.raises(ValueError, match="requires question-blind senders"):
+        replace(
+            TrainConfig(),
+            sender_question_conditioning=True,
+            receiver_question_query_only=True,
+        ).validate()
+    with pytest.raises(ValueError, match="incompatible with bridge supervision"):
+        replace(
+            TrainConfig(),
+            receiver_question_query_only=True,
+            bridge_supervision_weight=1.0,
+        ).validate()
+
+
 def test_config_rejects_unsupported_communication_round_count() -> None:
     """Communication must use one direct round or two synchronous rounds."""
     with pytest.raises(ValueError, match="communication_rounds must be 1 or 2"):
@@ -878,6 +901,82 @@ def test_receiver_question_input_can_be_disabled() -> None:
 
     assert jnp.allclose(logits, reversed_question_logits)
     assert not jnp.allclose(active_question_logits, active_reversed_question_logits)
+
+
+def test_query_only_receiver_routes_question_information_through_message_values() -> None:
+    """Questions should select message values without becoming decoder content."""
+    tokenizer = _example_tokenizer()
+    config = replace(_small_config(), receiver_question_query_only=True)
+    batch = tokenize_examples(_examples(), tokenizer, config).select([0, 1])
+    model = JaxCommunicationModel(_model_config(config, tokenizer))
+    agent_1_token_ids = jnp.asarray(batch.agent_1_token_ids)
+    agent_2_token_ids = jnp.asarray(batch.agent_2_token_ids)
+    question_token_ids = jnp.asarray(batch.question_token_ids)
+    answer_token_ids = jnp.asarray(batch.answer_token_ids)
+    variables = model.init(
+        {"params": jax.random.PRNGKey(0)},
+        agent_1_token_ids,
+        agent_2_token_ids,
+        question_token_ids,
+        answer_token_ids,
+        deterministic=True,
+    )
+    repeated_agent_1 = jnp.repeat(agent_1_token_ids[:1], 2, axis=0)
+    repeated_agent_2 = jnp.repeat(agent_2_token_ids[:1], 2, axis=0)
+    sender_messages = model.apply(
+        variables,
+        repeated_agent_1,
+        repeated_agent_2,
+        deterministic=True,
+        question_token_ids=question_token_ids,
+        method=model.encode_messages,
+    )
+    beginning = jnp.full((2, 1), tokenizer.bos_id, dtype=jnp.int32)
+    repeated_answer_token_ids = jnp.repeat(answer_token_ids[:1], 2, axis=0)
+    answer_input_ids = jnp.concatenate(
+        (beginning, repeated_answer_token_ids[:, :-1]),
+        axis=1,
+    )
+    question_selected_logits = model.apply(
+        variables,
+        sender_messages,
+        question_token_ids,
+        answer_input_ids,
+        deterministic=True,
+        method=model.answer_logits,
+    )
+    repeated_message_value = jnp.mean(sender_messages[:1], axis=1, keepdims=True)
+    uniform_messages = jnp.broadcast_to(repeated_message_value, sender_messages.shape)
+    uniform_message_logits = model.apply(
+        variables,
+        uniform_messages,
+        question_token_ids,
+        answer_input_ids,
+        deterministic=True,
+        method=model.answer_logits,
+    )
+
+    def selected_answer_logit(current_messages: jax.Array) -> jax.Array:
+        logits = model.apply(
+            variables,
+            current_messages,
+            question_token_ids,
+            answer_input_ids,
+            deterministic=True,
+            method=model.answer_logits,
+        )
+        return logits[0, 0, int(answer_token_ids[0, 0])]
+
+    message_gradients = jax.grad(selected_answer_logit)(sender_messages)
+    receiver_parameters = variables["params"]["receiver"]
+
+    assert jnp.allclose(sender_messages[0], sender_messages[1])
+    assert not jnp.allclose(question_selected_logits[0], question_selected_logits[1])
+    assert jnp.allclose(uniform_message_logits[0], uniform_message_logits[1], atol=1e-5)
+    assert float(jnp.linalg.norm(message_gradients)) > 0
+    assert "query_key_value_encoder" in receiver_parameters
+    assert "query_message_block" in receiver_parameters
+    assert "encoder_layer_0" not in receiver_parameters
 
 
 @pytest.mark.parametrize("tie_sender_receiver_encoder", [False, True])

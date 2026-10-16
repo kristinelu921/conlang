@@ -92,6 +92,7 @@ class JaxCommunicationModelConfig:
     role_gate_channels: int | None = None
     sender_question_conditioning: bool = False
     receiver_question_input: bool = True
+    receiver_question_query_only: bool = False
     communication_rounds: int = 1
     bridge_supervision_weight: float = 0.0
     message_length: int = 4
@@ -125,6 +126,12 @@ class JaxCommunicationModelConfig:
             raise ValueError("role_gate_channels must be positive when configured")
         if not self.receiver_question_input and not self.sender_question_conditioning:
             raise ValueError("the question must be available to either senders or receiver")
+        if self.receiver_question_query_only and not self.receiver_question_input:
+            raise ValueError("query-only receiver attention requires receiver question input")
+        if self.receiver_question_query_only and self.sender_question_conditioning:
+            raise ValueError("query-only receiver attention requires question-blind senders")
+        if self.receiver_question_query_only and self.bridge_supervision_weight > 0:
+            raise ValueError("query-only receiver attention is incompatible with bridge supervision")
         if self.communication_rounds not in {1, 2}:
             raise ValueError("communication_rounds must be 1 or 2")
         if self.bridge_supervision_weight < 0:
@@ -367,6 +374,69 @@ class ResidualRoleGate(nn.Module):
         return hidden + update, gate
 
 
+class QuestionMessageAttentionBlock(nn.Module):
+    """Use encoded questions only as queries over message keys and values."""
+
+    config: JaxCommunicationModelConfig
+
+    @nn.compact
+    def __call__(
+        self,
+        question_queries: Array,
+        message_memory: Array,
+        question_valid: Array,
+        message_valid: Array,
+        deterministic: bool,
+    ) -> Array:
+        """Return question-indexed states whose content comes only from messages."""
+        config = self.config
+        attended_messages = nn.MultiHeadDotProductAttention(
+            num_heads=config.num_heads,
+            qkv_features=config.hidden_size,
+            out_features=config.hidden_size,
+            dropout_rate=config.dropout,
+            dtype=config.dtype,
+            param_dtype=jnp.float32,
+            force_fp32_for_softmax=True,
+            name="question_message_attention",
+        )(
+            question_queries,
+            message_memory,
+            mask=_attention_mask(question_valid, message_valid),
+            deterministic=deterministic,
+        )
+        hidden = nn.LayerNorm(dtype=jnp.float32, name="attention_norm")(
+            nn.Dropout(config.dropout, name="attention_dropout")(
+                attended_messages,
+                deterministic=deterministic,
+            )
+        ).astype(config.dtype)
+        feedforward = nn.Dense(
+            config.feedforward_size,
+            dtype=config.dtype,
+            param_dtype=jnp.float32,
+            name="feedforward_in",
+        )(hidden)
+        feedforward = jax.nn.relu(feedforward)
+        feedforward = nn.Dropout(config.dropout, name="feedforward_dropout")(
+            feedforward,
+            deterministic=deterministic,
+        )
+        feedforward = nn.Dense(
+            config.hidden_size,
+            dtype=config.dtype,
+            param_dtype=jnp.float32,
+            name="feedforward_out",
+        )(feedforward)
+        return nn.LayerNorm(dtype=jnp.float32, name="feedforward_norm")(
+            hidden
+            + nn.Dropout(config.dropout, name="residual_dropout")(
+                feedforward,
+                deterministic=deterministic,
+            )
+        ).astype(config.dtype)
+
+
 class DecoderBlock(nn.Module):
     """Apply one post-norm Transformer decoder block."""
 
@@ -548,21 +618,43 @@ class Receiver(nn.Module):
             or answer_embeddings.shape[1] > config.max_answer_length
         ):
             raise ValueError("question or answer is longer than the configured maximum")
-        memory = jnp.concatenate((messages, question_embeddings), axis=1)
-        memory_valid = jnp.concatenate(
-            (
-                jnp.ones((batch_size, message_count), dtype=jnp.bool_),
-                question_token_ids != config.padding_id,
-            ),
-            axis=1,
-        )
-        if self.shared_encoder is None:
-            for layer_index in range(config.num_layers):
-                memory = EncoderBlock(config, name=f"encoder_layer_{layer_index}")(
-                    memory, memory_valid, deterministic
+        message_valid = jnp.ones((batch_size, message_count), dtype=jnp.bool_)
+        question_valid = question_token_ids != config.padding_id
+        if config.receiver_question_query_only:
+            if self.shared_encoder is None:
+                query_key_value_encoder = EncoderStack(
+                    config,
+                    name="query_key_value_encoder",
                 )
+            else:
+                query_key_value_encoder = self.shared_encoder
+            message_memory = query_key_value_encoder(messages, message_valid, deterministic)
+            question_queries = query_key_value_encoder(
+                question_embeddings,
+                question_valid,
+                deterministic,
+            )
+            memory = QuestionMessageAttentionBlock(
+                config,
+                name="query_message_block",
+            )(
+                question_queries,
+                message_memory,
+                question_valid,
+                message_valid,
+                deterministic,
+            )
+            memory_valid = question_valid
         else:
-            memory = self.shared_encoder(memory, memory_valid, deterministic)
+            memory = jnp.concatenate((messages, question_embeddings), axis=1)
+            memory_valid = jnp.concatenate((message_valid, question_valid), axis=1)
+            if self.shared_encoder is None:
+                for layer_index in range(config.num_layers):
+                    memory = EncoderBlock(config, name=f"encoder_layer_{layer_index}")(
+                        memory, memory_valid, deterministic
+                    )
+            else:
+                memory = self.shared_encoder(memory, memory_valid, deterministic)
         gate = None
         if config.role_gate_channels is not None:
             memory, gate = ResidualRoleGate(

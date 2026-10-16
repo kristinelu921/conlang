@@ -78,6 +78,7 @@ class TrainConfig:
     role_gate_channels: int | None = None
     sender_question_conditioning: bool = False
     receiver_question_input: bool = True
+    receiver_question_query_only: bool = False
     communication_rounds: int = 1
     bridge_supervision_weight: float = 0.0
     message_length: int = 4
@@ -134,6 +135,12 @@ class TrainConfig:
             raise ValueError("role gate channels must be positive when configured")
         if not self.receiver_question_input and not self.sender_question_conditioning:
             raise ValueError("the question must be available to either senders or receiver")
+        if self.receiver_question_query_only and not self.receiver_question_input:
+            raise ValueError("query-only receiver attention requires receiver question input")
+        if self.receiver_question_query_only and self.sender_question_conditioning:
+            raise ValueError("query-only receiver attention requires question-blind senders")
+        if self.receiver_question_query_only and self.bridge_supervision_weight > 0:
+            raise ValueError("query-only receiver attention is incompatible with bridge supervision")
         if self.communication_rounds not in {1, 2}:
             raise ValueError("communication_rounds must be 1 or 2")
         if self.bridge_supervision_weight < 0:
@@ -266,6 +273,7 @@ def _model_config(config: TrainConfig, tokenizer: TextTokenizer) -> JaxCommunica
         role_gate_channels=config.role_gate_channels,
         sender_question_conditioning=config.sender_question_conditioning,
         receiver_question_input=config.receiver_question_input,
+        receiver_question_query_only=config.receiver_question_query_only,
         communication_rounds=config.communication_rounds,
         bridge_supervision_weight=config.bridge_supervision_weight,
         message_length=config.message_length,
@@ -672,16 +680,19 @@ def build_parallel_train_step(
             sender_gate_statistics = _gate_activation_statistics(
                 jnp.concatenate((output.sender_gate_1, output.sender_gate_2), axis=1)
             )
-            receiver_gate_valid = jnp.concatenate(
-                (
-                    jnp.ones(
-                        (batch.question_token_ids.shape[0], model.config.message_length * 2),
-                        dtype=jnp.bool_,
+            if model.config.receiver_question_query_only:
+                receiver_gate_valid = batch.question_token_ids != model.config.padding_id
+            else:
+                receiver_gate_valid = jnp.concatenate(
+                    (
+                        jnp.ones(
+                            (batch.question_token_ids.shape[0], model.config.message_length * 2),
+                            dtype=jnp.bool_,
+                        ),
+                        batch.question_token_ids != model.config.padding_id,
                     ),
-                    batch.question_token_ids != model.config.padding_id,
-                ),
-                axis=1,
-            )
+                    axis=1,
+                )
             receiver_gate_statistics = _gate_activation_statistics(
                 output.receiver_gate,
                 receiver_gate_valid,

@@ -11,6 +11,7 @@ and a receiver must answer a question from the two messages alone.
 | Sender | One Transformer encoder, shared by both agents | You asked for one small model that both agents use. Sharing forces the same code to carry person-to-middle facts and middle-to-answer facts. |
 | Message | 4 vectors, each of size 128, per agent | You asked for 4 tokens and a hidden size of 128. The 4 positions are learned query slots read out of the encoder, so the channel length is fixed even when the passage is hundreds of characters. |
 | Receiver input | Those 8 vectors, then the question | The receiver never sees either passage. Concatenating the messages in agent order keeps which sender said what. |
+| Query-only receiver attention | Disabled by default; optionally question queries over message keys and values | This removes question embeddings from decoder content while retaining question-directed retrieval. The attended values and all later receiver memory come only from the sender messages. |
 | Receiver output | Up to 4 answer tokens | You asked for an answer of at most 4 tokens. Decoding stops at the end token. |
 | Output head | Direct linear projection by default; optional independent hidden width | A configured output hidden size adds one ReLU projection before the vocabulary logits without changing the sender, messages, or Transformer width. |
 | Role gates | Disabled by default; optional separate sender and receiver bottleneck gates | A configured gate width lets each role adapt the tied encoder output without duplicating the encoder. The residual output starts at zero, so enabling gates preserves the initial ungated function. |
@@ -66,6 +67,15 @@ combine an incoming bridge entity with its complementary private hop.
    output head is a separate linear map from 128 to the vocabulary. Setting
    `output_hidden_size` adds a ReLU hidden projection of that width immediately
    before the vocabulary map while leaving the Transformer width unchanged.
+
+Setting `receiver_question_query_only` replaces the concatenated receiver
+encoder path with one shared encoder applied separately to the question and the
+eight messages. The encoded question supplies only cross-attention queries; the
+encoded messages supply all keys and values. The cross-attention result has no
+question residual and becomes the decoder memory, so question content can
+select message values but cannot enter the answer decoder directly. This mode
+requires question-blind senders, active receiver question input, and no
+question-specific bridge objective.
 
 Setting `tie_sender_receiver_encoder` makes the sender and receiver reuse one
 Transformer encoder stack. Their already-shared token embedding remains tied,
