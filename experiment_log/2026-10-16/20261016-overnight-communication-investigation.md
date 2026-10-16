@@ -11,6 +11,7 @@ The current model sends four continuous hidden vectors from each sender. A recei
 | Full data, hidden 128 | untied, no gates, message 4, depth 2 | 0.0390625 | -4.058863639831543 | All six causal arms are exactly 0.0390625; zero messages are slightly better in likelihood |
 | Full data, hidden 128 | untied, no gates, message 8, depth 2 | 0.0390625 | -4.052503585815430 | All six causal arms are exactly 0.0390625; longer messages remain causally unused |
 | Full data, hidden 128 | untied, no gates, message 4, depth 4 | 0.0390625 | -4.059023857116699 | Wrong-world reaches 0.04296875 and zero has better likelihood; extra depth remains causally unused |
+| Full data, hidden 128 | question-conditioned senders, untied, message 4, depth 2 | 0.0390625 | -4.055914878845215 | Target-question/wrong-passages also reaches 0.0390625 with better likelihood; conditioning remains causally unused |
 | Full data, hidden 128 | tied encoder, output width 256 | 0.0390625 | -4.04714298248291 | Tying did not improve exact match |
 | Full data, hidden 512 | tied encoder, output width 256 | 0.046875 | -4.053905487060547 | Fourfold width did not establish strong generalization |
 | Full data, hidden 512 | tied plus 64-channel role gates | 0.0390625 | -4.060502052307129 | Gates did not improve the result |
@@ -28,7 +29,8 @@ The exact 256-example validation prefix has a 0.03515625 empirical baseline when
 3. **Two layers are too shallow for character parsing, fact selection, and a two-hop join — ruled out as the primary blocker.** Depth 4 halves throughput but keeps intact messages no better than zero or wrong-world messages.
 4. **Capacity helps only after the channel and depth are adequate.** Hidden 512 alone already failed to move beyond the shortcut regime. Test width 256 only after another intervention identifies a communicating architecture.
 5. **Tying and role gates are secondary.** Existing matched small-prefix pairs and full-data runs show no robust benefit. Re-test shared versus unshared weights only on the best communicating architecture, so the comparison measures generalization rather than prior-fitting.
-6. **The end-to-end likelihood objective supplies too little sender learning signal.** If wider messages and deeper stacks still show no causal message gap, test an architectural oracle or an auxiliary sender-content objective before stacking more width.
+6. **Question conditioning alone shortens the path but does not repair credit assignment — ruled out as a sufficient intervention.** Target-question/wrong-passages matches intact exact accuracy and improves likelihood, while sender gradients become even smaller relative to the receiver.
+7. **The end-to-end likelihood objective supplies too little sender learning signal — leading hypothesis.** Test an explicit sender-content objective before stacking more width, depth, or weight sharing.
 
 ## Controlled sequence
 
@@ -45,7 +47,7 @@ Every arm uses seed 1730, the same Central2 dataset, the same Kristine v4-8, bat
 
 ## Current belief
 
-The baseline is definitively in a question-only shortcut/local minimum, not merely weak at communication. Raw width, message length, and depth have all failed, while every run keeps sender gradients around two to six thousandths against receiver gradients around one. The leading explanation is now the long, weak credit path: passage-only senders must learn a query-independent code through a receiver that can cheaply fit question-conditioned answer priors. The next arm provides the question to both senders so each can emit query-conditioned evidence while holding every established baseline setting fixed. If that remains causally flat, an explicit contrastive or auxiliary communication objective is warranted; further width/depth/tie stacking is not.
+The baseline is definitively in a question-only shortcut/local minimum, not merely weak at communication. Raw width, message length, depth, and question-conditioned sender selection have all failed. The conditioned arm still matches intact performance when both private passages come from another world, and its sender/receiver gradient imbalance worsens to roughly 476--673 times. The leading explanation is therefore inadequate direct learning signal for passage content, not merely a long query-independent path. The next arm should add an explicit sender-content objective; further width/depth/tie stacking is not justified until a passage-specific causal gap appears.
 
 ## Evidence limitations
 
