@@ -7,7 +7,7 @@
 | Run ID | `20261016-conlang-v4-8-full-m4-d2-qsender-norecvq-bridgeaux-commdiag` |
 | Status | `planned` |
 | Baseline | `20261016-conlang-v4-8-full-m4-d2-qsender-norecvq-commdiag` |
-| Git revision | implementation/configuration closure `4f6d6ca06679f3cbc172a9e8b421bf791f1c540a`; immutable launch snapshot pending |
+| Git revision | corrected reviewed implementation/configuration closure `c83e7a92994b118f9fd1d7fe4e2d55f894470a32`; immutable launch snapshot pending |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` |
 | Primary configuration | `configs/conlang-jax-v4-8-full-m4-d2-qsender-norecvq-bridgeaux-commdiag.yaml` |
 | Command | `/snap/google-cloud-cli/current/bin/gcloud compute tpus tpu-vm ssh kmh-tpuvm-v4-8-spot-kristine-14-23-12-28-N-us-central2-b --project=he-vision-group --zone=us-central2-b --worker=all --internal-ip --ssh-flag=-F --ssh-flag=/dev/null --command='set -euo pipefail; mkdir -p /home/kristinelu/elf-runs; test ! -e /home/kristinelu/elf-runs/20261016-conlang-v4-8-full-m4-d2-qsender-norecvq-bridgeaux-commdiag; test ! -e /tmp/libtpu_lockfile; test -z "$(sudo fuser /dev/vfio/* 2>/dev/null \|\| true)"; cd /home/kristinelu/elf-runs/source/20261016-conlang-v4-8-full-m4-d2-qsender-norecvq-bridgeaux-commdiag; export JAX_PLATFORMS=tpu CUDA_VISIBLE_DEVICES= ELF_TPU_WORKER_INDEX=0 PYTHONPATH="$PWD" HF_HOME=/home/kristinelu/elf-runs/hf-cache PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1; ulimit -c 0; /home/kristinelu/elf-runs/runtime/venv/bin/python -u train.py --config configs/conlang-jax-v4-8-full-m4-d2-qsender-norecvq-bridgeaux-commdiag.yaml 2>&1 \| tee /home/kristinelu/elf-runs/20261016-conlang-v4-8-full-m4-d2-qsender-norecvq-bridgeaux-commdiag.launcher.log'` |
@@ -86,7 +86,7 @@ Pending launch and verified completion.
 | Artifact | Path or URL | Verified |
 |---|---|---|
 | Configuration | `configs/conlang-jax-v4-8-full-m4-d2-qsender-norecvq-bridgeaux-commdiag.yaml` | parses and validates; launch pending |
-| Pull request | `https://github.com/kristinelu921/conlang/pull/1` | implementation/configuration closure prepared; required reviews and push pending |
+| Pull request | `https://github.com/kristinelu921/conlang/pull/1` | corrected closure prepared; correctness passed, cleanup re-review and push pending |
 | Source snapshot | pending | must be created after reviews and the final mandatory TPU availability check |
 | Regional dataset | `/home/kristinelu/elf-data/conlangs-v1` | expected manifest SHA-256 `a839b6ac98ba33a008caaebdde40dea7bc1e639106e93aab25ab2af3c29588e8`; remote revalidation pending |
 | Tracking run | pending | W&B enabled; exact URL pending authenticated launch |
@@ -97,9 +97,10 @@ Pending launch and verified completion.
 
 ## Review and Verification
 
-- Focused CPU verification passed 15 tests covering dataset labels, static tokenization, configuration validation, person-side sender selection, auxiliary-head updates, zero-weight parameter-tree compatibility, and bridge metrics under all causal interventions.
-- Full CPU regression closure passed 65 tests with two existing Pydantic warnings in 179.50 seconds.
-- Correctness and cleanup reviews are pending for the exact implementation/configuration/report range.
+- The initial focused CPU closure passed 15 tests covering dataset labels, static tokenization, configuration validation, person-side sender selection, auxiliary-head updates, zero-weight parameter-tree compatibility, and bridge metrics under all causal interventions.
+- After correcting swapped-channel bridge attribution, the full CPU regression closure passed 65 tests with two existing Pydantic warnings in 180.32 seconds. The discriminating selector/evaluation pair also passed independently in 30.06 seconds.
+- The cleanup-only tokenizer-fixture consolidation then passed all 56 JAX trainer tests with the same two existing warnings in 179.78 seconds; the nine unchanged generator tests had passed in the corrected full closure.
+- Correctness passed for the corrected implementation. Cleanup re-review is pending for the exact final implementation/configuration/report range.
 - Remote source, runtime, dataset, disk, output-path, process, lock, VFIO, and TPU health checks remain pending.
 
 ## Failure Details
@@ -111,3 +112,5 @@ Pending launch and verified completion.
 
 - `2026-10-16`: Selected explicit bridge-entity supervision after the message-8 and two-round sender arms preserved question relay but showed no beneficial private-passage gap.
 - `2026-10-16`: Implemented a training-only middle-entity target on the person-side sender message, preserved zero-weight checkpoint compatibility, and passed the focused and full CPU test closures.
+- `2026-10-16`: Correctness review found and verified a diagnostic-only fix so swapped bridge accuracy follows the semantic sender rather than its original channel index; the corrected full suite passed.
+- `2026-10-16`: Cleanup consolidated the compact-example tokenizer into one test helper and its complete 56-test JAX file passed; final cleanup re-review remains pending.
