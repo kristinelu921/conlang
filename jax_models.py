@@ -494,7 +494,7 @@ class Sender(nn.Module):
 
 
 class Receiver(nn.Module):
-    """Read two messages and a question, then score answer tokens."""
+    """Read two messages and optional question context, then score answer tokens."""
 
     config: JaxCommunicationModelConfig
     shared_encoder: EncoderStack | None = None
@@ -650,7 +650,7 @@ class JaxCommunicationModel(nn.Module):
         answer_input_ids: Array,
         deterministic: bool,
     ) -> Array:
-        """Score answer inputs from encoded messages and a question."""
+        """Score answer inputs from messages and the configured question context."""
         question_embeddings, receiver_question_token_ids = self._receiver_question_inputs(
             question_token_ids
         )
