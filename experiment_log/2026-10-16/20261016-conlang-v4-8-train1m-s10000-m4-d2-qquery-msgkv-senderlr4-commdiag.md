@@ -188,7 +188,9 @@ are input-pipeline events, not model loss transitions.
   exact report delta.
 - Completed-result correctness passed the report and evidence closure at
   `261d91504e9dad7d17ce592dd708976d1d00616b`. Completed-result cleanup found
-  three report-only clarity issues; their correction is pending commit.
+  three report-only clarity issues; they were corrected in
+  `7223fc4a6fa9908912c0e35d7a759b528409e880`, and the coordinator verified the
+  exact report-only delta.
 - The immutable node-local source matched the NFS snapshot, the complete new
   dataset passed its streaming integrity verifier, and the unchanged
   validation/test split hashes match the established dataset. Remote preflight
