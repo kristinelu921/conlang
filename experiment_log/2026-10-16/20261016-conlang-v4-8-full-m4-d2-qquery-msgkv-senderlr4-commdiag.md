@@ -181,6 +181,7 @@ steps.
 - `USE_TORCH_XLA=0 JAX_PLATFORMS=cpu python -m pytest -q tests/test_jax_train.py tests/test_linked_facts_generator.py`: 70 passed with the same two existing warnings in 203.53 seconds.
 - Correctness reviewed `32c72ce5e70b40b93c2c37048f4c84562a8027cb`; its matched-telemetry comparison finding was fixed in `75dd86d259ec97bc17ddc53d3368175769ed74af` by limiting update-ratio interpretation to the treatment and marking throughput instrumentation-confounded.
 - Cleanup passed on `75dd86d259ec97bc17ddc53d3368175769ed74af` with no confirmed findings.
+- Completed-result correctness passed at `12114a61848a00aebf01d437175e9d73eabab074`; completed-result cleanup re-review is pending this review-ledger correction.
 - The mandatory filtered TPU audit completed with three Kristine v4-8 candidates and one Kristine v5e-8 candidate in its final `AVAILABLE` table. The selected prior Central2 v4-8 then passed isolated JAX 0.6.2 runtime, W&B authentication, region-local data, 85 GiB free-space, source/config hash, output freshness, exact process, lock, and VFIO gates.
 - Terminal verification found `TRAINING_COMPLETE` at step 2000, no exact trainer, no lockfile or VFIO holder, TPU `READY` / `HEALTHY`, 201 metrics records, 200 output records, a restorable step-2000 checkpoint, and W&B `finished` at step 2000.
 
