@@ -9,7 +9,7 @@
 | Started | `not started` |
 | Finished | `not started` |
 | Baseline | `20261016-conlang-v4-8-full-m4-d2-qquery-msgkv-senderlr4-commdiag` |
-| Git revision | primary configuration/report commit `914c057`; immutable launch snapshot pending |
+| Git revision | primary configuration/report commit `914c0570f242ff75f592d3e030ae05dcbbcdb886`; immutable launch snapshot pending |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` |
 | Primary configuration | `configs/conlang-jax-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-commdiag.yaml` |
 | Command | `not recorded; pending immutable snapshot and node-local dataset generation` |
@@ -110,7 +110,7 @@ Pending launch and verified completion.
 
 | Artifact | Path or URL | Verified |
 |---|---|---|
-| Configuration | `configs/conlang-jax-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-commdiag.yaml` | pending immutable commit and remote hash |
+| Configuration | `configs/conlang-jax-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-commdiag.yaml` | committed at `914c0570f242ff75f592d3e030ae05dcbbcdb886`; remote hash pending |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` | pending updated reviewed closure |
 | Source snapshot | pending | pending |
 | Regional dataset | `/home/kristinelu/elf-data/conlangs-v1-train1m` | pending generation and full manifest verification in `us-central2` |
@@ -132,8 +132,11 @@ Pending launch and verified completion.
   `gs://kmh-gcp-us-central2/kristine/datasets/conlangs-train1m` currently has no
   objects. The dataset will therefore be generated and fully verified on the
   selected Central2 TPU without any cross-region transfer.
-- Focused configuration validation, tests, immutable source staging, remote
-  preflight, and two-pass review are pending.
+- Focused configuration validation and dataset tests passed 12 cases.
+  Correctness review passed the closure at
+  `f76311fd9654de4588ff06fe74741dab6929800e`; cleanup re-review after the
+  metadata correction, immutable source staging, and remote preflight remain
+  pending.
 
 ## Failure Details
 
