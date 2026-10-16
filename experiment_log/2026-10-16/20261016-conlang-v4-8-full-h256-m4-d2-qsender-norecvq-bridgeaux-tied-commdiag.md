@@ -135,6 +135,8 @@ Treat tying as useful at hidden width 256 only if the intact-over-wrong-passages
 - The exact Kristine v4-8 remained in the final mandatory `AVAILABLE` table immediately before launch; the launch-boundary output, lock, and VFIO checks passed.
 - Completed evidence verification parsed all 201 metrics and 200 output records, recomputed the causal gaps and last-50 medians, matched every preserved artifact hash to its remote source, restored the final checkpoint on CPU, and confirmed W&B `finished` at step 2000.
 - Terminal verification found the exact trainer absent, no stale TPU lock, idle VFIO devices, a canonical `TRAINING_COMPLETE ... step=2000` sentinel, and the TPU still `READY` / `HEALTHY`.
+- Completed-result correctness review passed for `3462cdbd526ecc975ea82ad8d02da2921271ff27..751bd56d76b3b2af674e44bdfb973f2d54591cb4`, including independent metric recomputation, artifact and checkpoint verification, authenticated W&B comparison, source provenance, causal wording, and idle TPU state.
+- Completed-result cleanup review found only stale `running` and future-tense wording in the overnight synthesis; the correction at `52c12ade16f38bebb4a27cfa6c92e2ff54f45a54` passed re-review with a clean tracked worktree.
 
 ## Failure Details
 
@@ -151,3 +153,4 @@ Treat tying as useful at hidden width 256 only if the intact-over-wrong-passages
 - `2026-10-16`: Passed the launch gate with finite losses, bridge accuracy above the empirical constant baseline, active sender gradients, and approximately 3,330 examples/s.
 - `2026-10-16T13:03:06Z`: Completed step 2000, every answer and bridge causal arm, checkpoint save, and W&B finalization.
 - `2026-10-16`: Verified exact process absence, lock and VFIO idleness, 201 metrics records, 200 output records, artifact hashes, CPU checkpoint restore, W&B `finished`, and TPU `READY` / `HEALTHY` state.
+- `2026-10-16`: Correctness review passed the completed evidence; cleanup review passed after marking the overnight synthesis completed and removing stale future-tense experiment wording.
