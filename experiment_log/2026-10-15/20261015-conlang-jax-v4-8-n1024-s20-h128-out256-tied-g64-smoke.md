@@ -122,3 +122,4 @@ The batch size 256, output hidden dimension 256, tied sender/receiver encoder, s
 - `2026-10-16T03:54:22Z`: Reviewed config commit was pushed to PR 1, the existing runtime and regional dataset were reverified, the immutable source snapshot matched locally and remotely, and remote preflight passed. Launch remains pending the final occupancy gate.
 - `2026-10-16T03:55:35Z`: Final state and occupancy gates reported `READY`, `HEALTHY`, and `AVAILABLE`; launched the tied-encoder arm and registered W&B run `1lr5w1l8`.
 - `2026-10-16T03:58:56Z`: Training completed at step 20. W&B, checkpoint restore, artifact hashes, terminal log, process absence, VFIO idleness, and TPU health were independently verified.
+- `2026-10-16T04:09:53Z`: The matched untied-encoder arm also completed; its report is `experiment_log/2026-10-15/20261015-conlang-jax-v4-8-n1024-s20-h128-out256-untied-g64-smoke.md`.
