@@ -16,7 +16,11 @@ import pytest
 
 from flax.traverse_util import flatten_dict
 
-from jax_models import JaxCommunicationModel, _relative_position_bucket
+from jax_models import (
+    JaxCommunicationModel,
+    _relative_position_bucket,
+    apply_message_intervention,
+)
 from linked_facts.generate_dataset import iter_question_examples
 from tokenizer import TextTokenizer
 from train import (
@@ -32,7 +36,9 @@ from train import (
     _read_step_metrics,
     _selected_gradient_norm,
     _top_vocabulary_histogram,
+    build_parallel_evaluation_step,
     build_parallel_train_step,
+    evaluate_exact_match,
     iter_epoch_batches,
     parse_arguments,
     save_checkpoint,
@@ -367,7 +373,10 @@ def test_throughput_timing_excludes_evaluation_delay(monkeypatch: pytest.MonkeyP
             collect_diagnostics
         ),
     )
-    monkeypatch.setattr("train.build_parallel_evaluation_step", lambda model: object())
+    monkeypatch.setattr(
+        "train.build_parallel_evaluation_step",
+        lambda model, collect_message_interventions=False: object(),
+    )
     monkeypatch.setattr("train.evaluate_exact_match", fake_evaluation)
     monkeypatch.setattr("train._initialize_wandb", lambda current_config: FakeWandbRun())
     monkeypatch.setattr("train.time.perf_counter", lambda: clock["time"])
@@ -421,7 +430,10 @@ def test_outputs_follow_logging_cadence(
             collect_diagnostics
         ),
     )
-    monkeypatch.setattr("train.build_parallel_evaluation_step", lambda model: object())
+    monkeypatch.setattr(
+        "train.build_parallel_evaluation_step",
+        lambda model, collect_message_interventions=False: object(),
+    )
     monkeypatch.setattr(
         "train.evaluate_exact_match",
         lambda *args, **kwargs: {"exact_match": 0.5, "mean_joint_log_probability": -1.0},
@@ -502,6 +514,65 @@ def test_each_sender_emits_four_message_vectors() -> None:
 
     assert config.message_length == 4
     assert messages.shape == (2, 8, config.hidden_size)
+
+
+def test_message_interventions_apply_the_requested_causal_controls() -> None:
+    """Message controls should preserve shape while selecting the intended information."""
+    messages = jnp.arange(24, dtype=jnp.float32).reshape(2, 6, 2)
+    message_1 = messages[:, :3]
+    message_2 = messages[:, 3:]
+
+    assert jnp.array_equal(apply_message_intervention(messages, 3, "intact"), messages)
+    assert jnp.array_equal(
+        apply_message_intervention(messages, 3, "wrong_world"),
+        messages[::-1],
+    )
+    assert jnp.array_equal(
+        apply_message_intervention(messages, 3, "swap_senders"),
+        jnp.concatenate((message_2, message_1), axis=1),
+    )
+    assert jnp.array_equal(
+        apply_message_intervention(messages, 3, "agent_1_only"),
+        jnp.concatenate((message_1, jnp.zeros_like(message_2)), axis=1),
+    )
+    assert jnp.array_equal(
+        apply_message_intervention(messages, 3, "agent_2_only"),
+        jnp.concatenate((jnp.zeros_like(message_1), message_2), axis=1),
+    )
+    assert jnp.count_nonzero(apply_message_intervention(messages, 3, "zero")) == 0
+    with pytest.raises(ValueError, match="unknown message intervention"):
+        apply_message_intervention(messages, 3, "unsupported")
+
+
+def test_evaluation_reports_every_message_intervention() -> None:
+    """Causal evaluation should emit intact and intervened metrics from one batch."""
+    tokenizer = TextTokenizer(["buffalo", "chapel"])
+    config = _small_config()
+    tokenized = tokenize_examples(_examples(), tokenizer, config)
+    batch = tokenized.select([0, 1])
+    model = JaxCommunicationModel(_model_config(config, tokenizer))
+    state = _initialize_state(model, optax.identity(), batch, config.seed)
+    replicated_params = jax.device_put_replicated(state.params, jax.local_devices())
+
+    metrics = evaluate_exact_match(
+        replicated_params,
+        tokenized,
+        config.batch_size,
+        jax.local_device_count(),
+        build_parallel_evaluation_step(model, collect_message_interventions=True),
+    )
+
+    expected_prefixes = {
+        "zero_message",
+        "wrong_world_message",
+        "swapped_sender",
+        "agent_1_only",
+        "agent_2_only",
+    }
+    assert metrics.keys() >= {"exact_match", "mean_joint_log_probability"}
+    for prefix in expected_prefixes:
+        assert 0.0 <= metrics[f"{prefix}_exact_match"] <= 1.0
+        assert np.isfinite(metrics[f"{prefix}_mean_joint_log_probability"])
 
 
 def test_output_hidden_size_is_independent_of_transformer_width() -> None:

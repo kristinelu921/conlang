@@ -19,6 +19,41 @@ from flax.linen.attention import dot_product_attention
 Array = jax.Array
 
 
+MESSAGE_INTERVENTIONS = frozenset(
+    {
+        "intact",
+        "zero",
+        "wrong_world",
+        "swap_senders",
+        "agent_1_only",
+        "agent_2_only",
+    }
+)
+
+
+def apply_message_intervention(
+    messages: Array,
+    message_length: int,
+    intervention: str,
+) -> Array:
+    """Apply one causal intervention to two concatenated sender messages."""
+    if intervention not in MESSAGE_INTERVENTIONS:
+        raise ValueError(f"unknown message intervention: {intervention}")
+    if intervention == "intact":
+        return messages
+    if intervention == "zero":
+        return jnp.zeros_like(messages)
+    if intervention == "wrong_world":
+        return jnp.flip(messages, axis=0)
+    message_1 = messages[:, :message_length]
+    message_2 = messages[:, message_length:]
+    if intervention == "swap_senders":
+        return jnp.concatenate((message_2, message_1), axis=1)
+    if intervention == "agent_1_only":
+        return jnp.concatenate((message_1, jnp.zeros_like(message_2)), axis=1)
+    return jnp.concatenate((jnp.zeros_like(message_1), message_2), axis=1)
+
+
 @dataclass(frozen=True)
 class JaxCommunicationModelConfig:
     """Sizes and numeric settings for the Flax communication model."""
@@ -607,6 +642,7 @@ class JaxCommunicationModel(nn.Module):
         stop_message_1: bool = False,
         stop_message_2: bool = False,
         stop_receiver_tokens: bool = False,
+        message_intervention: str = "intact",
     ) -> JaxCommunicationOutput:
         """Teacher-force answers and return their joint log probability."""
         batch_size = answer_token_ids.shape[0]
@@ -623,6 +659,13 @@ class JaxCommunicationModel(nn.Module):
             message_1 = jax.lax.stop_gradient(message_1)
         if stop_message_2:
             message_2 = jax.lax.stop_gradient(message_2)
+        messages = apply_message_intervention(
+            jnp.concatenate((message_1, message_2), axis=1),
+            self.config.message_length,
+            message_intervention,
+        )
+        message_1 = messages[:, : self.config.message_length]
+        message_2 = messages[:, self.config.message_length :]
         question_embeddings = self.token_embedding(question_token_ids)
         answer_embeddings = self.token_embedding(answer_input_ids)
         if stop_receiver_tokens:
@@ -659,6 +702,7 @@ class JaxCommunicationModel(nn.Module):
         agent_1_token_ids: Array,
         agent_2_token_ids: Array,
         question_token_ids: Array,
+        message_intervention: str = "intact",
     ) -> Array:
         """Generate a fixed-shape greedy answer without data-dependent control flow."""
         batch_size = agent_1_token_ids.shape[0]
@@ -669,6 +713,11 @@ class JaxCommunicationModel(nn.Module):
         )
         finished = jnp.zeros((batch_size,), dtype=jnp.bool_)
         messages = self.encode_messages(agent_1_token_ids, agent_2_token_ids, deterministic=True)
+        messages = apply_message_intervention(
+            messages,
+            self.config.message_length,
+            message_intervention,
+        )
         beginning = jnp.full((batch_size, 1), self.config.bos_id, dtype=jnp.int32)
         for position in range(self.config.max_answer_length):
             answer_input_ids = jnp.concatenate((beginning, generated[:, :-1]), axis=1)

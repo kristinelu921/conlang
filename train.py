@@ -68,6 +68,7 @@ class TrainConfig:
     output_path: Path | None = None
     limit_examples: int | None = None
     repeat_training_examples_to_batch_size: bool = False
+    evaluation_message_interventions: bool = False
     wandb_project: str = "conlangs"
     wandb_run_name: str | None = None
     wandb_enabled: bool = True
@@ -667,32 +668,59 @@ def build_parallel_train_step(
 
 
 
-def build_parallel_evaluation_step(model: JaxCommunicationModel) -> Any:
+def build_parallel_evaluation_step(
+    model: JaxCommunicationModel,
+    collect_message_interventions: bool = False,
+) -> Any:
     """Compile exact-match evaluation across TPU devices."""
+
+    intervention_names = {
+        "zero_message": "zero",
+        "wrong_world_message": "wrong_world",
+        "swapped_sender": "swap_senders",
+        "agent_1_only": "agent_1_only",
+        "agent_2_only": "agent_2_only",
+    }
 
     def evaluation_step(params: Any, batch: JaxExampleBatch) -> dict[str, Array]:
         """Return globally summed validation statistics."""
-        output = model.apply(
-            {"params": params},
-            batch.agent_1_token_ids,
-            batch.agent_2_token_ids,
-            batch.question_token_ids,
-            batch.answer_token_ids,
-            deterministic=True,
-        )
-        generated = model.apply(
-            {"params": params},
-            batch.agent_1_token_ids,
-            batch.agent_2_token_ids,
-            batch.question_token_ids,
-            method=model.greedy_answer_token_ids,
-        )
-        correct = jnp.all(generated == batch.answer_token_ids, axis=-1).sum()
-        statistics = {
+        def intervention_statistics(intervention: str) -> tuple[Array, Array]:
+            """Return correct-count and joint-log-probability sums for one intervention."""
+            output = model.apply(
+                {"params": params},
+                batch.agent_1_token_ids,
+                batch.agent_2_token_ids,
+                batch.question_token_ids,
+                batch.answer_token_ids,
+                deterministic=True,
+                message_intervention=intervention,
+            )
+            generated = model.apply(
+                {"params": params},
+                batch.agent_1_token_ids,
+                batch.agent_2_token_ids,
+                batch.question_token_ids,
+                message_intervention=intervention,
+                method=model.greedy_answer_token_ids,
+            )
+            correct = jnp.all(generated == batch.answer_token_ids, axis=-1).sum()
+            return correct, output.joint_log_probability.sum()
+
+        correct, joint_log_probability = intervention_statistics("intact")
+        statistics: dict[str, Array] = {
             "correct": correct,
             "count": jnp.asarray(batch.answer_token_ids.shape[0], dtype=jnp.int32),
-            "joint_log_probability": output.joint_log_probability.sum(),
+            "joint_log_probability": joint_log_probability,
         }
+        if collect_message_interventions:
+            for metric_prefix, intervention in intervention_names.items():
+                intervention_correct, intervention_joint_log_probability = intervention_statistics(
+                    intervention
+                )
+                statistics[f"{metric_prefix}_correct"] = intervention_correct
+                statistics[f"{metric_prefix}_joint_log_probability"] = (
+                    intervention_joint_log_probability
+                )
         return jax.lax.psum(statistics, axis_name="devices")
 
     return jax.pmap(evaluation_step, axis_name="devices")
@@ -720,20 +748,25 @@ def evaluate_exact_match(
     """Measure greedy exact match and mean joint answer log probability."""
     if examples.size % batch_size != 0:
         raise ValueError("validation example count must be divisible by batch size")
-    correct = 0
-    count = 0
-    joint_log_probability = 0.0
+    totals: dict[str, float] = {}
     for start in range(0, examples.size, batch_size):
         batch = examples.select(range(start, start + batch_size))
         statistics = parallel_evaluation_step(params, shard_batch(batch, local_device_count))
         host_statistics = jax.device_get(jax.tree_util.tree_map(lambda value: value[0], statistics))
-        correct += int(host_statistics["correct"])
-        count += int(host_statistics["count"])
-        joint_log_probability += float(host_statistics["joint_log_probability"])
-    return {
-        "exact_match": correct / count,
-        "mean_joint_log_probability": joint_log_probability / count,
+        for key, value in host_statistics.items():
+            totals[key] = totals.get(key, 0.0) + float(value)
+    count = totals.pop("count")
+    results = {
+        "exact_match": totals.pop("correct") / count,
+        "mean_joint_log_probability": totals.pop("joint_log_probability") / count,
     }
+    for key, value in totals.items():
+        if key.endswith("_correct"):
+            results[f"{key.removesuffix('_correct')}_exact_match"] = value / count
+        else:
+            metric_prefix = key.removesuffix("_joint_log_probability")
+            results[f"{metric_prefix}_mean_joint_log_probability"] = value / count
+    return results
 
 
 def _serializable_config(config: TrainConfig) -> dict[str, Any]:
@@ -861,7 +894,10 @@ def train(config: TrainConfig) -> dict[str, Any]:
             collect_diagnostics=False,
         )
         parallel_logged_train_step = build_parallel_train_step(model, collect_path_gradients=True)
-        parallel_evaluation_step = build_parallel_evaluation_step(model)
+        parallel_evaluation_step = build_parallel_evaluation_step(
+            model,
+            collect_message_interventions=config.evaluation_message_interventions,
+        )
         metrics_path = None if output_directory is None else output_directory / "metrics.jsonl"
         outputs_path = None if output_directory is None else output_directory / "outputs.jsonl"
         print(
