@@ -9,7 +9,7 @@
 | Started | not started |
 | Finished | not applicable |
 | Baseline | `20261016-conlang-v4-8-full-m4-d2-qsender-norecvq-bridgeaux-commdiag` |
-| Git revision | primary configuration commit `570334c62e6ed33d0fe1f6e3b2b30061ace79b7c`; corrected reviewed configuration/report head `5e32f33d1ccee31688f915d6c2ee01163157bed8`; immutable launch snapshot pending |
+| Git revision | primary configuration commit `570334c62e6ed33d0fe1f6e3b2b30061ace79b7c`; final reviewed configuration/report closure `d45924a8816df48be91e2f8588fd285d063599f4`; immutable launch snapshot pending |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` |
 | Primary configuration | `configs/conlang-jax-v4-8-full-h256-m4-d2-qsender-norecvq-bridgeaux-commdiag.yaml` |
 | Command | not recorded; pending immutable snapshot and launch-boundary verification |
@@ -85,7 +85,7 @@ Pending launch and verified completion.
 
 | Artifact | Path or URL | Verified |
 |---|---|---|
-| Configuration | `configs/conlang-jax-v4-8-full-h256-m4-d2-qsender-norecvq-bridgeaux-commdiag.yaml` | committed in `570334c62e6ed33d0fe1f6e3b2b30061ace79b7c`, parses and validates locally, and passed correctness review after report-only corrections |
+| Configuration | `configs/conlang-jax-v4-8-full-h256-m4-d2-qsender-norecvq-bridgeaux-commdiag.yaml` | committed in `570334c62e6ed33d0fe1f6e3b2b30061ace79b7c`, parses and validates locally, and passed correctness and cleanup review after report-only corrections |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` | pending push of the reviewed configuration closure |
 | Source snapshot | pending | must be produced by `tpu_scripts/run_staging.sh` before launch |
 | Regional dataset | `/home/kristinelu/elf-data/conlangs-v1` | must revalidate the complete Central2 manifest before launch |
@@ -96,7 +96,7 @@ Pending launch and verified completion.
 
 - The configuration parses and validates locally. Its exact YAML diff from the completed hidden-128 bridge-supervised baseline is limited to run identity/output fields plus `hidden_size: 128` to `256`.
 - Correctness review passed for the committed configuration/report closure after correcting the coupled-width and output-projection descriptions.
-- Cleanup review identified two report-only provenance/projection clarifications; cleanup re-review is pending this correction.
+- Cleanup review identified two report-only provenance/projection clarifications; cleanup re-review passed at `d45924a8816df48be91e2f8588fd285d063599f4`.
 - Pending mandatory same-TPU availability check, node-local snapshot verification, regional-data integrity check, runtime preflight, and launch-boundary VFIO/process/output checks.
 
 ## Failure Details
