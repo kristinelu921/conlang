@@ -116,7 +116,7 @@ Keep the second round only if intact final messages beat target-question/wrong-p
 | Artifact | Path or URL | Verified |
 |---|---|---|
 | Configuration | `configs/conlang-jax-v4-8-full-m4-d2-qsender-norecvq-r2-commdiag.yaml` | parses; correctness and cleanup reviews passed |
-| Pull request | `https://github.com/kristinelu921/conlang/pull/1` | reviewed implementation/configuration closure pushed |
+| Pull request | `https://github.com/kristinelu921/conlang/pull/1` | reviewed launch closure pushed; completed-result update prepared on the PR branch |
 | Source snapshot | `/kmh-nfs-ssd-us-mount/staging/kristine/elf/20261016-conlang-v4-8-full-m4-d2-qsender-norecvq-r2-commdiag-20261016T103711.365431876Z`; remote `/home/kristinelu/elf-runs/source/20261016-conlang-v4-8-full-m4-d2-qsender-norecvq-r2-commdiag` | local and remote matched before launch: 56 files, 425946 bytes, relative SHA-256-manifest digest `a49cb431a00c35980c0f9ef381b1db54ba8c0e710bd3b564b2879aee16998d05`; selected-config SHA-256 `9289846b850928bed986db8f8be2af6d7b96a8c3df44d45bd9d32b5987d66ad1`; no bytecode caches |
 | Regional dataset | `/home/kristinelu/elf-data/conlangs-v1` | revalidated on the TPU: 15,625 worlds / 125,000 questions / 8 questions per world; manifest SHA-256 `a839b6ac98ba33a008caaebdde40dea7bc1e639106e93aab25ab2af3c29588e8` |
 | Tracking run | `https://wandb.ai/kaynelu921-massachusetts-institute-of-technology/conlangs/runs/daubgk8r` | synced and finalized by the canonical launcher |
@@ -130,7 +130,8 @@ Keep the second round only if intact final messages beat target-question/wrong-p
 - Focused CPU verification passed 11 cases covering one-round regression behavior, config validation, crossed two-round dependencies in both directions, tied and untied encoders, unchanged parameter trees, and matched wrong-question and wrong-passage controls across both round counts.
 - Full CPU regression closure passed 60 tests with two existing Pydantic warnings in 157.54 seconds.
 - Correctness and cleanup reviews passed for exact implementation/configuration range `df823a4f7c869be72a6b89b8e49c5b340b3b528b..a74ed6fbf1630a625f89c64e026c4b86f0696f5c`.
-- Terminal verification found the exact trainer absent, VFIO idle, no stale TPU lock, a canonical `TRAINING_COMPLETE ... step=2000` sentinel, a CPU-restorable step-2000 checkpoint, all 56 original source files byte-identical outside W&B's separate run directory, and the TPU still `READY` / `HEALTHY`. Completed-result review is pending.
+- Completed-result correctness and cleanup reviews passed after calibrating the synthesis to distinguish tested insufficiency from a unique architectural root cause.
+- Terminal verification found the exact trainer absent, VFIO idle, no stale TPU lock, a canonical `TRAINING_COMPLETE ... step=2000` sentinel, a CPU-restorable step-2000 checkpoint, all 56 original source files byte-identical outside W&B's separate run directory, and the TPU still `READY` / `HEALTHY`.
 
 ## Failure Details
 
@@ -147,3 +148,4 @@ Keep the second round only if intact final messages beat target-question/wrong-p
 - `2026-10-16`: Passed the first-step launch gate and reached step 80 with stable finite loss and approximately 2,440 examples/s. The expected throughput cost reflects the additional sender pass; no HBM or compilation failure appeared.
 - `2026-10-16T10:49:36Z`: Completed step 2000, all seven causal arms, checkpoint save, and W&B finalization.
 - `2026-10-16`: Verified exact process absence, lock and VFIO idleness, checkpoint restore, artifact hashes, 201 parsed metric records, 200 output records with 256 examples each, unchanged snapshot files, and TPU `READY` / `HEALTHY` state.
+- `2026-10-16`: Completed-result correctness and cleanup reviews independently verified the numerical, causal, artifact, W&B, checkpoint, snapshot, dataset, and terminal-state evidence; accepted wording fixes keep bridge supervision as the leading hypothesis rather than an established cause.
