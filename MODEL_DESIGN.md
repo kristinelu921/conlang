@@ -14,6 +14,7 @@ and a receiver must answer a question from the two messages alone.
 | Receiver output | Up to 4 answer tokens | You asked for an answer of at most 4 tokens. Decoding stops at the end token. |
 | Output head | Direct linear projection by default; optional independent hidden width | A configured output hidden size adds one ReLU projection before the vocabulary logits without changing the sender, messages, or Transformer width. |
 | Role gates | Disabled by default; optional separate sender and receiver bottleneck gates | A configured gate width lets each role adapt the tied encoder output without duplicating the encoder. The residual output starts at zero, so enabling gates preserves the initial ungated function. |
+| Communication rounds | One by default; optional second synchronous exchange | In round two, each sender receives the other sender's first-round continuous message alongside its original private input, which creates a direct path for complementary facts to be joined before the receiver. |
 | Width and depth | Hidden 128, 2 layers, 4 heads, feedforward 512 | 128 was requested. Two layers and four heads keep it a small encoder-decoder. Feedforward width is the usual 4 times the hidden size from Attention Is All You Need. Each head is 32 wide. |
 | Attention KV | Standard multi-head attention | One fused query/key/value projection per block, full keys and values for every head. No grouped-query or multi-query attention, and no KV cache. |
 | Channel contents | Continuous hidden states | The joint answer log probability has to train both messages. Continuous vectors let that gradient pass through the sender. A discrete codebook would need an extra sampling step that was not requested. |
@@ -44,6 +45,13 @@ character embeddings and runs a batch-first Transformer encoder. The returned
 message is the encoder state at the 4 query positions, shape `(batch, 4, 128)`.
 `encode_messages` runs that module twice and concatenates on the length axis,
 shape `(batch, 8, 128)`.
+
+Setting `communication_rounds` to 2 reuses the same sender and its parameters
+for a synchronous second exchange. Each sender sees the other sender's
+first-round message followed by its own original question and passage inputs;
+the receiver sees only the two resulting second-round messages. Reusing the
+sender preserves the parameter tree, while the crossed inputs let either agent
+combine an incoming bridge entity with its complementary private hop.
 
 `Receiver` is an encoder-decoder:
 

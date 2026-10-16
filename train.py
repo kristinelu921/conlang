@@ -78,6 +78,7 @@ class TrainConfig:
     role_gate_channels: int | None = None
     sender_question_conditioning: bool = False
     receiver_question_input: bool = True
+    communication_rounds: int = 1
     message_length: int = 4
     max_answer_length: int = 4
     max_text_length: int = 512
@@ -132,6 +133,8 @@ class TrainConfig:
             raise ValueError("role gate channels must be positive when configured")
         if not self.receiver_question_input and not self.sender_question_conditioning:
             raise ValueError("the question must be available to either senders or receiver")
+        if self.communication_rounds not in {1, 2}:
+            raise ValueError("communication_rounds must be 1 or 2")
         if not 0 <= self.dropout < 1:
             raise ValueError("dropout must be in [0, 1)")
         if (
@@ -249,6 +252,7 @@ def _model_config(config: TrainConfig, tokenizer: TextTokenizer) -> JaxCommunica
         role_gate_channels=config.role_gate_channels,
         sender_question_conditioning=config.sender_question_conditioning,
         receiver_question_input=config.receiver_question_input,
+        communication_rounds=config.communication_rounds,
         message_length=config.message_length,
         max_answer_length=config.max_answer_length,
         max_text_length=config.max_text_length,

@@ -293,6 +293,12 @@ def test_config_requires_one_question_path() -> None:
         ).validate()
 
 
+def test_config_rejects_unsupported_communication_round_count() -> None:
+    """Communication must use one direct round or two synchronous rounds."""
+    with pytest.raises(ValueError, match="communication_rounds must be 1 or 2"):
+        replace(TrainConfig(), communication_rounds=3).validate()
+
+
 def test_tpu_config_requires_regional_cache_and_node_local_output() -> None:
     """TPU runs should fail before launch when locality paths are missing."""
     config = TrainConfig(device="tpu", throughput_warmup_steps=1, steps=2)
@@ -565,6 +571,99 @@ def test_question_conditioned_senders_require_and_use_the_question() -> None:
         )
 
 
+@pytest.mark.parametrize("tie_sender_receiver_encoder", [False, True])
+def test_two_round_exchange_uses_the_other_senders_first_message(
+    tie_sender_receiver_encoder: bool,
+) -> None:
+    """Each second-round message should depend on the other sender's passage."""
+    tokenizer = TextTokenizer(["buffalo", "chapel"])
+    config = replace(
+        _small_config(),
+        sender_question_conditioning=True,
+        communication_rounds=2,
+        tie_sender_receiver_encoder=tie_sender_receiver_encoder,
+    )
+    batch = tokenize_examples(_examples(), tokenizer, config).select([0, 1])
+    model_config = _model_config(config, tokenizer)
+    model = JaxCommunicationModel(model_config)
+    agent_1_token_ids = jnp.asarray(batch.agent_1_token_ids)
+    agent_2_token_ids = jnp.asarray(batch.agent_2_token_ids)
+    repeated_questions = jnp.repeat(jnp.asarray(batch.question_token_ids[:1]), 2, axis=0)
+    variables = model.init(
+        {"params": jax.random.PRNGKey(0)},
+        agent_1_token_ids,
+        agent_2_token_ids,
+        repeated_questions,
+        jnp.asarray(batch.answer_token_ids),
+        deterministic=True,
+    )
+    single_round_model = JaxCommunicationModel(
+        replace(model_config, communication_rounds=1)
+    )
+    single_round_variables = single_round_model.init(
+        {"params": jax.random.PRNGKey(0)},
+        agent_1_token_ids,
+        agent_2_token_ids,
+        repeated_questions,
+        jnp.asarray(batch.answer_token_ids),
+        deterministic=True,
+    )
+
+    repeated_agent_1 = jnp.repeat(agent_1_token_ids[:1], 2, axis=0)
+    repeated_agent_2 = jnp.repeat(agent_2_token_ids[:1], 2, axis=0)
+    messages_with_changed_agent_2 = model.apply(
+        variables,
+        repeated_agent_1,
+        agent_2_token_ids,
+        deterministic=True,
+        question_token_ids=repeated_questions,
+        method=model.encode_messages,
+    )
+    messages_with_changed_agent_1 = model.apply(
+        variables,
+        agent_1_token_ids,
+        repeated_agent_2,
+        deterministic=True,
+        question_token_ids=repeated_questions,
+        method=model.encode_messages,
+    )
+    single_round_messages = single_round_model.apply(
+        single_round_variables,
+        repeated_agent_1,
+        agent_2_token_ids,
+        deterministic=True,
+        question_token_ids=repeated_questions,
+        method=single_round_model.encode_messages,
+    )
+
+    assert messages_with_changed_agent_2.shape == (
+        2,
+        config.message_length * 2,
+        config.hidden_size,
+    )
+    assert jnp.allclose(
+        single_round_messages[0, : config.message_length],
+        single_round_messages[1, : config.message_length],
+    )
+    assert not jnp.allclose(
+        messages_with_changed_agent_2[0, : config.message_length],
+        messages_with_changed_agent_2[1, : config.message_length],
+    )
+    assert not jnp.allclose(
+        messages_with_changed_agent_1[0, config.message_length :],
+        messages_with_changed_agent_1[1, config.message_length :],
+    )
+    assert jax.tree_util.tree_structure(variables["params"]) == jax.tree_util.tree_structure(
+        single_round_variables["params"]
+    )
+    for two_round_parameter, single_round_parameter in zip(
+        jax.tree_util.tree_leaves(variables["params"]),
+        jax.tree_util.tree_leaves(single_round_variables["params"]),
+        strict=True,
+    ):
+        assert jnp.array_equal(two_round_parameter, single_round_parameter)
+
+
 def test_receiver_question_input_can_be_disabled() -> None:
     """A disabled receiver question path should make logits question-invariant."""
     tokenizer = TextTokenizer(["buffalo", "chapel"])
@@ -640,8 +739,10 @@ def test_receiver_question_input_can_be_disabled() -> None:
 
 
 @pytest.mark.parametrize("tie_sender_receiver_encoder", [False, True])
+@pytest.mark.parametrize("communication_rounds", [1, 2])
 def test_conditioned_wrong_world_control_keeps_the_target_question(
     tie_sender_receiver_encoder: bool,
+    communication_rounds: int,
 ) -> None:
     """Wrong-world controls should rotate passages but retain each target question."""
     tokenizer = TextTokenizer(["buffalo", "chapel"])
@@ -649,6 +750,7 @@ def test_conditioned_wrong_world_control_keeps_the_target_question(
         _small_config(),
         sender_question_conditioning=True,
         tie_sender_receiver_encoder=tie_sender_receiver_encoder,
+        communication_rounds=communication_rounds,
     )
     batch = tokenize_examples(_examples(), tokenizer, config).select([0, 1])
     model = JaxCommunicationModel(_model_config(config, tokenizer))
@@ -717,10 +819,17 @@ def test_conditioned_wrong_world_control_keeps_the_target_question(
     assert jnp.array_equal(wrong_world_tokens, expected_tokens)
 
 
-def test_conditioned_wrong_question_control_keeps_passages_and_receiver_question() -> None:
+@pytest.mark.parametrize("communication_rounds", [1, 2])
+def test_conditioned_wrong_question_control_keeps_passages_and_receiver_question(
+    communication_rounds: int,
+) -> None:
     """Wrong-question controls should change only sender-side question identity."""
     tokenizer = TextTokenizer(["buffalo", "chapel"])
-    config = replace(_small_config(), sender_question_conditioning=True)
+    config = replace(
+        _small_config(),
+        sender_question_conditioning=True,
+        communication_rounds=communication_rounds,
+    )
     base_batch = tokenize_examples(_examples(), tokenizer, config)
     batch = base_batch.select([0, 1, 1, 0])
     model_config = _model_config(config, tokenizer)

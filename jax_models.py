@@ -92,6 +92,7 @@ class JaxCommunicationModelConfig:
     role_gate_channels: int | None = None
     sender_question_conditioning: bool = False
     receiver_question_input: bool = True
+    communication_rounds: int = 1
     message_length: int = 4
     max_answer_length: int = 4
     max_text_length: int = 512
@@ -123,6 +124,8 @@ class JaxCommunicationModelConfig:
             raise ValueError("role_gate_channels must be positive when configured")
         if not self.receiver_question_input and not self.sender_question_conditioning:
             raise ValueError("the question must be available to either senders or receiver")
+        if self.communication_rounds not in {1, 2}:
+            raise ValueError("communication_rounds must be 1 or 2")
         lengths = (
             self.message_length,
             self.max_answer_length,
@@ -480,6 +483,8 @@ class Sender(nn.Module):
         maximum_sender_input_length = config.max_text_length
         if config.sender_question_conditioning:
             maximum_sender_input_length += config.max_question_length
+        if config.communication_rounds == 2:
+            maximum_sender_input_length += config.message_length
         if text_length > maximum_sender_input_length:
             raise ValueError("text is longer than the configured maximum")
         queries = jnp.broadcast_to(query_embedding[None], (batch_size, *query_embedding.shape))
@@ -658,6 +663,26 @@ class JaxCommunicationModel(nn.Module):
             agent_2_token_ids,
             deterministic,
         )
+        if self.config.communication_rounds == 2:
+            round_1_message_1 = message_1
+            round_1_message_2 = message_2
+            # Sender consumes token IDs only as a padding mask; these placeholders
+            # mark the incoming continuous message positions as valid.
+            incoming_message_token_ids = jnp.full(
+                (agent_1_token_ids.shape[0], self.config.message_length),
+                self.config.padding_id + 1,
+                dtype=agent_1_token_ids.dtype,
+            )
+            message_1, sender_gate_1 = self.sender(
+                jnp.concatenate((round_1_message_2, agent_1_embeddings), axis=1),
+                jnp.concatenate((incoming_message_token_ids, agent_1_token_ids), axis=1),
+                deterministic,
+            )
+            message_2, sender_gate_2 = self.sender(
+                jnp.concatenate((round_1_message_1, agent_2_embeddings), axis=1),
+                jnp.concatenate((incoming_message_token_ids, agent_2_token_ids), axis=1),
+                deterministic,
+            )
         return jnp.concatenate((message_1, message_2), axis=1), sender_gate_1, sender_gate_2
 
     def answer_logits(
