@@ -742,7 +742,7 @@ def _validated_world_block_size(
     local_device_count: int,
     questions_per_world: int,
 ) -> int:
-    """Return one world-block shift after validating device-local evaluation layout."""
+    """Return the validated device-local world block size."""
     per_device_batch = batch_size // local_device_count
     if per_device_batch % questions_per_world != 0:
         raise ValueError("message interventions require world-aligned per-device batches")
