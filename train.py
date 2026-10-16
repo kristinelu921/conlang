@@ -67,6 +67,7 @@ class TrainConfig:
     precision: str = "float32"
     output_path: Path | None = None
     limit_examples: int | None = None
+    repeat_training_examples_to_batch_size: bool = False
     wandb_project: str = "conlangs"
     wandb_run_name: str | None = None
     wandb_enabled: bool = True
@@ -214,13 +215,20 @@ def iter_epoch_batches(
     examples: TokenizedExamples,
     batch_size: int,
     random_generator: random.Random,
+    repeat_examples_to_batch_size: bool = False,
 ) -> Iterator[JaxExampleBatch]:
     """Yield shuffled, full, fixed-shape batches indefinitely."""
-    if examples.size < batch_size:
+    if examples.size < 1:
+        raise ValueError("training dataset is empty")
+    if examples.size < batch_size and not repeat_examples_to_batch_size:
         raise ValueError("training dataset is smaller than one full batch")
     while True:
         order = list(range(examples.size))
         random_generator.shuffle(order)
+        if examples.size < batch_size:
+            repeated_order = [order[index % examples.size] for index in range(batch_size)]
+            yield examples.select(repeated_order)
+            continue
         for start in range(0, examples.size - batch_size + 1, batch_size):
             yield examples.select(order[start : start + batch_size])
 
@@ -834,7 +842,12 @@ def train(config: TrainConfig) -> dict[str, Any]:
         tokenizer = build_task_tokenizer()
         tokenized_train = tokenize_examples(train_examples, tokenizer, config)
         tokenized_validation = tokenize_examples(validation_examples, tokenizer, config)
-        batch_iterator = iter_epoch_batches(tokenized_train, config.batch_size, random.Random(config.seed))
+        batch_iterator = iter_epoch_batches(
+            tokenized_train,
+            config.batch_size,
+            random.Random(config.seed),
+            repeat_examples_to_batch_size=config.repeat_training_examples_to_batch_size,
+        )
         first_batch = next(batch_iterator)
         model = JaxCommunicationModel(_model_config(config, tokenizer))
         initialization_optimizer = optax.identity()

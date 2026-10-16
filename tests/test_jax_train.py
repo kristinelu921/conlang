@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import random
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
@@ -32,6 +33,7 @@ from train import (
     _selected_gradient_norm,
     _top_vocabulary_histogram,
     build_parallel_train_step,
+    iter_epoch_batches,
     parse_arguments,
     save_checkpoint,
     shard_batch,
@@ -89,6 +91,57 @@ def test_tokenization_produces_static_training_shapes() -> None:
     assert tokenized.question_token_ids.shape == (2, 16)
     assert tokenized.answer_token_ids.shape == (2, 4)
     assert tokenized.agent_1_token_ids.dtype == np.int32
+
+
+def test_epoch_batches_reject_a_dataset_smaller_than_the_batch_by_default() -> None:
+    """Undersized training sets should require explicit replication."""
+    tokenizer = TextTokenizer(["buffalo", "chapel"])
+    config = _small_config()
+    tokenized = tokenize_examples(_examples()[:1], tokenizer, config)
+
+    batch_iterator = iter_epoch_batches(tokenized, 4, random.Random(config.seed))
+
+    with pytest.raises(ValueError, match="smaller than one full batch"):
+        next(batch_iterator)
+
+
+def test_epoch_batches_can_repeat_one_example_to_fill_a_device_batch() -> None:
+    """Explicit replication should fill a fixed-shape batch from one unique example."""
+    tokenizer = TextTokenizer(["buffalo", "chapel"])
+    config = _small_config()
+    tokenized = tokenize_examples(_examples()[:1], tokenizer, config)
+
+    batch_iterator = iter_epoch_batches(
+        tokenized,
+        4,
+        random.Random(config.seed),
+        repeat_examples_to_batch_size=True,
+    )
+    first_batch = next(batch_iterator)
+    second_batch = next(batch_iterator)
+
+    assert first_batch.answer_token_ids.shape == (4, config.max_answer_length)
+    for batch_field in first_batch:
+        assert np.array_equal(batch_field, np.repeat(batch_field[:1], 4, axis=0))
+    for first_field, second_field in zip(first_batch, second_batch, strict=True):
+        assert np.array_equal(first_field, second_field)
+
+
+def test_epoch_batches_reject_an_empty_dataset_when_replication_is_enabled() -> None:
+    """Replication should fail clearly when there is no source example."""
+    tokenizer = TextTokenizer(["buffalo", "chapel"])
+    config = _small_config()
+    tokenized = tokenize_examples([], tokenizer, config)
+
+    batch_iterator = iter_epoch_batches(
+        tokenized,
+        4,
+        random.Random(config.seed),
+        repeat_examples_to_batch_size=True,
+    )
+
+    with pytest.raises(ValueError, match="training dataset is empty"):
+        next(batch_iterator)
 
 
 def test_regional_training_split_fits_static_sequence_limits() -> None:
