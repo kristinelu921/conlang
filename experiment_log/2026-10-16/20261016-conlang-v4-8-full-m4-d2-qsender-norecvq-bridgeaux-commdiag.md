@@ -135,6 +135,7 @@ The bridge hypothesis is supported only if intact bridge exact match learns abov
 - Correctness and cleanup reviews passed for exact range `5a5ea7110b73791077f984afd0311b8d8a566ef5..f3c402a1606063cd3d5652689dfb55f511d7ca53` after the diagnostic correction and test-fixture consolidation.
 - Remote source, JAX `0.6.2` runtime, authenticated W&B file presence, complete regional dataset, 85 GiB free space, fresh output path, process absence, lock absence, VFIO idleness, and TPU health checks passed.
 - Completed evidence verification parsed all 201 metrics and 200 output records, recomputed the causal gaps and last-50 medians, matched every local artifact hash to its remote source, restored the final checkpoint on CPU, and confirmed W&B `finished` at step 2000.
+- The completed-result correctness and cleanup reviews passed at `6fbd6bbb07a351039ca0b0267d5ebd01d8cc9d74` after correcting one mixed-window gradient comparison and clarifying the private-passage/W&B synthesis wording.
 - Terminal verification found the exact trainer absent, no stale TPU lock, idle VFIO devices, a canonical `TRAINING_COMPLETE ... step=2000` sentinel, and the TPU still `READY` / `HEALTHY`.
 
 ## Failure Details
@@ -155,3 +156,4 @@ The bridge hypothesis is supported only if intact bridge exact match learns abov
 - `2026-10-16`: Passed the launch gate with finite losses, bridge accuracy above its empirical constant baseline, and approximately 4,400 examples/s. At step 810, bridge accuracy was `12/256` and sender gradients had risen to `0.4565` / `0.5004`.
 - `2026-10-16T11:45:05Z`: Completed step 2000, every answer and bridge causal arm, checkpoint save, and W&B finalization.
 - `2026-10-16`: Verified exact process absence, lock and VFIO idleness, 201 metrics records, 200 output records, artifact hashes, CPU checkpoint restore, W&B `finished`, and TPU `READY` / `HEALTHY` state.
+- `2026-10-16`: Completed independent correctness and cleanup review of the preserved result; both passes now report `PASS`.
