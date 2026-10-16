@@ -71,7 +71,10 @@ relative_attention_max_distance: 128
 |---|---:|---:|---|
 | Sender-private post-Adam update multiplier | 1.0 | 4.0 | Increase actual sender parameter movement without changing the answer-token objective, receiver optimizer, shared token embedding, model, data, or seed |
 
-The implementation also logs sender, receiver, embedding, and total update norms plus sender/receiver update-to-weight ratios. This telemetry does not change optimization.
+The implementation also logs sender, receiver, embedding, and total update
+norms plus sender/receiver update-to-weight ratios. This telemetry does not
+change optimization, but the historical baseline did not record these fields
+and did not pay their logged-step computation cost.
 
 ## Hypothesis and Decision Rule
 
@@ -92,11 +95,14 @@ updates unchanged. It adds no labels or auxiliary objective.
 
 Treat balancing as a communication improvement only if intact messages beat
 both zero and wrong-world messages in exact match and mean joint log
-probability. Separately compare logged sender/receiver update-to-weight ratios,
-weight-norm drift, path-gradient norms, loss, and throughput against the exact
-query/message-KV baseline. A larger sender update without an intact-versus-
-wrong-world advantage is optimizer activity, not evidence of useful content
-transport.
+probability. Interpret sender/receiver update-to-weight ratios within this run;
+the historical baseline cannot supply a matched update-ratio comparison.
+Compare weight-norm drift, path-gradient norms, loss, and causal evaluation to
+the exact query/message-KV baseline. Report throughput descriptively, but do
+not attribute its difference solely to the multiplier because the new logged-
+step update telemetry adds instrumentation work. A larger sender update without
+an intact-versus-wrong-world advantage is optimizer activity, not evidence of
+useful content transport.
 
 ## Results
 
