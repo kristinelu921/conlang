@@ -5,16 +5,16 @@
 | Field | Value |
 |---|---|
 | Run ID | `20261016-conlang-v4-8-full-m4-d2-qquery-msgkv-commdiag` |
-| Status | `planned` |
-| Started | `not recorded; not launched` |
-| Finished | `not recorded; not launched` |
+| Status | `completed` |
+| Started | `2026-10-16T19:08:42Z` |
+| Finished | `2026-10-16T19:14:32Z` |
 | Baseline | `20261016-conlang-v4-8-full-m4-d2-commdiag` |
-| Git revision | primary implementation/configuration commit `c7e51f00729c6bda3fb0550571778bfa17022e8a`; correctness-reviewed closure `f56d215185495e60f9bd6a69f19cb8d60e4642fb`; cleanup-reviewed closure `47623a895371247f647dd3b98f2b9227bfc26247`; reviewed PR closure `7bbe5ce7e2a11a1877f248c9879422b0091e7d67`; immutable launch snapshot pending |
+| Git revision | primary implementation/configuration commit `c7e51f00729c6bda3fb0550571778bfa17022e8a`; correctness-reviewed closure `f56d215185495e60f9bd6a69f19cb8d60e4642fb`; cleanup-reviewed closure `47623a895371247f647dd3b98f2b9227bfc26247`; immutable launch source `c00dd35e56504a506b9acadb3ea9bc69f391bfc4` |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` |
 | Primary configuration | `configs/conlang-jax-v4-8-full-m4-d2-qquery-msgkv-commdiag.yaml` |
-| Command | `/snap/google-cloud-cli/current/bin/gcloud compute tpus tpu-vm ssh kmh-tpuvm-v4-8-spot-kristine-14-23-12-28-N-us-central2-b --project=he-vision-group --zone=us-central2-b --worker=all --internal-ip --ssh-flag=-F --ssh-flag=/dev/null --command='set -euo pipefail; mkdir -p /home/kristinelu/elf-runs; test ! -e /home/kristinelu/elf-runs/20261016-conlang-v4-8-full-m4-d2-qquery-msgkv-commdiag; test ! -e /tmp/libtpu_lockfile; test -z "$(sudo fuser /dev/vfio/* 2>/dev/null \|\| true)"; cd /home/kristinelu/elf-runs/source/20261016-conlang-v4-8-full-m4-d2-qquery-msgkv-commdiag; export JAX_PLATFORMS=tpu CUDA_VISIBLE_DEVICES= ELF_TPU_WORKER_INDEX=0 PYTHONPATH="$PWD" HF_HOME=/home/kristinelu/elf-runs/hf-cache PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1; ulimit -c 0; /home/kristinelu/elf-runs/runtime/venv/bin/python -u train.py --config configs/conlang-jax-v4-8-full-m4-d2-qquery-msgkv-commdiag.yaml 2>&1 \| tee /home/kristinelu/elf-runs/20261016-conlang-v4-8-full-m4-d2-qquery-msgkv-commdiag.launcher.log'` |
+| Command | `/snap/google-cloud-cli/current/bin/gcloud compute tpus tpu-vm ssh kmh-tpuvm-v4-8-spot-kristine-14-23-12-28-N-us-central2-b --project=he-vision-group --zone=us-central2-b --worker=all --internal-ip --ssh-flag=-F --ssh-flag=/dev/null --command='set -euo pipefail; source_dir=/home/kristinelu/elf-runs/source/20261016-conlang-v4-8-full-m4-d2-qquery-msgkv-commdiag; output_dir=/home/kristinelu/elf-runs/20261016-conlang-v4-8-full-m4-d2-qquery-msgkv-commdiag; launcher_log=/home/kristinelu/elf-runs/20261016-conlang-v4-8-full-m4-d2-qquery-msgkv-commdiag.launcher.log; test -d "$source_dir"; test ! -e "$output_dir"; test ! -e "$launcher_log"; test ! -e /tmp/libtpu_lockfile; test -z "$(sudo fuser /dev/vfio/* 2>/dev/null \|\| true)"; cd "$source_dir"; export JAX_PLATFORMS=tpu CUDA_VISIBLE_DEVICES= ELF_TPU_WORKER_INDEX=0 PYTHONPATH="$PWD" HF_HOME=/home/kristinelu/elf-runs/hf-cache PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1; ulimit -c 0; /home/kristinelu/elf-runs/runtime/venv/bin/python -u train.py --config configs/conlang-jax-v4-8-full-m4-d2-qquery-msgkv-commdiag.yaml 2>&1 \| tee "$launcher_log"'` |
 | Seed | `1730` |
-| Hardware | intended exact same authorized TPU only: `kmh-tpuvm-v4-8-spot-kristine-14-23-12-28-N-us-central2-b`, `us-central2-b`, Spot `v4-8`, topology `2x2x1`, one host, four TPU devices; transiently available at `2026-10-16T18:46Z` with unknown runtime, then absent again at the `18:47Z` selection check |
+| Hardware | `kmh-tpuvm-v4-8-spot-kristine-14-23-12-28-N-us-central2-b`, `us-central2-b`, Spot `v4-8`, topology `2x2x1`, one host, four TPU devices; terminal state `READY` / `HEALTHY` |
 
 ## Configuration
 
@@ -82,18 +82,55 @@ Treat the architecture as communicating only if intact messages beat both zero a
 
 ## Results
 
-Pending launch and verified completion.
+| Evaluation arm | Exact match | Correct | Mean joint log probability |
+|---|---:|---:|---:|
+| Intact messages | 0.01171875 | 3/256 | -9.404946327209473 |
+| Zero messages | 0.0 | 0/256 | -7.162421226501465 |
+| Wrong-world messages | 0.01171875 | 3/256 | -9.404233932495117 |
+| Swapped senders | 0.01171875 | 3/256 | -9.405538558959961 |
+| Agent 1 only | 0.01171875 | 3/256 | -8.69467544555664 |
+| Agent 2 only | 0.01171875 | 3/256 | -8.985088348388672 |
+
+The treatment fails the preregistered communication rule. Intact and
+wrong-world messages tie at `3/256`, and wrong-world messages are marginally
+better by `0.0007124` nats. Zeroing the messages removes those three exact
+matches, but improves mean joint log probability by `2.2425251` nats; this
+out-of-distribution control establishes nonzero-message dependence, not useful
+passage transport. Either single-sender arm also keeps all three exact matches
+and improves likelihood relative to intact. The final logged training batch
+greedily emitted `pelican` for all 256 examples, so output concentration remains
+severe; validation generations were not persisted per example.
+
+Over the last 50 logged training steps, median gradient norms are `0.0049345`
+and `0.0049162` for the two sender paths and `1.6263727` for the receiver, a
+`329.59x` / `330.82x` receiver-to-sender imbalance. Relative to the matched
+baseline medians, absolute sender gradients rise `1.60x` / `1.79x`, but the
+receiver also rises `1.28x`; the added gradient does not produce a beneficial
+wrong-world gap. Median steady-state throughput is `5686.64` examples/s versus
+`5869.27` for the baseline, a `3.11%` reduction. Median final-50 training loss
+is `4.21608` versus `3.99575`, and final validation exact match falls from
+`10/256` to `3/256`.
+
+For this seed and validation prefix, making the question only the attention
+query is therefore not a sufficient unsupervised credit-assignment fix. It
+removes the direct question-value shortcut and modestly increases sender-path
+gradients, but the model still does not use aligned private passage content
+beneficially and generalizes worse than the original receiver.
 
 ## Artifacts
 
 | Artifact | Path or URL | Verified |
 |---|---|---|
-| Configuration | `configs/conlang-jax-v4-8-full-m4-d2-qquery-msgkv-commdiag.yaml` | committed in `c7e51f00729c6bda3fb0550571778bfa17022e8a`, parses and validates locally; correctness-reviewed at `f56d215185495e60f9bd6a69f19cb8d60e4642fb`; cleanup-reviewed at `47623a895371247f647dd3b98f2b9227bfc26247`; pushed in reviewed closure `7bbe5ce7e2a11a1877f248c9879422b0091e7d67`; remote runtime hash pending |
-| Pull request | `https://github.com/kristinelu921/conlang/pull/1` | branch updated through reviewed closure `7bbe5ce7e2a11a1877f248c9879422b0091e7d67` |
-| Source snapshot | `not recorded; pending immutable staging` | no |
-| Regional dataset | `/home/kristinelu/elf-data/conlangs-v1` | previously verified Central2 copy; fresh preflight pending |
-| Checkpoint | `/home/kristinelu/elf-runs/20261016-conlang-v4-8-full-m4-d2-qquery-msgkv-commdiag/checkpoint.msgpack` | no; run not launched |
-| Tracking run | `not recorded; run not launched` | no |
+| Configuration | `configs/conlang-jax-v4-8-full-m4-d2-qquery-msgkv-commdiag.yaml` | local and remote SHA-256 `dcdc5b43c04b5665e905042fa8ba8bbdb4ba33633ba7d28f538a36d7077b25f0` |
+| Pull request | `https://github.com/kristinelu921/conlang/pull/1` | immutable launch source pushed before staging |
+| Source snapshot | `/kmh-nfs-ssd-us-mount/staging/kristine/elf/20261016-conlang-v4-8-full-m4-d2-qquery-msgkv-commdiag-20261016T185253.120559935Z`; remote `/home/kristinelu/elf-runs/source/20261016-conlang-v4-8-full-m4-d2-qquery-msgkv-commdiag` | local and remote base source matched before and after launch: 60 files, 454098 bytes, relative SHA-256-manifest digest `e218b4847b5bc6fd643a4edec1acd5dc278fe84933a606db0e67d0c504d9ef98`; no cache files; W&B's separate run directory excluded |
+| Regional dataset | `/home/kristinelu/elf-data/conlangs-v1` | manifest SHA-256 `a839b6ac98ba33a008caaebdde40dea7bc1e639106e93aab25ab2af3c29588e8`; six gzip shards passed integrity checking; 125000 verified questions |
+| Checkpoint | `/home/kristinelu/elf-runs/20261016-conlang-v4-8-full-m4-d2-qquery-msgkv-commdiag/checkpoint.msgpack` | 28799159 bytes; SHA-256 `99f0d4b40124ac66fc4357d74d43f1c4d639115e8c85e5aa1e6ebb1ac0e9763f`; CPU restore reports step 2000 |
+| Metrics | `experiment_log/2026-10-16/artifacts/20261016-conlang-v4-8-full-m4-d2-qquery-msgkv-commdiag/metrics.jsonl` | 325735 bytes; SHA-256 `9baca85683db4fd7d9d35102f2f315b781699a8995c5f0fd9ff0d434b8f607fc`; byte-identical to remote |
+| Outputs | `experiment_log/2026-10-16/artifacts/20261016-conlang-v4-8-full-m4-d2-qquery-msgkv-commdiag/outputs.jsonl` | 2848492 bytes; SHA-256 `071b056fcfaed88c50199872087dc3b94826714a5f690070398d4542aef8a7c6`; byte-identical to remote |
+| Launcher log | `experiment_log/2026-10-16/artifacts/20261016-conlang-v4-8-full-m4-d2-qquery-msgkv-commdiag/launcher.log.gz` | 3877 bytes; SHA-256 `bc63622c2851dfbc5c2f3ddd6472830d940ce2ad3f7540365668bc8ffccbee65`; decompressed SHA-256 `73ec1285d337153b6d8c810a0eeed4a22e22bacae9a2d50d3535fabe23274f3c` matches the 18722-byte remote log |
+| Tracking run | `https://wandb.ai/kaynelu921-massachusetts-institute-of-technology/conlangs/runs/vuwudmeg` | authenticated API reports `finished`, last history step 2000, and matching summary metrics |
+| Preflight incident | `experiment_log/2026-10-16/20261016-conlang-v4-8-full-m4-d2-qquery-msgkv-commdiag-preflight-runtime-probe-attempt1.md` | recovered before launch; no trainer, W&B run, output, or checkpoint was created by the failed inventory probe |
 
 ## Review and Verification
 
@@ -103,16 +140,20 @@ Pending launch and verified completion.
 - Correctness passed at `f56d215185495e60f9bd6a69f19cb8d60e4642fb`; cleanup passed at `47623a895371247f647dd3b98f2b9227bfc26247`.
 - The first mandatory availability check on `2026-10-16` returned no final `AVAILABLE` row: the intended prior Kristine v4-8 was absent, one Kristine v6e-16 was deleting, and one Kristine v5e-4 was actively occupied and left untouched. No TPU was selected or modified.
 - The filtered availability check at `2026-10-16T18:36Z` returned the same state and no final `AVAILABLE` row. The occupied v5e-4 was again left untouched.
-- At `2026-10-16T18:46Z`, the intended v4-8 appeared in the final `AVAILABLE` table with ELF runtime status `UNKNOWN`, alongside four other candidates. Before any initialization or selection, the fresh `18:47Z` check showed that the v4-8 was absent again; the v5e-4 remained occupied and untouched, and the v6e-16 remained deleting. No candidate was modified.
-- Immutable snapshot, remote source, runtime, regional-data, output-freshness, and VFIO checks remain pending stable capacity.
+- At `2026-10-16T18:46Z`, the intended v4-8 appeared in the final `AVAILABLE` table. The next parallel checker ended before its required final table; direct API evidence showed the TPU remained `READY` / `HEALTHY`, so the incomplete audit was not treated as absence or launch authority.
+- A later complete audit selected the exact v4-8 from its final `AVAILABLE` table. Exact occupancy, source, config, JAX 0.6.2 runtime, W&B authentication, regional dataset, 85 GiB free-space, output-freshness, and lock/VFIO gates passed. The official inventory's intermittent runtime-probe reconnect is documented separately; its exact isolated readiness probe passed before the final occupancy gate.
+- Terminal verification found `TRAINING_COMPLETE` at step 2000, no fatal pattern, no trainer, no lockfile or VFIO holder, TPU `READY` / `HEALTHY`, 201 metrics records, 200 output records, a restorable step-2000 checkpoint, and W&B `finished` at step 2000. Completed-result correctness and cleanup review are pending.
 
 ## Failure Details
 
-- Last known step: `not applicable; not launched`.
-- Error summary: `not applicable; waiting for an authorized available Kristine TPU`.
-- Detailed output: `not recorded`.
+- Last known step: `2000`; run completed successfully.
+- Error summary: no training failure. A pre-launch inventory runtime probe intermittently returned `UNKNOWN` even though the exact probe passed; the zero-step incident is preserved in its separate report.
+- Detailed output: canonical launcher log and the separate preflight report linked above.
 
 ## Updates
 
 - `2026-10-16`: Selected the question-query/message-key-value receiver as a single architectural intervention after confirming that the original receiver could remain insensitive to messages while answer cross-entropy stayed unsaturated.
 - `2026-10-16`: The initial mandatory filtered audit found no available Kristine TPU. The occupied Kristine v5e-4 was left untouched; implementation and review continue while capacity is unavailable.
+- `2026-10-16T18:52:53Z`: Created the immutable source snapshot, copied it once to node-local storage, and verified file count, byte count, manifest, selected-config hash, and cache exclusion.
+- `2026-10-16T19:08:42Z`: Launched on the exact Kristine v4-8 after direct state, runtime, data, output, lock, and occupancy gates. W&B run ID is `vuwudmeg`.
+- `2026-10-16T19:14:32Z`: Completed all 2000 steps, final causal evaluation, checkpoint save, and W&B synchronization. A first read-only checkpoint probe had a quoting-only syntax error; the corrected CPU probe restored step 2000 without modifying the checkpoint.
