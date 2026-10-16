@@ -77,6 +77,7 @@ class TrainConfig:
     tie_sender_receiver_encoder: bool = False
     role_gate_channels: int | None = None
     sender_question_conditioning: bool = False
+    receiver_question_input: bool = True
     message_length: int = 4
     max_answer_length: int = 4
     max_text_length: int = 512
@@ -129,6 +130,8 @@ class TrainConfig:
             raise ValueError("output hidden size must be positive when configured")
         if self.role_gate_channels is not None and self.role_gate_channels < 1:
             raise ValueError("role gate channels must be positive when configured")
+        if not self.receiver_question_input and not self.sender_question_conditioning:
+            raise ValueError("the question must be available to either senders or receiver")
         if not 0 <= self.dropout < 1:
             raise ValueError("dropout must be in [0, 1)")
         if (
@@ -245,6 +248,7 @@ def _model_config(config: TrainConfig, tokenizer: TextTokenizer) -> JaxCommunica
         tie_sender_receiver_encoder=config.tie_sender_receiver_encoder,
         role_gate_channels=config.role_gate_channels,
         sender_question_conditioning=config.sender_question_conditioning,
+        receiver_question_input=config.receiver_question_input,
         message_length=config.message_length,
         max_answer_length=config.max_answer_length,
         max_text_length=config.max_text_length,

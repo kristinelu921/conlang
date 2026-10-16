@@ -40,14 +40,15 @@ The exact 256-example validation prefix has a 0.03515625 empirical baseline when
 | 2 | Message 8 only | Test channel capacity | Keep only if causal gap improves |
 | 3 | Depth 4 only | Test reasoning depth | Keep only if causal gap improves |
 | 4 | Question-conditioned senders, message 4, depth 2 | Shorten the sender credit path and make messages query-specific | Keep only if a causal message gap appears |
-| 5 | Explicit sender-content objective | Supply direct learning signal if architectural conditioning remains flat | Design from the question-conditioned result |
-| 6 | Hidden 256 and tied versus untied on the best communicating arm | Test capacity and sharing after communication is present | Matched comparisons, same seed and schedule |
+| 5 | Mask direct receiver question input | Remove the confirmed cheap shortcut while preserving question-conditioned senders | Keep only if intact beats both zero and wrong passages |
+| 6 | Explicit sender-content objective | Supply direct learning signal if the sender-only question path remains flat | Design from the bypass result |
+| 7 | Hidden 256 and tied versus untied on the best communicating arm | Test capacity and sharing after communication is present | Matched comparisons, same seed and schedule |
 
 Every arm uses seed 1730, the same Central2 dataset, the same Kristine v4-8, batch 256, 2,000 steps, bfloat16 compute, output hidden width 256, AdamW settings, and the causal intervention evaluation unless a report explicitly records otherwise.
 
 ## Current belief
 
-The baseline is definitively in a question-only shortcut/local minimum, not merely weak at communication. Raw width, message length, depth, and question-conditioned sender selection have all failed. The conditioned arm still matches intact performance when both private passages come from another world, and its sender/receiver gradient imbalance worsens to roughly 476--673 times. The leading explanation is therefore inadequate direct learning signal for passage content, not merely a long query-independent path. The next arm should add an explicit sender-content objective; further width/depth/tie stacking is not justified until a passage-specific causal gap appears.
+The baseline is definitively in a question-only shortcut/local minimum, not merely weak at communication. Raw width, message length, depth, and question-conditioned sender selection have all failed to create a beneficial causal gap. The conditioned arm still matches intact exact accuracy when both private passages come from another world, and its sender/receiver gradient imbalance worsens to roughly 476--673 times. However, that arm left the receiver's cheap direct question path intact. The next clean architecture test masks that path while keeping the question available to both senders. If this remains flat, an explicit sender-content objective is warranted; further width/depth/tie stacking is not justified until a beneficial passage-specific gap appears.
 
 ## Evidence limitations
 

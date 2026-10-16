@@ -74,6 +74,7 @@ class JaxCommunicationModelConfig:
     tie_sender_receiver_encoder: bool = False
     role_gate_channels: int | None = None
     sender_question_conditioning: bool = False
+    receiver_question_input: bool = True
     message_length: int = 4
     max_answer_length: int = 4
     max_text_length: int = 512
@@ -103,6 +104,8 @@ class JaxCommunicationModelConfig:
             raise ValueError("output_hidden_size must be positive when configured")
         if self.role_gate_channels is not None and self.role_gate_channels < 1:
             raise ValueError("role_gate_channels must be positive when configured")
+        if not self.receiver_question_input and not self.sender_question_conditioning:
+            raise ValueError("the question must be available to either senders or receiver")
         lengths = (
             self.message_length,
             self.max_answer_length,
@@ -648,15 +651,28 @@ class JaxCommunicationModel(nn.Module):
         deterministic: bool,
     ) -> Array:
         """Score answer inputs from encoded messages and a question."""
+        question_embeddings, receiver_question_token_ids = self._receiver_question_inputs(
+            question_token_ids
+        )
         logits, _receiver_activation, _receiver_gate = self.receiver(
             messages,
-            self.token_embedding(question_token_ids),
-            question_token_ids,
+            question_embeddings,
+            receiver_question_token_ids,
             self.token_embedding(answer_input_ids),
             answer_input_ids,
             deterministic,
         )
         return logits
+
+    def _receiver_question_inputs(self, question_token_ids: Array) -> tuple[Array, Array]:
+        """Return active question inputs or masked placeholders for the receiver."""
+        question_embeddings = self.token_embedding(question_token_ids)
+        if self.config.receiver_question_input:
+            return question_embeddings, question_token_ids
+        return (
+            jnp.zeros_like(question_embeddings),
+            jnp.full_like(question_token_ids, self.config.padding_id),
+        )
 
     def __call__(
         self,
@@ -705,7 +721,9 @@ class JaxCommunicationModel(nn.Module):
         )
         message_1 = messages[:, : self.config.message_length]
         message_2 = messages[:, self.config.message_length :]
-        question_embeddings = self.token_embedding(question_token_ids)
+        question_embeddings, receiver_question_token_ids = self._receiver_question_inputs(
+            question_token_ids
+        )
         answer_embeddings = self.token_embedding(answer_input_ids)
         if stop_receiver_tokens:
             question_embeddings = jax.lax.stop_gradient(question_embeddings)
@@ -713,7 +731,7 @@ class JaxCommunicationModel(nn.Module):
         logits, receiver_activation, receiver_gate = self.receiver(
             jnp.concatenate((message_1, message_2), axis=1),
             question_embeddings,
-            question_token_ids,
+            receiver_question_token_ids,
             answer_embeddings,
             answer_input_ids,
             deterministic,

@@ -283,6 +283,16 @@ def test_config_rejects_nonpositive_role_gate_channels() -> None:
         replace(TrainConfig(), role_gate_channels=0).validate()
 
 
+def test_config_requires_one_question_path() -> None:
+    """The question must reach either the senders or the receiver."""
+    with pytest.raises(ValueError, match="question must be available"):
+        replace(
+            TrainConfig(),
+            sender_question_conditioning=False,
+            receiver_question_input=False,
+        ).validate()
+
+
 def test_tpu_config_requires_regional_cache_and_node_local_output() -> None:
     """TPU runs should fail before launch when locality paths are missing."""
     config = TrainConfig(device="tpu", throughput_warmup_steps=1, steps=2)
@@ -553,6 +563,80 @@ def test_question_conditioned_senders_require_and_use_the_question() -> None:
             deterministic=True,
             method=model.encode_messages,
         )
+
+
+def test_receiver_question_input_can_be_disabled() -> None:
+    """A disabled receiver question path should make logits question-invariant."""
+    tokenizer = TextTokenizer(["buffalo", "chapel"])
+    config = replace(
+        _small_config(),
+        sender_question_conditioning=True,
+        receiver_question_input=False,
+    )
+    batch = tokenize_examples(_examples(), tokenizer, config).select([0, 1])
+    model = JaxCommunicationModel(_model_config(config, tokenizer))
+    agent_1_token_ids = jnp.asarray(batch.agent_1_token_ids)
+    agent_2_token_ids = jnp.asarray(batch.agent_2_token_ids)
+    question_token_ids = jnp.asarray(batch.question_token_ids)
+    answer_token_ids = jnp.asarray(batch.answer_token_ids)
+    variables = model.init(
+        {"params": jax.random.PRNGKey(0)},
+        agent_1_token_ids,
+        agent_2_token_ids,
+        question_token_ids,
+        answer_token_ids,
+        deterministic=True,
+    )
+    messages = model.apply(
+        variables,
+        agent_1_token_ids,
+        agent_2_token_ids,
+        deterministic=True,
+        question_token_ids=question_token_ids,
+        method=model.encode_messages,
+    )
+    beginning = jnp.full((2, 1), tokenizer.bos_id, dtype=jnp.int32)
+    answer_input_ids = jnp.concatenate((beginning, answer_token_ids[:, :-1]), axis=1)
+    reversed_questions = jnp.flip(question_token_ids, axis=0)
+
+    logits = model.apply(
+        variables,
+        messages,
+        question_token_ids,
+        answer_input_ids,
+        deterministic=True,
+        method=model.answer_logits,
+    )
+    reversed_question_logits = model.apply(
+        variables,
+        messages,
+        reversed_questions,
+        answer_input_ids,
+        deterministic=True,
+        method=model.answer_logits,
+    )
+    receiver_question_model = JaxCommunicationModel(
+        replace(_model_config(config, tokenizer), receiver_question_input=True)
+    )
+    active_question_logits = receiver_question_model.apply(
+        variables,
+        messages,
+        question_token_ids,
+        answer_input_ids,
+        deterministic=True,
+        method=receiver_question_model.answer_logits,
+    )
+    active_reversed_question_logits = receiver_question_model.apply(
+        variables,
+        messages,
+        reversed_questions,
+        answer_input_ids,
+        deterministic=True,
+        method=receiver_question_model.answer_logits,
+    )
+
+    assert jnp.allclose(logits, reversed_question_logits)
+    assert not jnp.allclose(active_question_logits, active_reversed_question_logits)
 
 
 @pytest.mark.parametrize("tie_sender_receiver_encoder", [False, True])
