@@ -9,12 +9,12 @@
 | Started | `not started` |
 | Finished | `not started` |
 | Baseline | `20261016-conlang-v4-8-full-m4-d2-qquery-msgkv-senderlr4-commdiag` |
-| Git revision | implementation/configuration closure pending commit; immutable launch snapshot pending |
+| Git revision | primary configuration/report commit `914c057`; immutable launch snapshot pending |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` |
 | Primary configuration | `configs/conlang-jax-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-commdiag.yaml` |
 | Command | `not recorded; pending immutable snapshot and node-local dataset generation` |
 | Seed | `1730` |
-| Planned hardware | available Kristine Spot `v4-8` in `us-central2-b`; exact resource will be recorded after final preflight |
+| Planned hardware | `kmh-tpuvm-v4-8-spot-kristine-14-23-12-28-N-us-central2-b`, `us-central2-b`, Spot `v4-8`; pending final preflight |
 
 ## Configuration
 
