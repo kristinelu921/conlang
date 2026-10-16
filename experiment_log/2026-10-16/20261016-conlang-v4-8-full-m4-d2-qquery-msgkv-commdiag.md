@@ -142,7 +142,7 @@ beneficially and generalizes worse than the original receiver.
 - The filtered availability check at `2026-10-16T18:36Z` returned the same state and no final `AVAILABLE` row. The occupied v5e-4 was again left untouched.
 - At `2026-10-16T18:46Z`, the intended v4-8 appeared in the final `AVAILABLE` table. The next parallel checker ended before its required final table; direct API evidence showed the TPU remained `READY` / `HEALTHY`, so the incomplete audit was not treated as absence or launch authority.
 - A later complete audit selected the exact v4-8 from its final `AVAILABLE` table. Exact occupancy, source, config, JAX 0.6.2 runtime, W&B authentication, regional dataset, 85 GiB free-space, output-freshness, and lock/VFIO gates passed. The official inventory's intermittent runtime-probe reconnect is documented separately; its exact isolated readiness probe passed before the final occupancy gate.
-- Terminal verification found `TRAINING_COMPLETE` at step 2000, no fatal pattern, no trainer, no lockfile or VFIO holder, TPU `READY` / `HEALTHY`, 201 metrics records, 200 output records, a restorable step-2000 checkpoint, and W&B `finished` at step 2000. Completed-result correctness and cleanup review are pending.
+- Terminal verification found `TRAINING_COMPLETE` at step 2000, no fatal pattern, no trainer, no lockfile or VFIO holder, TPU `READY` / `HEALTHY`, 201 metrics records, 200 output records, a restorable step-2000 checkpoint, and W&B `finished` at step 2000. Completed-result correctness passed at `2e25d578b1b3b05071ec975586cab7439042cd7b`; cleanup re-review of the status corrections remains pending.
 
 ## Failure Details
 

@@ -45,10 +45,10 @@ launch-ready.
 
 The source snapshot and verified node-local data were preserved. No process was
 signaled, no lock or output was removed, and no TPU was rebooted. The scientific
-run remains eligible for its original identity because the launch fan-out never
-opened. Before launch, require a fresh direct `READY`/`HEALTHY` description, the
-selected TPU in the checker's final `AVAILABLE` table, an exact successful
-runtime-readiness probe, and a fresh occupancy plus canonical lockfile gate.
+run remained eligible for its original identity because the launch fan-out
+never opened. A fresh direct `READY`/`HEALTHY` description, a final `AVAILABLE`
+selection, an exact successful runtime-readiness probe, and fresh occupancy plus
+canonical lockfile gates all passed before the subsequent successful launch.
 
 ## Artifacts
 
