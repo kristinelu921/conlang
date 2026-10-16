@@ -41,7 +41,7 @@ Pending launch and verified completion.
 
 - Correctness review passed after correcting the conditioned wrong-world control to rotate only private passages while retaining each target question.
 - Cleanup review passed after aligning sender documentation with the optional question context.
-- The full CPU regression suite passed 49 tests with two existing Pydantic warnings. Focused tied/untied wrong-world oracle coverage passed both parameterized cases after the final test refinement.
+- The full CPU regression suite passed 50 tests with two existing Pydantic warnings. Focused tied/untied wrong-world oracle coverage passed both parameterized cases.
 - The selected YAML validates and differs from the causal baseline only by fresh run identity fields and `sender_question_conditioning: true`.
 
 ## Updates
