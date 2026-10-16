@@ -9,10 +9,10 @@
 | Started | not started |
 | Finished | not applicable |
 | Baseline | `20261016-conlang-v4-8-full-m4-d2-qsender-norecvq-bridgeaux-commdiag` |
-| Git revision | primary configuration commit `570334c62e6ed33d0fe1f6e3b2b30061ace79b7c`; final reviewed configuration/report closure `d45924a8816df48be91e2f8588fd285d063599f4`; immutable launch snapshot pending |
+| Git revision | primary configuration commit `570334c62e6ed33d0fe1f6e3b2b30061ace79b7c`; final reviewed configuration/report closure `d45924a8816df48be91e2f8588fd285d063599f4`; immutable launch snapshot HEAD `68a819dad88d1d2bd705af3b696081dabdd9ee00` |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` |
 | Primary configuration | `configs/conlang-jax-v4-8-full-h256-m4-d2-qsender-norecvq-bridgeaux-commdiag.yaml` |
-| Command | not recorded; pending immutable snapshot and launch-boundary verification |
+| Command | `/snap/google-cloud-cli/current/bin/gcloud compute tpus tpu-vm ssh kmh-tpuvm-v4-8-spot-kristine-14-23-12-28-N-us-central2-b --project=he-vision-group --zone=us-central2-b --worker=all --internal-ip --ssh-flag=-F --ssh-flag=/dev/null --command='set -euo pipefail; mkdir -p /home/kristinelu/elf-runs; test ! -e /home/kristinelu/elf-runs/20261016-conlang-v4-8-full-h256-m4-d2-qsender-norecvq-bridgeaux-commdiag; test ! -e /tmp/libtpu_lockfile; test -z "$(sudo fuser /dev/vfio/* 2>/dev/null \|\| true)"; cd /home/kristinelu/elf-runs/source/20261016-conlang-v4-8-full-h256-m4-d2-qsender-norecvq-bridgeaux-commdiag; export JAX_PLATFORMS=tpu CUDA_VISIBLE_DEVICES= ELF_TPU_WORKER_INDEX=0 PYTHONPATH="$PWD" HF_HOME=/home/kristinelu/elf-runs/hf-cache PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1; ulimit -c 0; /home/kristinelu/elf-runs/runtime/venv/bin/python -u train.py --config configs/conlang-jax-v4-8-full-h256-m4-d2-qsender-norecvq-bridgeaux-commdiag.yaml 2>&1 \| tee /home/kristinelu/elf-runs/20261016-conlang-v4-8-full-h256-m4-d2-qsender-norecvq-bridgeaux-commdiag.launcher.log'` |
 | Seed | `1730` |
 | Hardware | exact same authorized TPU only: `kmh-tpuvm-v4-8-spot-kristine-14-23-12-28-N-us-central2-b`, `us-central2-b`, Spot `v4-8`, topology `2x2x1`, one host, four TPU devices |
 
@@ -86,8 +86,8 @@ Pending launch and verified completion.
 | Artifact | Path or URL | Verified |
 |---|---|---|
 | Configuration | `configs/conlang-jax-v4-8-full-h256-m4-d2-qsender-norecvq-bridgeaux-commdiag.yaml` | committed in `570334c62e6ed33d0fe1f6e3b2b30061ace79b7c`, parses and validates locally, and passed correctness and cleanup review after report-only corrections |
-| Pull request | `https://github.com/kristinelu921/conlang/pull/1` | pending push of the reviewed configuration closure |
-| Source snapshot | pending | must be produced by `tpu_scripts/run_staging.sh` before launch |
+| Pull request | `https://github.com/kristinelu921/conlang/pull/1` | reviewed configuration closure pushed to `codex/jax-tpu-training` |
+| Source snapshot | `/kmh-nfs-ssd-us-mount/staging/kristine/elf/20261016-conlang-v4-8-full-h256-m4-d2-qsender-norecvq-bridgeaux-commdiag-20261016T120728.329172883Z`; planned remote `/home/kristinelu/elf-runs/source/20261016-conlang-v4-8-full-h256-m4-d2-qsender-norecvq-bridgeaux-commdiag` | local snapshot verified: 58 files, 442420 bytes, relative SHA-256-manifest digest `f950b1800036e09fbaab6da482b73cecf9d41ddc5e0bea761df84a7e268a8d56`; selected-config SHA-256 `454571ea9d0625088324f58cb5efb55e305217c2f2b84346d6c0eb11297530b9`; no bytecode or test caches; remote verification pending |
 | Regional dataset | `/home/kristinelu/elf-data/conlangs-v1` | must revalidate the complete Central2 manifest before launch |
 | Tracking run | pending | W&B enabled; final run identity must match the selected configuration |
 | Checkpoint | `/home/kristinelu/elf-runs/20261016-conlang-v4-8-full-h256-m4-d2-qsender-norecvq-bridgeaux-commdiag/checkpoint.msgpack` | pending |
@@ -97,7 +97,8 @@ Pending launch and verified completion.
 - The configuration parses and validates locally. Its exact YAML diff from the completed hidden-128 bridge-supervised baseline is limited to run identity/output fields plus `hidden_size: 128` to `256`.
 - Correctness review passed for the committed configuration/report closure after correcting the coupled-width and output-projection descriptions.
 - Cleanup review identified two report-only provenance/projection clarifications; cleanup re-review passed at `d45924a8816df48be91e2f8588fd285d063599f4`.
-- Pending mandatory same-TPU availability check, node-local snapshot verification, regional-data integrity check, runtime preflight, and launch-boundary VFIO/process/output checks.
+- Pending remote node-local snapshot verification, regional-data integrity check, runtime preflight, and launch-boundary VFIO/process/output checks.
+- The mandatory checker listed the exact Kristine v4-8 in its final `AVAILABLE` table, and `tpu_scripts/run_staging.sh` created the verified immutable 58-file snapshot at HEAD `68a819dad88d1d2bd705af3b696081dabdd9ee00`.
 
 ## Failure Details
 
@@ -107,3 +108,4 @@ Pending launch and verified completion.
 ## Updates
 
 - `2026-10-16`: Selected hidden width 256 as the next single-variable test after explicit bridge supervision established beneficial private-passage use at hidden width 128.
+- `2026-10-16T12:07:28Z`: The exact same Kristine v4-8 appeared in the mandatory final `AVAILABLE` table; created and verified the immutable local launch snapshot, selected-config hash, and cache exclusions.
