@@ -26,6 +26,8 @@ def load_examples(path: Path, limit: int | None = None) -> list[dict[str, str]]:
                 "agent_2_input": str(example["agent_2_input"]),
                 "question": str(example["question"]),
                 "answer": str(example["answer"]),
+                "bridge": str(example["bridge"]),
+                "person_side_agent": str(example["person_side_agent"]),
             }
         )
         if limit is not None and len(loaded) >= limit:

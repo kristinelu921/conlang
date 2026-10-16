@@ -233,4 +233,14 @@ def test_dataset_builds_manifest_and_flattened_examples(tmp_path: Path) -> None:
         "agent_2_input",
         "question",
         "answer",
+        "bridge",
+        "person_side_agent",
     }
+    first_world = next(read_worlds(train_path))
+    first_question = first_world["questions"][0]
+    first_person, first_bridge, _first_answer = first_question["reasoning_path"]
+    assert examples[0]["bridge"] == first_bridge
+    assert (
+        examples[0]["person_side_agent"]
+        == first_world["metadata"]["person_side_agent"][first_person]
+    )

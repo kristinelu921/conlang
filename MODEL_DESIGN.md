@@ -20,6 +20,7 @@ and a receiver must answer a question from the two messages alone.
 | Channel contents | Continuous hidden states | The joint answer log probability has to train both messages. Continuous vectors let that gradient pass through the sender. A discrete codebook would need an extra sampling step that was not requested. |
 | Tokenizer | Characters for text, one token per answer word | Passages must expose held-out spellings. Answers are 4–13 characters, so a character answer cannot fit in 4 tokens. |
 | Objective | Sum of answer-token log probabilities | You asked for joint log probabilities. The scalar loss is the negative of that sum, averaged over the batch. |
+| Optional bridge supervision | Shared vocabulary head over the person-side sender message | A nonzero weight gives direct training credit for selecting the question-specific middle entity without exposing the label as a model input. |
 | Initialization | Flax linen defaults, with token embeddings drawn from a normal of standard deviation 1 | Standard library initialization. The embedding scale is the one explicit choice. |
 | Optimizer | AdamW, learning rate `3e-4`, gradient clip `1.0` | AdamW is the usual Transformer optimizer. `3e-4` is a standard small-model step size. The clip limits a step from the large initial embeddings. |
 | Weight decay | `0.01` on matrices, `0` on biases and layer-norm scales | `0.01` is AdamW's usual default. Vector parameters such as layer-norm scales are left without decay so the decay does not shrink them toward zero. |
@@ -148,6 +149,15 @@ The sum is the joint probability of the answer string. A mean over tokens would
 treat a short answer and a long one as the same number of decisions, which is a
 different objective. `CommunicationOutput.joint_log_probability` is the per-row
 sum. `loss` is what a minimizer should step on.
+
+When `bridge_supervision_weight` is positive, one shared vocabulary projection
+also reads the mean of each sender's final message vectors. Training selects
+only the sender that holds the target person's person-to-middle fact and adds
+its middle-entity cross-entropy to the answer loss at the configured weight.
+The bridge and sender-side labels come from generator metadata and are never
+model inputs. Evaluation reports bridge accuracy for intact messages and each
+causal message intervention. A zero weight omits the projection entirely, so
+existing parameter trees and checkpoints remain unchanged.
 
 ## Initialization
 

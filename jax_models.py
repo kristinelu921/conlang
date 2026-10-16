@@ -93,6 +93,7 @@ class JaxCommunicationModelConfig:
     sender_question_conditioning: bool = False
     receiver_question_input: bool = True
     communication_rounds: int = 1
+    bridge_supervision_weight: float = 0.0
     message_length: int = 4
     max_answer_length: int = 4
     max_text_length: int = 512
@@ -126,6 +127,8 @@ class JaxCommunicationModelConfig:
             raise ValueError("the question must be available to either senders or receiver")
         if self.communication_rounds not in {1, 2}:
             raise ValueError("communication_rounds must be 1 or 2")
+        if self.bridge_supervision_weight < 0:
+            raise ValueError("bridge supervision weight cannot be negative")
         lengths = (
             self.message_length,
             self.max_answer_length,
@@ -157,6 +160,8 @@ class JaxCommunicationOutput(NamedTuple):
     sender_gate_1: Array | None
     sender_gate_2: Array | None
     receiver_gate: Array | None
+    bridge_logits_1: Array | None
+    bridge_logits_2: Array | None
 
 
 def _attention_mask(query_valid: Array, key_valid: Array) -> Array:
@@ -618,6 +623,16 @@ class JaxCommunicationModel(nn.Module):
             )
         self.sender = Sender(self.config, shared_encoder=shared_encoder, name="sender")
         self.receiver = Receiver(self.config, shared_encoder=shared_encoder, name="receiver")
+        self.bridge_output_projection = (
+            nn.Dense(
+                self.config.vocab_size,
+                dtype=jnp.float32,
+                param_dtype=jnp.float32,
+                name="bridge_output_projection",
+            )
+            if self.config.bridge_supervision_weight > 0
+            else None
+        )
 
     def encode_messages(
         self,
@@ -767,6 +782,15 @@ class JaxCommunicationModel(nn.Module):
         )
         message_1 = messages[:, : self.config.message_length]
         message_2 = messages[:, self.config.message_length :]
+        bridge_logits_1 = None
+        bridge_logits_2 = None
+        if self.bridge_output_projection is not None:
+            bridge_logits_1 = self.bridge_output_projection(
+                jnp.mean(message_1.astype(jnp.float32), axis=1)
+            )
+            bridge_logits_2 = self.bridge_output_projection(
+                jnp.mean(message_2.astype(jnp.float32), axis=1)
+            )
         question_embeddings, receiver_question_token_ids = self._receiver_question_inputs(
             question_token_ids
         )
@@ -798,6 +822,8 @@ class JaxCommunicationModel(nn.Module):
             sender_gate_1=sender_gate_1,
             sender_gate_2=sender_gate_2,
             receiver_gate=receiver_gate,
+            bridge_logits_1=bridge_logits_1,
+            bridge_logits_2=bridge_logits_2,
         )
 
     def greedy_answer_token_ids(

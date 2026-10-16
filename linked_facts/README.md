@@ -63,7 +63,11 @@ world. The latter makes large experiments much cheaper.
 
 Only `agent_1_input`, `agent_2_input`, and `questions[].question` are model
 inputs. `questions[].answer` is the target. Everything else is audit metadata
-and must be excluded from model inputs.
+and must be excluded from model inputs. An optional training-only auxiliary
+objective may use the middle entry of `questions[].reasoning_path` as a bridge
+label and `metadata.person_side_agent` to identify which sender holds that
+person-to-bridge fact. Neither label is passed to the sender or receiver as an
+input.
 
 ## Evaluation splits
 
@@ -146,6 +150,8 @@ for example in iter_question_examples(Path("datasets/linked_facts_v1/train.jsonl
     agent_2_text = example["agent_2_input"]
     question = example["question"]
     target = example["answer"]
+    bridge_target = example["bridge"]
+    person_side_agent = example["person_side_agent"]
 ```
 
 The model in `jax_models.py` is specified in `MODEL_DESIGN.md`. It uses one small Transformer for both senders. Each

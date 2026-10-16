@@ -79,6 +79,7 @@ class TrainConfig:
     sender_question_conditioning: bool = False
     receiver_question_input: bool = True
     communication_rounds: int = 1
+    bridge_supervision_weight: float = 0.0
     message_length: int = 4
     max_answer_length: int = 4
     max_text_length: int = 512
@@ -135,6 +136,8 @@ class TrainConfig:
             raise ValueError("the question must be available to either senders or receiver")
         if self.communication_rounds not in {1, 2}:
             raise ValueError("communication_rounds must be 1 or 2")
+        if self.bridge_supervision_weight < 0:
+            raise ValueError("bridge supervision weight cannot be negative")
         if not 0 <= self.dropout < 1:
             raise ValueError("dropout must be in [0, 1)")
         if (
@@ -164,6 +167,8 @@ class JaxExampleBatch(NamedTuple):
     agent_1_token_ids: np.ndarray
     agent_2_token_ids: np.ndarray
     question_token_ids: np.ndarray
+    bridge_token_ids: np.ndarray
+    person_side_agent_ids: np.ndarray
 
 
 @dataclass(frozen=True)
@@ -174,6 +179,8 @@ class TokenizedExamples:
     agent_1_token_ids: np.ndarray
     agent_2_token_ids: np.ndarray
     question_token_ids: np.ndarray
+    bridge_token_ids: np.ndarray
+    person_side_agent_ids: np.ndarray
 
     @property
     def size(self) -> int:
@@ -188,6 +195,8 @@ class TokenizedExamples:
             agent_1_token_ids=self.agent_1_token_ids[index_array],
             agent_2_token_ids=self.agent_2_token_ids[index_array],
             question_token_ids=self.question_token_ids[index_array],
+            bridge_token_ids=self.bridge_token_ids[index_array],
+            person_side_agent_ids=self.person_side_agent_ids[index_array],
         )
 
 
@@ -211,11 +220,16 @@ def tokenize_examples(
     agent_1_inputs = [tokenizer.encode_text(example["agent_1_input"]) for example in examples]
     agent_2_inputs = [tokenizer.encode_text(example["agent_2_input"]) for example in examples]
     questions = [tokenizer.encode_text(example["question"]) for example in examples]
+    bridges = [tokenizer.encode_answer(example["bridge"])[0] for example in examples]
+    person_side_agents = {"agent_1": 0, "agent_2": 1}
+    person_side_agent_ids = [person_side_agents[example["person_side_agent"]] for example in examples]
     return TokenizedExamples(
         answer_token_ids=_pad_token_ids(answers, config.max_answer_length, tokenizer.pad_id),
         agent_1_token_ids=_pad_token_ids(agent_1_inputs, config.max_text_length, tokenizer.pad_id),
         agent_2_token_ids=_pad_token_ids(agent_2_inputs, config.max_text_length, tokenizer.pad_id),
         question_token_ids=_pad_token_ids(questions, config.max_question_length, tokenizer.pad_id),
+        bridge_token_ids=np.asarray(bridges, dtype=np.int32),
+        person_side_agent_ids=np.asarray(person_side_agent_ids, dtype=np.int32),
     )
 
 
@@ -253,6 +267,7 @@ def _model_config(config: TrainConfig, tokenizer: TextTokenizer) -> JaxCommunica
         sender_question_conditioning=config.sender_question_conditioning,
         receiver_question_input=config.receiver_question_input,
         communication_rounds=config.communication_rounds,
+        bridge_supervision_weight=config.bridge_supervision_weight,
         message_length=config.message_length,
         max_answer_length=config.max_answer_length,
         max_text_length=config.max_text_length,
@@ -495,6 +510,28 @@ def _gate_activation_statistics(gate: Array, valid: Array | None = None) -> Arra
     return global_sums / global_count
 
 
+def _bridge_supervision_statistics(
+    output: JaxCommunicationOutput,
+    batch: JaxExampleBatch,
+) -> tuple[Array, Array]:
+    """Return bridge cross-entropy and correct count for the person-side sender."""
+    assert output.bridge_logits_1 is not None
+    assert output.bridge_logits_2 is not None
+    selected_logits = jnp.where(
+        batch.person_side_agent_ids[:, None] == 0,
+        output.bridge_logits_1,
+        output.bridge_logits_2,
+    )
+    bridge_loss = optax.softmax_cross_entropy_with_integer_labels(
+        selected_logits,
+        batch.bridge_token_ids,
+    ).mean()
+    bridge_correct = jnp.sum(
+        jnp.argmax(selected_logits, axis=-1) == batch.bridge_token_ids
+    )
+    return bridge_loss, bridge_correct
+
+
 def build_parallel_train_step(
     model: JaxCommunicationModel,
     collect_path_gradients: bool = True,
@@ -521,7 +558,7 @@ def build_parallel_train_step(
         """Return one stop-gradient slice of the distributed training gradient."""
 
         def loss_function(current_params: Any) -> Array:
-            return model.apply(
+            output = model.apply(
                 {"params": current_params},
                 batch.agent_1_token_ids,
                 batch.agent_2_token_ids,
@@ -532,7 +569,12 @@ def build_parallel_train_step(
                 stop_message_2=stop_message_2,
                 stop_receiver_tokens=stop_receiver_tokens,
                 rngs={"dropout": dropout_key},
-            ).loss
+            )
+            total_loss = output.loss
+            if model.config.bridge_supervision_weight > 0:
+                bridge_loss, _bridge_correct = _bridge_supervision_statistics(output, batch)
+                total_loss += model.config.bridge_supervision_weight * bridge_loss
+            return total_loss
 
         return jax.lax.pmean(jax.grad(loss_function)(params), axis_name="devices")
 
@@ -543,7 +585,9 @@ def build_parallel_train_step(
     ) -> tuple[TrainState, dict[str, Array]]:
         """Average gradients across devices and apply one optimizer update."""
 
-        def loss_function(params: Any) -> tuple[Array, JaxCommunicationOutput]:
+        def loss_function(
+            params: Any,
+        ) -> tuple[Array, tuple[JaxCommunicationOutput, Array, Array]]:
             output = model.apply(
                 {"params": params},
                 batch.agent_1_token_ids,
@@ -553,9 +597,17 @@ def build_parallel_train_step(
                 deterministic=False,
                 rngs={"dropout": dropout_key},
             )
-            return output.loss, output
+            bridge_loss = jnp.asarray(0.0, dtype=jnp.float32)
+            bridge_correct = jnp.asarray(0, dtype=jnp.int32)
+            total_loss = output.loss
+            if model.config.bridge_supervision_weight > 0:
+                bridge_loss, bridge_correct = _bridge_supervision_statistics(output, batch)
+                total_loss += model.config.bridge_supervision_weight * bridge_loss
+            return total_loss, (output, bridge_loss, bridge_correct)
 
-        (loss, output), gradients = jax.value_and_grad(loss_function, has_aux=True)(state.params)
+        (loss, (output, bridge_loss, bridge_correct)), gradients = jax.value_and_grad(
+            loss_function, has_aux=True
+        )(state.params)
         gradients = jax.lax.pmean(gradients, axis_name="devices")
         loss = jax.lax.pmean(loss, axis_name="devices")
         params_for_path_gradients = state.params
@@ -564,6 +616,15 @@ def build_parallel_train_step(
             "loss": loss,
             "gradient_norm": optax.global_norm(gradients),
         }
+        if model.config.bridge_supervision_weight > 0:
+            metrics.update({
+                "answer_loss": jax.lax.pmean(output.loss, axis_name="devices"),
+                "bridge_loss": jax.lax.pmean(bridge_loss, axis_name="devices"),
+                "bridge_accuracy": jax.lax.pmean(
+                    bridge_correct.astype(jnp.float32) / batch.bridge_token_ids.shape[0],
+                    axis_name="devices",
+                ),
+            })
         if not collect_diagnostics:
             return state, metrics
         generated_token_ids = model.apply(
@@ -697,8 +758,8 @@ def build_parallel_evaluation_step(
 
     def evaluation_step(params: Any, batch: JaxExampleBatch) -> dict[str, Array]:
         """Return globally summed validation statistics."""
-        def intervention_statistics(intervention: str) -> tuple[Array, Array]:
-            """Return correct-count and joint-log-probability sums for one intervention."""
+        def intervention_statistics(intervention: str) -> tuple[Array, Array, Array]:
+            """Return answer, likelihood, and bridge statistics for one intervention."""
             output = model.apply(
                 {"params": params},
                 batch.agent_1_token_ids,
@@ -719,23 +780,34 @@ def build_parallel_evaluation_step(
                 method=model.greedy_answer_token_ids,
             )
             correct = jnp.all(generated == batch.answer_token_ids, axis=-1).sum()
-            return correct, output.joint_log_probability.sum()
+            bridge_correct = jnp.asarray(0, dtype=jnp.int32)
+            if model.config.bridge_supervision_weight > 0:
+                _bridge_loss, bridge_correct = _bridge_supervision_statistics(output, batch)
+            return correct, output.joint_log_probability.sum(), bridge_correct
 
-        correct, joint_log_probability = intervention_statistics("intact")
+        correct, joint_log_probability, bridge_correct = intervention_statistics("intact")
         statistics: dict[str, Array] = {
             "correct": correct,
             "count": jnp.asarray(batch.answer_token_ids.shape[0], dtype=jnp.int32),
             "joint_log_probability": joint_log_probability,
         }
+        if model.config.bridge_supervision_weight > 0:
+            statistics["bridge_correct"] = bridge_correct
         if collect_message_interventions:
             for metric_prefix, intervention in intervention_names.items():
-                intervention_correct, intervention_joint_log_probability = intervention_statistics(
-                    intervention
-                )
+                (
+                    intervention_correct,
+                    intervention_joint_log_probability,
+                    intervention_bridge_correct,
+                ) = intervention_statistics(intervention)
                 statistics[f"{metric_prefix}_correct"] = intervention_correct
                 statistics[f"{metric_prefix}_joint_log_probability"] = (
                     intervention_joint_log_probability
                 )
+                if model.config.bridge_supervision_weight > 0:
+                    statistics[f"{metric_prefix}_bridge_correct"] = (
+                        intervention_bridge_correct
+                    )
         return jax.lax.psum(statistics, axis_name="devices")
 
     return jax.pmap(evaluation_step, axis_name="devices")

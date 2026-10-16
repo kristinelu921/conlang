@@ -468,10 +468,14 @@ def build_dataset(output_directory: Path, config: GenerationConfig) -> dict[str,
             "shared_encoder_call_2": "agent_2_input",
             "receiver_inputs": ["questions[].question", "message_1", "message_2"],
             "training_target": "questions[].answer",
+            "optional_auxiliary_targets": [
+                "questions[].reasoning_path[1]",
+                "metadata.person_side_agent",
+            ],
             "excluded_metadata": [
-                "metadata",
+                "metadata except person_side_agent auxiliary label",
                 "questions[].domain",
-                "questions[].reasoning_path",
+                "questions[].reasoning_path except bridge auxiliary label",
                 "questions[].answer_index",
             ],
         },
@@ -553,9 +557,16 @@ def iter_question_examples(path: Path) -> Iterator[dict[str, Any]]:
     """Flatten world records into model-facing question examples."""
     for world in read_worlds(path):
         questions = world["questions"]
+        metadata = world["metadata"]
         assert isinstance(questions, list)
+        assert isinstance(metadata, dict)
+        person_side_agents = metadata["person_side_agent"]
+        assert isinstance(person_side_agents, dict)
         for question in questions:
             assert isinstance(question, dict)
+            reasoning_path = question["reasoning_path"]
+            assert isinstance(reasoning_path, list)
+            person, bridge, _answer = reasoning_path
             yield {
                 "world_id": world["world_id"],
                 "question_id": question["question_id"],
@@ -563,6 +574,8 @@ def iter_question_examples(path: Path) -> Iterator[dict[str, Any]]:
                 "agent_2_input": world["agent_2_input"],
                 "question": question["question"],
                 "answer": question["answer"],
+                "bridge": bridge,
+                "person_side_agent": person_side_agents[person],
             }
 
 
