@@ -5,9 +5,9 @@
 | Field | Value |
 |---|---|
 | Run ID | `20261016-conlang-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-commdiag` |
-| Status | `running` |
+| Status | `completed` |
 | Started | `2026-10-16T20:47:46Z` |
-| Finished | `not started` |
+| Finished | `2026-10-16T21:01:48Z` |
 | Baseline | `20261016-conlang-v4-8-full-m4-d2-qquery-msgkv-senderlr4-commdiag` |
 | Git revision | primary configuration/report commit `914c0570f242ff75f592d3e030ae05dcbbcdb886`; reviewed immutable launch source `773f1d90789dfde666b8b5abff224a7d9121148e` |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` |
@@ -104,7 +104,55 @@ separately identify which change caused any difference.
 
 ## Results
 
-Pending launch and verified completion.
+| Evaluation arm | Exact match | Correct | Mean joint log probability |
+|---|---:|---:|---:|
+| Intact messages | 0.000000 | 0/256 | -7.1216254234313965 |
+| Zero messages | 0.000000 | 0/256 | -8.230392456054688 |
+| Wrong-world messages | 0.000000 | 0/256 | -7.122644424438477 |
+| Swapped senders | 0.000000 | 0/256 | -7.118856430053711 |
+| Agent 1 only | 0.000000 | 0/256 | -6.936520576477051 |
+| Agent 2 only | 0.000000 | 0/256 | -7.008391857147217 |
+
+The run fails the preregistered communication rule. Every intervention has
+`0/256` exact answers. Intact messages improve mean joint log probability over
+zero messages by `1.1087670` nats and over wrong-world messages by only
+`0.0010190` nats. The first gap establishes strong dependence on a learned,
+nonzero message, while the tiny aligned-passage advantage is not accompanied
+by any correct answer. Swapping senders is `0.0027690` nats better than intact,
+and using only agent 1 or agent 2 is respectively `0.1851048` and `0.1132336`
+nats better than intact. The two channels therefore interfere rather than
+compose productively at the evaluated endpoint. The final logged training
+batch greedily emits the single location name `Gliona` for all 256 examples;
+validation generations are not persisted, but their exact-match aggregate is
+zero.
+
+The non-initial loss transition repeats at step 830. The largest adjacent
+five-record-versus-five-record loss-level decline after step 100 is
+`5.2098673` to `4.8309323`, nearly the same timing and magnitude as the
+2,000-step treatment's step-830 decline from `5.2885519` to `4.9078181`.
+Because the enlarged dataset's first two epoch boundaries are near steps 3,907
+and 7,813, this transition is not caused by wrapping the training set. No
+second comparably useful phase appears through step 10,000; median final-50
+loss is `3.9882981`, only `0.0298425` below the 2,000-step treatment's
+`4.0181406`.
+
+Late training makes sender credit attenuation substantially worse. Over the
+last 50 logged steps, median raw path-gradient norms are `0.0000498664` and
+`0.0000478335` for the senders versus `0.6485574` for the receiver: receiver
+ratios of `13,005.91x` and `13,558.64x`, up from the 2,000-step treatment's
+`1,044.22x` / `1,032.96x`. Median sender and receiver update-to-weight ratios
+are `0.0001039430` and `0.0001668050`, so even with the `4x` post-Adam sender
+multiplier, sender parameters move only `0.623x` as far relative to their
+weights. From step 10 to step 10,000, sender weight norm falls `4.27%`
+(`60.1216240` to `57.5558128`), while receiver norm grows `84.83%`
+(`107.1916428` to `198.1217041`). Message RMS nevertheless rises from about
+`1.006` to `1.225`, consistent with a strong learned carrier whose useful
+passage alignment remains negligible.
+
+Median final-50 throughput is `5,682.36` examples/s, `2.29%` above the matched
+2,000-step treatment. The isolated throughput dips near steps 3,910 and 7,820
+coincide with reshuffling the million-entry host index at epoch boundaries and
+are input-pipeline events, not model loss transitions.
 
 ## Artifacts
 
@@ -114,11 +162,11 @@ Pending launch and verified completion.
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` | reviewed closure pushed before staging |
 | Source snapshot | `/kmh-nfs-ssd-us-mount/staging/kristine/elf/20261016-conlang-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-commdiag-20261016T204214.567755894Z`; remote `/home/kristinelu/elf-runs/source/20261016-conlang-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-commdiag` | local and remote match: 62 files, 460936 bytes, relative SHA-256-manifest digest `b966f6ca228ae44fdf3f719b86d8b387a9b8f9c6d0f69285329e17743eac76f2`; no cache files before launch |
 | Regional dataset | `/home/kristinelu/elf-data/conlangs-v1-train1m` | full verification passed: 128,125 worlds / 1,025,000 questions / 8 questions per world; 95,042,272 file bytes; manifest SHA-256 `1a860a5a0ace2d249c0b7e7273925d9545f61aaa261e00f5b9fe75900da91b20` |
-| Checkpoint | `/home/kristinelu/elf-runs/20261016-conlang-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-commdiag/checkpoint.msgpack` | pending |
-| Metrics | pending | pending |
-| Outputs | pending | pending |
-| Launcher log | pending | pending |
-| Tracking run | `https://wandb.ai/kaynelu921-massachusetts-institute-of-technology/conlangs/runs/0rka2x7a` | authenticated, running, and reporting training progress |
+| Checkpoint | `/home/kristinelu/elf-runs/20261016-conlang-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-commdiag/checkpoint.msgpack` | 28,799,175 bytes; SHA-256 `2beb75200686a46323f7cd41c18abb8c081126ca11bf4d335fdc7fcac1e50427`; CPU-only Flax msgpack restore verified step 10,000 |
+| Metrics | `experiment_log/2026-10-16/artifacts/20261016-conlang-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-commdiag/metrics.jsonl` | 1,910,754 bytes; SHA-256 `7916c5079a7ce3941b05ddd8ea169884a8ee02065655088a6e31b16ab6b8c595`; byte-identical to remote |
+| Outputs | `experiment_log/2026-10-16/artifacts/20261016-conlang-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-commdiag/outputs.jsonl` | 14,054,917 bytes; SHA-256 `a45406b0a385a949bcc369474dd614d4dbd27877efd4ef44c39bb8115f4fdca0`; byte-identical to remote |
+| Launcher log | `experiment_log/2026-10-16/artifacts/20261016-conlang-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-commdiag/launcher.log.gz` | 15,009 bytes; SHA-256 `f5b44f1846ffb8a036d1572de98db8db94c1463265e4f49ef031753e85d4b810`; decompressed SHA-256 `0c7761640bff067ae8ce5b1034d213e9f62858250295b7d7046ecdd82d1a1ba9` matches the 81,433-byte remote log |
+| Tracking run | `https://wandb.ai/kaynelu921-massachusetts-institute-of-technology/conlangs/runs/0rka2x7a` | authenticated API reports `finished`, step 10,000, and matching intact/wrong-world exact match |
 
 ## Review and Verification
 
@@ -126,7 +174,7 @@ Pending launch and verified completion.
   Kristine v4-8 resources in `us-central2-b` in its final `AVAILABLE` table.
 - The selected prior-run v4-8 currently reports 400 GiB host RAM and 85 GiB
   free local disk. The current compressed training shard is 9,267,279 bytes;
-  a tenfold deterministic expansion and approximately 4.6 GiB of fixed int32
+  a tenfold deterministic expansion and approximately 4.31 GiB of fixed int32
   token arrays fit with substantial host-memory and disk headroom.
 - The matching `us-central2` bucket path
   `gs://kmh-gcp-us-central2/kristine/datasets/conlangs-train1m` currently has no
@@ -148,12 +196,18 @@ Pending launch and verified completion.
   expected node-local dataset, 1,000,000 train examples, 256 validation
   examples, and four TPU devices. Step 190 completed at approximately 5,700
   examples per second before this status update.
+- Terminal verification found the exact completion sentinel at step 10,000,
+  1,001 parseable metric records, 1,000 parseable output records spanning
+  steps 10--10,000, a restorable step-10,000 checkpoint, and matching local and
+  remote evidence hashes. W&B reports `finished` at step 10,000. The exact
+  trainer and libtpu lock are absent, all VFIO resources are idle, and the TPU
+  remains `READY` / `HEALTHY`.
 
 ## Failure Details
 
-- Last known step: `190`; training remains active.
+- Last known step: `10,000`; run completed successfully.
 - Error summary: none.
-- Detailed output: pending.
+- Detailed output: canonical launcher log linked above.
 
 ## Updates
 
@@ -169,3 +223,6 @@ Pending launch and verified completion.
   crossed regions; validation and test hashes match the original dataset.
 - `2026-10-16T20:47:46Z`: Started W&B run `0rka2x7a`. The TPU trainer completed
   its first logged step group and reached step 190 at normal matched throughput.
+- `2026-10-16T21:01:48Z`: Completed all 10,000 steps, final causal evaluation,
+  checkpoint save, and W&B synchronization. CPU-only checkpoint restore and
+  terminal process/lock/VFIO checks passed; the TPU remains ready and healthy.
