@@ -5,16 +5,16 @@
 | Field | Value |
 |---|---|
 | Run ID | `20261016-conlang-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-commdiag` |
-| Status | `planned` |
-| Started | `not started` |
+| Status | `running` |
+| Started | `2026-10-16T20:47:46Z` |
 | Finished | `not started` |
 | Baseline | `20261016-conlang-v4-8-full-m4-d2-qquery-msgkv-senderlr4-commdiag` |
-| Git revision | primary configuration/report commit `914c0570f242ff75f592d3e030ae05dcbbcdb886`; immutable launch snapshot pending |
+| Git revision | primary configuration/report commit `914c0570f242ff75f592d3e030ae05dcbbcdb886`; reviewed immutable launch source `773f1d90789dfde666b8b5abff224a7d9121148e` |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` |
 | Primary configuration | `configs/conlang-jax-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-commdiag.yaml` |
-| Command | `not recorded; pending immutable snapshot and node-local dataset generation` |
+| Command | `/snap/google-cloud-cli/current/bin/gcloud compute tpus tpu-vm ssh kmh-tpuvm-v4-8-spot-kristine-14-23-12-28-N-us-central2-b --project=he-vision-group --zone=us-central2-b --worker=all --internal-ip --ssh-flag=-F --ssh-flag=/dev/null --command='set -euo pipefail; source_dir=/home/kristinelu/elf-runs/source/20261016-conlang-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-commdiag; output_dir=/home/kristinelu/elf-runs/20261016-conlang-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-commdiag; launcher_log=/home/kristinelu/elf-runs/20261016-conlang-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-commdiag.launcher.log; test -d "$source_dir"; test ! -e "$output_dir"; test ! -e "$launcher_log"; test ! -e /tmp/libtpu_lockfile; test -z "$(sudo fuser /dev/vfio/* 2>/dev/null || true)"; cd "$source_dir"; export JAX_PLATFORMS=tpu CUDA_VISIBLE_DEVICES= ELF_TPU_WORKER_INDEX=0 PYTHONPATH="$PWD" HF_HOME=/home/kristinelu/elf-runs/hf-cache PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1; ulimit -c 0; /home/kristinelu/elf-runs/runtime/venv/bin/python -u train.py --config configs/conlang-jax-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-commdiag.yaml 2>&1 | tee "$launcher_log"' --quiet` |
 | Seed | `1730` |
-| Planned hardware | `kmh-tpuvm-v4-8-spot-kristine-14-23-12-28-N-us-central2-b`, `us-central2-b`, Spot `v4-8`; pending final preflight |
+| Hardware | `kmh-tpuvm-v4-8-spot-kristine-14-23-12-28-N-us-central2-b`, `us-central2-b`, Spot `v4-8`, topology `2x2x1`, one host and four TPU devices |
 
 ## Configuration
 
@@ -110,15 +110,15 @@ Pending launch and verified completion.
 
 | Artifact | Path or URL | Verified |
 |---|---|---|
-| Configuration | `configs/conlang-jax-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-commdiag.yaml` | committed at `914c0570f242ff75f592d3e030ae05dcbbcdb886`; remote hash pending |
-| Pull request | `https://github.com/kristinelu921/conlang/pull/1` | pending updated reviewed closure |
-| Source snapshot | pending | pending |
-| Regional dataset | `/home/kristinelu/elf-data/conlangs-v1-train1m` | pending generation and full manifest verification in `us-central2` |
+| Configuration | `configs/conlang-jax-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-commdiag.yaml` | local snapshot and remote SHA-256 `e579b0178ce06277d4da14792e5c4831b626fd3bdddf96118d01940a8954d4f4` |
+| Pull request | `https://github.com/kristinelu921/conlang/pull/1` | reviewed closure pushed before staging |
+| Source snapshot | `/kmh-nfs-ssd-us-mount/staging/kristine/elf/20261016-conlang-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-commdiag-20261016T204214.567755894Z`; remote `/home/kristinelu/elf-runs/source/20261016-conlang-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-commdiag` | local and remote match: 62 files, 460936 bytes, relative SHA-256-manifest digest `b966f6ca228ae44fdf3f719b86d8b387a9b8f9c6d0f69285329e17743eac76f2`; no cache files before launch |
+| Regional dataset | `/home/kristinelu/elf-data/conlangs-v1-train1m` | full verification passed: 128,125 worlds / 1,025,000 questions / 8 questions per world; 95,042,272 file bytes; manifest SHA-256 `1a860a5a0ace2d249c0b7e7273925d9545f61aaa261e00f5b9fe75900da91b20` |
 | Checkpoint | `/home/kristinelu/elf-runs/20261016-conlang-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-commdiag/checkpoint.msgpack` | pending |
 | Metrics | pending | pending |
 | Outputs | pending | pending |
 | Launcher log | pending | pending |
-| Tracking run | pending | pending |
+| Tracking run | `https://wandb.ai/kaynelu921-massachusetts-institute-of-technology/conlangs/runs/0rka2x7a` | authenticated, running, and reporting training progress |
 
 ## Review and Verification
 
@@ -137,12 +137,21 @@ Pending launch and verified completion.
   `f76311fd9654de4588ff06fe74741dab6929800e`. Cleanup review found one stale
   pending-metadata issue; it was corrected in
   `a8e4115ded7db481915bc721368cc3cd0df53d5b` and the coordinator verified the
-  exact report delta. Immutable source staging and remote preflight remain
-  pending.
+  exact report delta.
+- The immutable node-local source matched the NFS snapshot, the complete new
+  dataset passed its streaming integrity verifier, and the unchanged
+  validation/test split hashes match the established dataset. Remote preflight
+  found 85 GiB free, writable TPU logs, authenticated W&B, fresh output and
+  launcher-log paths, and no trainer, libtpu lock, or VFIO holder.
+- The isolated runtime reported JAX `0.6.2`, Flax `0.10.5`, Optax `0.2.8`, W&B
+  `0.28.1`, and four local TPU devices. The launched trainer confirmed the
+  expected node-local dataset, 1,000,000 train examples, 256 validation
+  examples, and four TPU devices. Step 190 completed at approximately 5,700
+  examples per second before this status update.
 
 ## Failure Details
 
-- Last known step: not started.
+- Last known step: `190`; training remains active.
 - Error summary: none.
 - Detailed output: pending.
 
@@ -152,3 +161,11 @@ Pending launch and verified completion.
   initialization with 1,000,000 unique training questions. Validation and test
   splits remain exactly matched; the treatment changes training horizon and
   training-set size together.
+- `2026-10-16T20:42:14Z`: Created the immutable source snapshot, copied it once
+  to the selected TPU's node-local storage, and verified the complete source
+  manifest and selected-config hash.
+- `2026-10-16T20:46Z`: Generated and fully verified the deterministic
+  one-million-question train split on the selected Central2 host. No dataset
+  crossed regions; validation and test hashes match the original dataset.
+- `2026-10-16T20:47:46Z`: Started W&B run `0rka2x7a`. The TPU trainer completed
+  its first logged step group and reached step 190 at normal matched throughput.
