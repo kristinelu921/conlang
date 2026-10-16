@@ -435,7 +435,7 @@ class DecoderBlock(nn.Module):
 
 
 class Sender(nn.Module):
-    """Read one private passage and return fixed-length message vectors."""
+    """Read one private passage, optionally question-prefixed, and return messages."""
 
     config: JaxCommunicationModelConfig
     shared_encoder: EncoderStack | None = None
@@ -617,7 +617,7 @@ class JaxCommunicationModel(nn.Module):
         deterministic: bool,
         question_token_ids: Array | None = None,
     ) -> tuple[Array, Array | None, Array | None]:
-        """Encode both private passages and preserve role-gate telemetry."""
+        """Encode both passages with optional question context and preserve gate telemetry."""
         agent_1_embeddings = self.token_embedding(agent_1_token_ids)
         agent_2_embeddings = self.token_embedding(agent_2_token_ids)
         if self.config.sender_question_conditioning:
