@@ -69,7 +69,7 @@ relative_attention_max_distance: 128
 |---|---:|---:|---|
 | Transformer, embedding, and message-vector width | `128` | `256` | Test coupled model and continuous-channel capacity only after explicit bridge credit has produced beneficial private-passage use |
 
-Output hidden width remains `256`, so the receiver output MLP stays fixed. Message length remains four slots per sender, but each continuous message vector widens from 128 to 256 features together with the transformer and token embeddings. Data, seed, optimization, schedule, depth, untied encoders, gates, sender conditioning, receiver-question masking, communication rounds, bridge objective, hardware, and evaluation interventions remain fixed.
+Configured output hidden width remains `256`, so the final vocabulary projection stays fixed; the preceding output-hidden input kernel widens from `(128, 256)` to `(256, 256)` with `hidden_size`. Message length remains four slots per sender, but each continuous message vector widens from 128 to 256 features together with the transformer and token embeddings. Data, seed, optimization, schedule, depth, untied encoders, gates, sender conditioning, receiver-question masking, communication rounds, bridge objective, hardware, and evaluation interventions remain fixed.
 
 ## Hypothesis and Decision Rule
 
