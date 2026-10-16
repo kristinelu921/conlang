@@ -55,6 +55,7 @@ class TrainConfig:
     dataset_prefix: str = DATASET_PREFIX
     batch_size: int = 32
     learning_rate: float = 3e-4
+    sender_learning_rate_multiplier: float = 1.0
     weight_decay: float = 0.01
     max_gradient_norm: float = 1.0
     steps: int = 1000
@@ -109,9 +110,14 @@ class TrainConfig:
         )
         if min(positive_integers) < 1:
             raise ValueError("batch, step, evaluation, logging, and model sizes must be positive")
-        if self.learning_rate <= 0 or self.weight_decay < 0 or self.max_gradient_norm <= 0:
+        if (
+            self.learning_rate <= 0
+            or self.sender_learning_rate_multiplier <= 0
+            or self.weight_decay < 0
+            or self.max_gradient_norm <= 0
+        ):
             raise ValueError(
-                "learning rate and gradient clip must be positive; weight decay cannot be negative"
+                "learning rates and gradient clip must be positive; weight decay cannot be negative"
             )
         if self.throughput_warmup_steps < 1 or self.throughput_warmup_steps >= self.steps:
             raise ValueError("throughput warmup must be positive and shorter than the run")
@@ -312,12 +318,27 @@ def _initialize_state(
 
 
 def _optimizer_for_params(config: TrainConfig, params: Any) -> optax.GradientTransformation:
-    """Create clipped AdamW with weight decay only on matrix parameters."""
+    """Create clipped AdamW with an optional sender-specific update multiplier."""
     decay_mask = jax.tree_util.tree_map(lambda parameter: parameter.ndim >= 2, params)
-    return optax.chain(
+    transformations: list[optax.GradientTransformation] = [
         optax.clip_by_global_norm(config.max_gradient_norm),
         optax.adamw(config.learning_rate, weight_decay=config.weight_decay, mask=decay_mask),
-    )
+    ]
+    if config.sender_learning_rate_multiplier != 1.0:
+        sender_update_mask = {
+            part_name: jax.tree_util.tree_map(
+                lambda _parameter: part_name == "sender",
+                part_params,
+            )
+            for part_name, part_params in params.items()
+        }
+        transformations.append(
+            optax.masked(
+                optax.scale(config.sender_learning_rate_multiplier),
+                sender_update_mask,
+            )
+        )
+    return optax.chain(*transformations)
 
 
 ACTIVATION_HISTOGRAM_EDGES = tuple(float(edge) for edge in np.linspace(-5.0, 5.0, 33))
@@ -622,7 +643,7 @@ def build_parallel_train_step(
         )(state.params)
         gradients = jax.lax.pmean(gradients, axis_name="devices")
         loss = jax.lax.pmean(loss, axis_name="devices")
-        params_for_path_gradients = state.params
+        params_before_update = state.params
         state = state.apply_gradients(grads=gradients)
         metrics = {
             "loss": loss,
@@ -639,6 +660,15 @@ def build_parallel_train_step(
             })
         if not collect_diagnostics:
             return state, metrics
+        parameter_updates = jax.tree_util.tree_map(
+            lambda after, before: after - before,
+            state.params,
+            params_before_update,
+        )
+        sender_weight_norm = optax.global_norm(state.params["sender"])
+        receiver_weight_norm = optax.global_norm(state.params["receiver"])
+        sender_update_norm = optax.global_norm(parameter_updates["sender"])
+        receiver_update_norm = optax.global_norm(parameter_updates["receiver"])
         generated_token_ids = model.apply(
             {"params": state.params},
             batch.agent_1_token_ids,
@@ -649,8 +679,14 @@ def build_parallel_train_step(
         metrics.update({
             "weight_norm": optax.global_norm(state.params),
             "weight_norm_embedding": optax.global_norm(state.params["token_embedding"]),
-            "weight_norm_sender": optax.global_norm(state.params["sender"]),
-            "weight_norm_receiver": optax.global_norm(state.params["receiver"]),
+            "weight_norm_sender": sender_weight_norm,
+            "weight_norm_receiver": receiver_weight_norm,
+            "update_norm": optax.global_norm(parameter_updates),
+            "update_norm_embedding": optax.global_norm(parameter_updates["token_embedding"]),
+            "update_norm_sender": sender_update_norm,
+            "update_norm_receiver": receiver_update_norm,
+            "relative_update_norm_sender": sender_update_norm / sender_weight_norm,
+            "relative_update_norm_receiver": receiver_update_norm / receiver_weight_norm,
             "activation_rms_message_1": _global_root_mean_square(output.message_1),
             "activation_rms_message_2": _global_root_mean_square(output.message_2),
             "activation_rms_receiver": _global_root_mean_square(output.receiver_activation),
@@ -708,7 +744,7 @@ def build_parallel_train_step(
         if collect_path_gradients:
             # These reuse the update's dropout key so each path is a slice of the same noise.
             receiver_gradients = component_gradients(
-                params_for_path_gradients,
+                params_before_update,
                 batch,
                 dropout_key,
                 True,
@@ -716,7 +752,7 @@ def build_parallel_train_step(
                 False,
             )
             agent_1_gradients = component_gradients(
-                params_for_path_gradients,
+                params_before_update,
                 batch,
                 dropout_key,
                 False,
@@ -724,7 +760,7 @@ def build_parallel_train_step(
                 True,
             )
             agent_2_gradients = component_gradients(
-                params_for_path_gradients,
+                params_before_update,
                 batch,
                 dropout_key,
                 True,

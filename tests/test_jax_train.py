@@ -201,6 +201,68 @@ def test_jax_training_step_updates_parameters_and_stays_finite() -> None:
     assert not np.array_equal(jax.device_get(before), after)
 
 
+def test_sender_learning_rate_multiplier_scales_only_sender_updates() -> None:
+    """The sender multiplier should scale post-Adam sender updates only."""
+    params = {
+        "sender": {"kernel": jnp.ones((2, 2))},
+        "receiver": {"kernel": jnp.ones((2, 2))},
+    }
+    gradients = jax.tree_util.tree_map(jnp.ones_like, params)
+    config = replace(
+        _small_config(),
+        learning_rate=1e-3,
+        sender_learning_rate_multiplier=4.0,
+        weight_decay=0.0,
+        max_gradient_norm=100.0,
+    )
+    optimizer = _optimizer_for_params(config, params)
+
+    updates, _optimizer_state = optimizer.update(
+        gradients,
+        optimizer.init(params),
+        params,
+    )
+
+    sender_update_norm = float(optax.global_norm(updates["sender"]))
+    receiver_update_norm = float(optax.global_norm(updates["receiver"]))
+    assert sender_update_norm == pytest.approx(4.0 * receiver_update_norm)
+
+
+def test_default_optimizer_matches_single_rate_adamw() -> None:
+    """The default multiplier should preserve the original optimizer updates."""
+    params = {
+        "sender": {"kernel": jnp.ones((2, 2))},
+        "receiver": {"kernel": jnp.ones((2, 2))},
+    }
+    gradients = jax.tree_util.tree_map(jnp.ones_like, params)
+    config = replace(_small_config(), weight_decay=0.0, max_gradient_norm=100.0)
+    optimizer = _optimizer_for_params(config, params)
+    expected_optimizer = optax.chain(
+        optax.clip_by_global_norm(config.max_gradient_norm),
+        optax.adamw(config.learning_rate, weight_decay=0.0),
+    )
+
+    updates, _optimizer_state = optimizer.update(
+        gradients,
+        optimizer.init(params),
+        params,
+    )
+    expected_updates, _expected_state = expected_optimizer.update(
+        gradients,
+        expected_optimizer.init(params),
+        params,
+    )
+
+    assert all(
+        jnp.array_equal(actual, expected)
+        for actual, expected in zip(
+            jax.tree_util.tree_leaves(updates),
+            jax.tree_util.tree_leaves(expected_updates),
+            strict=True,
+        )
+    )
+
+
 def test_bridge_supervision_updates_its_head_and_reports_metrics() -> None:
     """The optional bridge objective should train and expose its own metrics."""
     tokenizer = _example_tokenizer()
@@ -411,6 +473,12 @@ def test_config_rejects_nonpositive_output_hidden_size() -> None:
     """An enabled output hidden layer should have a positive width."""
     with pytest.raises(ValueError, match="output hidden size must be positive"):
         replace(TrainConfig(), output_hidden_size=0).validate()
+
+
+def test_config_rejects_nonpositive_sender_learning_rate_multiplier() -> None:
+    """Sender update balancing should require a positive multiplier."""
+    with pytest.raises(ValueError, match="learning rates and gradient clip"):
+        replace(TrainConfig(), sender_learning_rate_multiplier=0.0).validate()
 
 
 def test_config_rejects_nonpositive_role_gate_channels() -> None:
@@ -1744,6 +1812,12 @@ def test_step_saves_one_output_record_and_logs_requested_metrics(tmp_path: Path)
         "weight_norm_embedding",
         "weight_norm_sender",
         "weight_norm_receiver",
+        "update_norm",
+        "update_norm_embedding",
+        "update_norm_sender",
+        "update_norm_receiver",
+        "relative_update_norm_sender",
+        "relative_update_norm_receiver",
         "activation_rms_message_1",
         "activation_rms_message_2",
         "activation_rms_receiver",
@@ -1760,6 +1834,10 @@ def test_step_saves_one_output_record_and_logs_requested_metrics(tmp_path: Path)
         "gradient_norm_agent_1",
         "gradient_norm_agent_2",
         "gradient_norm_receiver",
+        "update_norm_sender",
+        "update_norm_receiver",
+        "relative_update_norm_sender",
+        "relative_update_norm_receiver",
         "activation_rms_message_1",
     ))
     assert "message_1_histogram" in wandb_payload
