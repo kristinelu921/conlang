@@ -857,14 +857,17 @@ def test_wrong_world_shift_requires_two_aligned_worlds_per_device() -> None:
         _validated_wrong_world_shift(32, 4, 8)
 
 
-def test_evaluation_reports_every_message_intervention() -> None:
+@pytest.mark.parametrize("sender_question_conditioning", [False, True])
+def test_evaluation_reports_every_message_intervention(
+    sender_question_conditioning: bool,
+) -> None:
     """Causal evaluation should emit intact and intervened metrics from one batch."""
     tokenizer = TextTokenizer(["buffalo", "chapel"])
     config = replace(
         _small_config(),
         batch_size=4,
         eval_examples=4,
-        sender_question_conditioning=True,
+        sender_question_conditioning=sender_question_conditioning,
     )
     source_examples = _examples()
     tokenized = tokenize_examples(
@@ -892,15 +895,21 @@ def test_evaluation_reports_every_message_intervention() -> None:
     expected_prefixes = {
         "zero_message",
         "wrong_world_message",
-        "wrong_question_message",
         "swapped_sender",
         "agent_1_only",
         "agent_2_only",
     }
+    if sender_question_conditioning:
+        expected_prefixes.add("wrong_question_message")
     assert metrics.keys() >= {"exact_match", "mean_joint_log_probability"}
     for prefix in expected_prefixes:
         assert 0.0 <= metrics[f"{prefix}_exact_match"] <= 1.0
         assert np.isfinite(metrics[f"{prefix}_mean_joint_log_probability"])
+    wrong_question_metric_names = {
+        "wrong_question_message_exact_match",
+        "wrong_question_message_mean_joint_log_probability",
+    }
+    assert wrong_question_metric_names.issubset(metrics) == sender_question_conditioning
 
 
 def test_output_hidden_size_is_independent_of_transformer_width() -> None:
