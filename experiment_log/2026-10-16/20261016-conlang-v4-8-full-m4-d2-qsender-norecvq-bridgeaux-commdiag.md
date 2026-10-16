@@ -86,9 +86,9 @@ Pending launch and verified completion.
 | Artifact | Path or URL | Verified |
 |---|---|---|
 | Configuration | `configs/conlang-jax-v4-8-full-m4-d2-qsender-norecvq-bridgeaux-commdiag.yaml` | parses and validates; launch pending |
-| Pull request | `https://github.com/kristinelu921/conlang/pull/1` | corrected closure passed correctness and cleanup review; push pending |
-| Source snapshot | `/kmh-nfs-ssd-us-mount/staging/kristine/elf/20261016-conlang-v4-8-full-m4-d2-qsender-norecvq-bridgeaux-commdiag-20261016T113307.495856067Z`; remote path pending | local snapshot verified: 57 files, 441219 bytes, relative SHA-256-manifest digest `4970c19a2ddfa884af78653bfdf3b0e2727bd9071f4b104d024038e4beca4b36`; selected-config SHA-256 `007774172e2348652f10d49e295b69ade13d0226df103400c535f36827756a2a`; no bytecode or test caches |
-| Regional dataset | `/home/kristinelu/elf-data/conlangs-v1` | expected manifest SHA-256 `a839b6ac98ba33a008caaebdde40dea7bc1e639106e93aab25ab2af3c29588e8`; remote revalidation pending |
+| Pull request | `https://github.com/kristinelu921/conlang/pull/1` | corrected reviewed closure and snapshot provenance pushed to `codex/jax-tpu-training` |
+| Source snapshot | `/kmh-nfs-ssd-us-mount/staging/kristine/elf/20261016-conlang-v4-8-full-m4-d2-qsender-norecvq-bridgeaux-commdiag-20261016T113307.495856067Z`; remote `/home/kristinelu/elf-runs/source/20261016-conlang-v4-8-full-m4-d2-qsender-norecvq-bridgeaux-commdiag` | local and remote matched before launch: 57 files, 441219 bytes, relative SHA-256-manifest digest `4970c19a2ddfa884af78653bfdf3b0e2727bd9071f4b104d024038e4beca4b36`; selected-config SHA-256 `007774172e2348652f10d49e295b69ade13d0226df103400c535f36827756a2a`; no bytecode or test caches |
+| Regional dataset | `/home/kristinelu/elf-data/conlangs-v1` | revalidated on the TPU: 15,625 worlds / 125,000 questions / 8 questions per world; manifest SHA-256 `a839b6ac98ba33a008caaebdde40dea7bc1e639106e93aab25ab2af3c29588e8` |
 | Tracking run | pending | W&B enabled; exact URL pending authenticated launch |
 | Checkpoint | pending | final step-2000 restore and checksum pending |
 | Metrics | pending | final JSONL copy, parse, and checksum pending |
@@ -101,7 +101,7 @@ Pending launch and verified completion.
 - After correcting swapped-channel bridge attribution, the full CPU regression closure passed 65 tests with two existing Pydantic warnings in 180.32 seconds. The discriminating selector/evaluation pair also passed independently in 30.06 seconds.
 - The cleanup-only tokenizer-fixture consolidation then passed all 56 JAX trainer tests with the same two existing warnings in 179.78 seconds; the nine unchanged generator tests had passed in the corrected full closure.
 - Correctness and cleanup reviews passed for exact range `5a5ea7110b73791077f984afd0311b8d8a566ef5..f3c402a1606063cd3d5652689dfb55f511d7ca53` after the diagnostic correction and test-fixture consolidation.
-- Remote source, runtime, dataset, disk, output-path, process, lock, VFIO, and TPU health checks remain pending.
+- Remote source, JAX `0.6.2` runtime, authenticated W&B file presence, complete regional dataset, 85 GiB free space, fresh output path, process absence, lock absence, VFIO idleness, and TPU health checks passed.
 
 ## Failure Details
 
@@ -115,3 +115,5 @@ Pending launch and verified completion.
 - `2026-10-16`: Correctness review found and verified a diagnostic-only fix so swapped bridge accuracy follows the semantic sender rather than its original channel index; the corrected full suite passed.
 - `2026-10-16`: Cleanup consolidated the compact-example tokenizer into one test helper and its complete 56-test JAX file passed; final cleanup re-review passed.
 - `2026-10-16T11:33:07Z`: After the exact Kristine v4-8 appeared in the mandatory final `AVAILABLE` table, created immutable launch snapshot `ce27b32f14ccbeb3c37e830d3902c050e4dc5550` and verified its 57-file local manifest, selected-config hash, and cache exclusions.
+- `2026-10-16T11:36:47Z`: Repaired an incomplete first source transfer after verification found that the shell glob omitted the snapshot's two top-level dotfiles; no training had started. The complete 57-file remote tree then matched the local byte count and manifest digest exactly.
+- `2026-10-16T11:36:47Z`: Verified the node-local config hash, JAX `0.6.2`, the complete region-local dataset, 85 GiB free space, a fresh output path, W&B authentication-file presence, and idle TPU devices. The selected config parses with bridge weight `1.0` and one communication round.
