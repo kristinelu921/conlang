@@ -94,7 +94,7 @@ All data, seed, optimization, schedule, widths, message length, depth, weight sh
 | Artifact | Path or URL | Verified |
 |---|---|---|
 | Configuration | `configs/conlang-jax-v4-8-full-m4-d2-qsender-commdiag.yaml` | correctness and cleanup reviews passed |
-| Pull request | `https://github.com/kristinelu921/conlang/pull/1` | open; result update pending |
+| Pull request | `https://github.com/kristinelu921/conlang/pull/1` | linked; completed results recorded in this report |
 | Source snapshot | `/kmh-nfs-ssd-us-mount/staging/kristine/elf/20261016-conlang-v4-8-full-m4-d2-qsender-commdiag-20261016T081332.874739292Z`; remote `/home/kristinelu/elf-runs/source/20261016-conlang-v4-8-full-m4-d2-qsender-commdiag` | yes; local and remote contain 53 files and 407094 bytes; relative SHA-256-manifest digest `cb14af919c89ca14348cd333371975065657a4d7b1ac559674424caa36b68ee0` |
 | Regional dataset | `/home/kristinelu/elf-data/conlangs-v1` | yes; 15,625 worlds / 125,000 questions; manifest SHA-256 `a839b6ac98ba33a008caaebdde40dea7bc1e639106e93aab25ab2af3c29588e8` |
 | Checkpoint | `/home/kristinelu/elf-runs/20261016-conlang-v4-8-full-m4-d2-qsender-commdiag/checkpoint.msgpack` | yes; 26,418,137 bytes; SHA-256 `2f69b5bd6a558e6c04c06e3c0694c657bf6f9116457e089dd367bb0ecb5e21fa`; CPU-only restore verified step 2000 |
