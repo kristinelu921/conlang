@@ -108,7 +108,7 @@ All data, seed, optimization, schedule, widths, message length, depth, sharing, 
 
 Question-conditioned senders did not produce a beneficial passage-specific causal gap while the receiver still saw the question directly. That direct path could continue fitting relation-conditioned answer priors without using messages. This arm masked all receiver question positions; the senders remained question-conditioned, so the question and private evidence could reach the answer decoder only through their eight combined message vectors.
 
-Useful communication required intact messages to outperform both zero messages and target-question/wrong-passages messages. A large intact-versus-zero gap without a meaningful intact-versus-wrong-passages gap would show question transport but not useful private-content transport.
+Useful communication required intact messages to outperform both zero messages and target-question/wrong-passages messages. The preregistered rule treated a large intact-versus-zero gap without a meaningful intact-versus-wrong-passages gap as question transport without useful private-content transport. Post-run review supersedes that interpretation: because zero messages are out of distribution, this pattern establishes only learned-message necessity. A matched wrong-question control is required to isolate question identity.
 
 ## Interpretation
 
