@@ -86,7 +86,7 @@ Pending launch and verified completion.
 | Artifact | Path or URL | Verified |
 |---|---|---|
 | Configuration | `configs/conlang-jax-v4-8-full-m4-d2-qsender-norecvq-bridgeaux-commdiag.yaml` | parses and validates; launch pending |
-| Pull request | `https://github.com/kristinelu921/conlang/pull/1` | corrected closure prepared; correctness passed, cleanup re-review and push pending |
+| Pull request | `https://github.com/kristinelu921/conlang/pull/1` | corrected closure passed correctness and cleanup review; push pending |
 | Source snapshot | pending | must be created after reviews and the final mandatory TPU availability check |
 | Regional dataset | `/home/kristinelu/elf-data/conlangs-v1` | expected manifest SHA-256 `a839b6ac98ba33a008caaebdde40dea7bc1e639106e93aab25ab2af3c29588e8`; remote revalidation pending |
 | Tracking run | pending | W&B enabled; exact URL pending authenticated launch |
@@ -100,7 +100,7 @@ Pending launch and verified completion.
 - The initial focused CPU closure passed 15 tests covering dataset labels, static tokenization, configuration validation, person-side sender selection, auxiliary-head updates, zero-weight parameter-tree compatibility, and bridge metrics under all causal interventions.
 - After correcting swapped-channel bridge attribution, the full CPU regression closure passed 65 tests with two existing Pydantic warnings in 180.32 seconds. The discriminating selector/evaluation pair also passed independently in 30.06 seconds.
 - The cleanup-only tokenizer-fixture consolidation then passed all 56 JAX trainer tests with the same two existing warnings in 179.78 seconds; the nine unchanged generator tests had passed in the corrected full closure.
-- Correctness passed for the corrected implementation. Cleanup re-review is pending for the exact final implementation/configuration/report range.
+- Correctness and cleanup reviews passed for exact range `5a5ea7110b73791077f984afd0311b8d8a566ef5..f3c402a1606063cd3d5652689dfb55f511d7ca53` after the diagnostic correction and test-fixture consolidation.
 - Remote source, runtime, dataset, disk, output-path, process, lock, VFIO, and TPU health checks remain pending.
 
 ## Failure Details
@@ -113,4 +113,4 @@ Pending launch and verified completion.
 - `2026-10-16`: Selected explicit bridge-entity supervision after the message-8 and two-round sender arms preserved question relay but showed no beneficial private-passage gap.
 - `2026-10-16`: Implemented a training-only middle-entity target on the person-side sender message, preserved zero-weight checkpoint compatibility, and passed the focused and full CPU test closures.
 - `2026-10-16`: Correctness review found and verified a diagnostic-only fix so swapped bridge accuracy follows the semantic sender rather than its original channel index; the corrected full suite passed.
-- `2026-10-16`: Cleanup consolidated the compact-example tokenizer into one test helper and its complete 56-test JAX file passed; final cleanup re-review remains pending.
+- `2026-10-16`: Cleanup consolidated the compact-example tokenizer into one test helper and its complete 56-test JAX file passed; final cleanup re-review passed.
