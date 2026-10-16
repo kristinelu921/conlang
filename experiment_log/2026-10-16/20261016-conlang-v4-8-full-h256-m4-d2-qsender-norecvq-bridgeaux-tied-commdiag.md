@@ -87,8 +87,8 @@ Pending launch and verified completion.
 |---|---|---|
 | Configuration | `configs/conlang-jax-v4-8-full-h256-m4-d2-qsender-norecvq-bridgeaux-tied-commdiag.yaml` | committed in `a8358bcb425953a4ca668fab675ed6e9b8f25a81`, parses and validates locally, and passed correctness and cleanup review |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` | reviewed configuration closure pushed to `codex/jax-tpu-training` |
-| Source snapshot | `/kmh-nfs-ssd-us-mount/staging/kristine/elf/20261016-conlang-v4-8-full-h256-m4-d2-qsender-norecvq-bridgeaux-tied-commdiag-20261016T124907.241580898Z`; planned remote `/home/kristinelu/elf-runs/source/20261016-conlang-v4-8-full-h256-m4-d2-qsender-norecvq-bridgeaux-tied-commdiag` | local snapshot verified: 59 files, 443635 bytes, relative SHA-256-manifest digest `028745fe8092d4599664871869e6360d926cc2d030529c40c4066dde05397451`; selected-config SHA-256 `b493f9b5a3af7a407ff53930bcef2f2424675baad906850f5e612b980d72bac6`; no bytecode or test caches; remote verification pending |
-| Regional dataset | `/home/kristinelu/elf-data/conlangs-v1` | must revalidate the complete Central2 manifest before launch |
+| Source snapshot | `/kmh-nfs-ssd-us-mount/staging/kristine/elf/20261016-conlang-v4-8-full-h256-m4-d2-qsender-norecvq-bridgeaux-tied-commdiag-20261016T124907.241580898Z`; remote `/home/kristinelu/elf-runs/source/20261016-conlang-v4-8-full-h256-m4-d2-qsender-norecvq-bridgeaux-tied-commdiag` | local and remote matched before launch: 59 files, 443635 bytes, relative SHA-256-manifest digest `028745fe8092d4599664871869e6360d926cc2d030529c40c4066dde05397451`; selected-config SHA-256 `b493f9b5a3af7a407ff53930bcef2f2424675baad906850f5e612b980d72bac6`; no bytecode or test caches |
+| Regional dataset | `/home/kristinelu/elf-data/conlangs-v1` | complete Central2 data revalidated: 15,625 worlds / 125,000 questions / 8 questions per world; manifest SHA-256 `a839b6ac98ba33a008caaebdde40dea7bc1e639106e93aab25ab2af3c29588e8` |
 | Tracking run | pending | W&B enabled; final run identity must match the selected configuration |
 | Checkpoint | `/home/kristinelu/elf-runs/20261016-conlang-v4-8-full-h256-m4-d2-qsender-norecvq-bridgeaux-tied-commdiag/checkpoint.msgpack` | pending |
 
@@ -98,7 +98,8 @@ Pending launch and verified completion.
 - Correctness review passed for the committed configuration/report closure, including five focused CPU cases in 63.84 seconds.
 - Cleanup review identified this report-only provenance update; cleanup re-review passed at `9adb7ee7096c91fe4b50b50e63d0f2a62761f91a`.
 - The mandatory checker listed the exact Kristine v4-8 in its final `AVAILABLE` table, and `tpu_scripts/run_staging.sh` created the verified immutable 59-file snapshot at HEAD `ea94b35523da4d1e5758ec8bb706afb210e56c98`.
-- Pending remote node-local snapshot verification, regional-data integrity check, runtime preflight, and launch-boundary VFIO/process/output checks.
+- Remote node-local snapshot, region-local dataset, JAX `0.6.2` runtime, authenticated W&B file presence, writable `/tmp/tpu_logs`, 85 GiB free space, fresh output path, process absence, and TPU-device idleness passed preflight.
+- Pending final mandatory TPU availability and launch-boundary VFIO/lock/output checks immediately before the foreground launch.
 
 ## Failure Details
 
@@ -109,3 +110,5 @@ Pending launch and verified completion.
 
 - `2026-10-16`: Selected encoder tying as the next single-variable test after hidden width 256 preserved private-passage use but failed the capacity stacking rule.
 - `2026-10-16T12:49:07Z`: The exact same Kristine v4-8 appeared in the mandatory final `AVAILABLE` table; created and verified the immutable local launch snapshot, selected-config hash, and cache exclusions.
+- `2026-10-16`: Copied the complete snapshot directory to node-local storage and verified the exact remote file count, byte count, manifest digest, selected-config hash, and cache exclusions.
+- `2026-10-16`: Revalidated JAX `0.6.2`, Flax `0.10.5`, Optax `0.2.8`, W&B `0.28.1`, the complete regional dataset, 85 GiB free space, fresh output path, W&B authentication-file presence, writable `/tmp/tpu_logs`, and idle TPU devices.
