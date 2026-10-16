@@ -66,4 +66,4 @@ The baseline is definitively in a question-only shortcut/local minimum, not mere
 
 - Existing comparisons are single-seed experiments on the first 256 validation examples.
 - The earlier tied-width, role-gate, small-prefix, and one-example runs did not include causal message interventions, so their message use is inferred from output concentration and gradient imbalance rather than directly measured.
-- The earlier read-only W&B reconciliation could enumerate projects but not runs, so the earlier values above come from checked-in effective configs, metrics JSONL, outputs JSONL, launcher logs, and reports. The bridge-supervised run was separately verified through the authenticated W&B API as finished at step 2000 with matching final metrics.
+- The earlier read-only W&B reconciliation could enumerate projects but not runs, so the earlier values above come from checked-in effective configs, metrics JSONL, outputs JSONL, launcher logs, and reports. Both hidden-128 and hidden-256 bridge-supervised runs were separately verified through the authenticated W&B API as finished at step 2000 with matching final metrics.
