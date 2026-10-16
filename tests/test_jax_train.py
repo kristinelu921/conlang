@@ -717,6 +717,99 @@ def test_conditioned_wrong_world_control_keeps_the_target_question(
     assert jnp.array_equal(wrong_world_tokens, expected_tokens)
 
 
+def test_conditioned_wrong_question_control_keeps_passages_and_receiver_question() -> None:
+    """Wrong-question controls should change only sender-side question identity."""
+    tokenizer = TextTokenizer(["buffalo", "chapel"])
+    config = replace(_small_config(), sender_question_conditioning=True)
+    base_batch = tokenize_examples(_examples(), tokenizer, config)
+    batch = base_batch.select([0, 1, 1, 0])
+    model_config = _model_config(config, tokenizer)
+    model = JaxCommunicationModel(model_config)
+    agent_1_token_ids = jnp.asarray(batch.agent_1_token_ids)
+    agent_2_token_ids = jnp.asarray(batch.agent_2_token_ids)
+    question_token_ids = jnp.asarray(batch.question_token_ids)
+    answer_token_ids = jnp.asarray(batch.answer_token_ids)
+    variables = model.init(
+        {"params": jax.random.PRNGKey(0)},
+        agent_1_token_ids,
+        agent_2_token_ids,
+        question_token_ids,
+        answer_token_ids,
+        deterministic=True,
+    )
+    wrong_question_token_ids = jnp.roll(
+        question_token_ids.reshape(2, 2, question_token_ids.shape[1]),
+        shift=1,
+        axis=1,
+    ).reshape(question_token_ids.shape)
+
+    wrong_question_output = model.apply(
+        variables,
+        agent_1_token_ids,
+        agent_2_token_ids,
+        question_token_ids,
+        answer_token_ids,
+        deterministic=True,
+        message_intervention="wrong_question",
+        wrong_world_shift=2,
+    )
+    expected_messages = model.apply(
+        variables,
+        agent_1_token_ids,
+        agent_2_token_ids,
+        deterministic=True,
+        question_token_ids=wrong_question_token_ids,
+        method=model.encode_messages,
+    )
+    actual_messages = jnp.concatenate(
+        (wrong_question_output.message_1, wrong_question_output.message_2),
+        axis=1,
+    )
+    beginning = jnp.full((4, 1), tokenizer.bos_id, dtype=jnp.int32)
+    answer_input_ids = jnp.concatenate((beginning, answer_token_ids[:, :-1]), axis=1)
+    expected_logits = model.apply(
+        variables,
+        expected_messages,
+        question_token_ids,
+        answer_input_ids,
+        deterministic=True,
+        method=model.answer_logits,
+    )
+    wrong_receiver_question_logits = model.apply(
+        variables,
+        expected_messages,
+        wrong_question_token_ids,
+        answer_input_ids,
+        deterministic=True,
+        method=model.answer_logits,
+    )
+
+    assert jnp.allclose(actual_messages, expected_messages)
+    assert jnp.allclose(wrong_question_output.logits, expected_logits)
+    assert not jnp.allclose(wrong_question_output.logits, wrong_receiver_question_logits)
+
+    sender_only_model = JaxCommunicationModel(
+        replace(model_config, receiver_question_input=False)
+    )
+    wrong_question_tokens = sender_only_model.apply(
+        variables,
+        agent_1_token_ids,
+        agent_2_token_ids,
+        question_token_ids,
+        message_intervention="wrong_question",
+        wrong_world_shift=2,
+        method=sender_only_model.greedy_answer_token_ids,
+    )
+    expected_tokens = sender_only_model.apply(
+        variables,
+        agent_1_token_ids,
+        agent_2_token_ids,
+        wrong_question_token_ids,
+        method=sender_only_model.greedy_answer_token_ids,
+    )
+    assert jnp.array_equal(wrong_question_tokens, expected_tokens)
+
+
 def test_message_interventions_apply_the_requested_causal_controls() -> None:
     """Message controls should preserve shape while selecting the intended information."""
     messages = jnp.arange(24, dtype=jnp.float32).reshape(2, 6, 2)
@@ -767,9 +860,19 @@ def test_wrong_world_shift_requires_two_aligned_worlds_per_device() -> None:
 def test_evaluation_reports_every_message_intervention() -> None:
     """Causal evaluation should emit intact and intervened metrics from one batch."""
     tokenizer = TextTokenizer(["buffalo", "chapel"])
-    config = _small_config()
-    tokenized = tokenize_examples(_examples(), tokenizer, config)
-    batch = tokenized.select([0, 1])
+    config = replace(
+        _small_config(),
+        batch_size=4,
+        eval_examples=4,
+        sender_question_conditioning=True,
+    )
+    source_examples = _examples()
+    tokenized = tokenize_examples(
+        [source_examples[index] for index in (0, 1, 1, 0)],
+        tokenizer,
+        config,
+    )
+    batch = tokenized.select([0, 1, 2, 3])
     model = JaxCommunicationModel(_model_config(config, tokenizer))
     state = _initialize_state(model, optax.identity(), batch, config.seed)
     replicated_params = jax.device_put_replicated(state.params, jax.local_devices())
@@ -782,13 +885,14 @@ def test_evaluation_reports_every_message_intervention() -> None:
         build_parallel_evaluation_step(
             model,
             collect_message_interventions=True,
-            wrong_world_shift=1,
+            wrong_world_shift=2,
         ),
     )
 
     expected_prefixes = {
         "zero_message",
         "wrong_world_message",
+        "wrong_question_message",
         "swapped_sender",
         "agent_1_only",
         "agent_2_only",

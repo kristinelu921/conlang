@@ -48,18 +48,35 @@ def apply_message_intervention(
 def _prepare_sender_inputs_for_message_intervention(
     agent_1_token_ids: Array,
     agent_2_token_ids: Array,
+    question_token_ids: Array,
     sender_question_conditioning: bool,
     intervention: str,
     wrong_world_shift: int,
-) -> tuple[Array, Array, str]:
-    """Rotate only private passages for conditioned wrong-world controls."""
+) -> tuple[Array, Array, Array, str]:
+    """Prepare matched passage or question controls before sender encoding."""
+    if intervention == "wrong_question":
+        if not sender_question_conditioning:
+            raise ValueError("wrong-question intervention requires conditioned senders")
+        batch_size = question_token_ids.shape[0]
+        if wrong_world_shift < 2 or batch_size % wrong_world_shift != 0:
+            raise ValueError("wrong-question intervention requires aligned question blocks")
+        grouped_questions = question_token_ids.reshape(
+            batch_size // wrong_world_shift,
+            wrong_world_shift,
+            question_token_ids.shape[1],
+        )
+        wrong_questions = jnp.roll(grouped_questions, shift=1, axis=1).reshape(
+            question_token_ids.shape
+        )
+        return agent_1_token_ids, agent_2_token_ids, wrong_questions, "intact"
     if not sender_question_conditioning or intervention != "wrong_world":
-        return agent_1_token_ids, agent_2_token_ids, intervention
+        return agent_1_token_ids, agent_2_token_ids, question_token_ids, intervention
     if wrong_world_shift < 1 or wrong_world_shift >= agent_1_token_ids.shape[0]:
         raise ValueError("wrong-world shift must select another row in the local batch")
     return (
         jnp.roll(agent_1_token_ids, shift=wrong_world_shift, axis=0),
         jnp.roll(agent_2_token_ids, shift=wrong_world_shift, axis=0),
+        question_token_ids,
         "intact",
     )
 
@@ -692,20 +709,24 @@ class JaxCommunicationModel(nn.Module):
         batch_size = answer_token_ids.shape[0]
         beginning = jnp.full((batch_size, 1), self.config.bos_id, dtype=jnp.int32)
         answer_input_ids = jnp.concatenate((beginning, answer_token_ids[:, :-1]), axis=1)
-        agent_1_token_ids, agent_2_token_ids, encoded_message_intervention = (
-            _prepare_sender_inputs_for_message_intervention(
-                agent_1_token_ids,
-                agent_2_token_ids,
-                self.config.sender_question_conditioning,
-                message_intervention,
-                wrong_world_shift,
-            )
+        (
+            agent_1_token_ids,
+            agent_2_token_ids,
+            sender_question_token_ids,
+            encoded_message_intervention,
+        ) = _prepare_sender_inputs_for_message_intervention(
+            agent_1_token_ids,
+            agent_2_token_ids,
+            question_token_ids,
+            self.config.sender_question_conditioning,
+            message_intervention,
+            wrong_world_shift,
         )
         messages, sender_gate_1, sender_gate_2 = self._encode_messages_with_gates(
             agent_1_token_ids,
             agent_2_token_ids,
             deterministic,
-            question_token_ids,
+            sender_question_token_ids,
         )
         message_1 = messages[:, : self.config.message_length]
         message_2 = messages[:, self.config.message_length :]
@@ -770,20 +791,24 @@ class JaxCommunicationModel(nn.Module):
             dtype=jnp.int32,
         )
         finished = jnp.zeros((batch_size,), dtype=jnp.bool_)
-        agent_1_token_ids, agent_2_token_ids, encoded_message_intervention = (
-            _prepare_sender_inputs_for_message_intervention(
-                agent_1_token_ids,
-                agent_2_token_ids,
-                self.config.sender_question_conditioning,
-                message_intervention,
-                wrong_world_shift,
-            )
+        (
+            agent_1_token_ids,
+            agent_2_token_ids,
+            sender_question_token_ids,
+            encoded_message_intervention,
+        ) = _prepare_sender_inputs_for_message_intervention(
+            agent_1_token_ids,
+            agent_2_token_ids,
+            question_token_ids,
+            self.config.sender_question_conditioning,
+            message_intervention,
+            wrong_world_shift,
         )
         messages = self.encode_messages(
             agent_1_token_ids,
             agent_2_token_ids,
             deterministic=True,
-            question_token_ids=question_token_ids,
+            question_token_ids=sender_question_token_ids,
         )
         messages = apply_message_intervention(
             messages,

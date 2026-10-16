@@ -688,6 +688,8 @@ def build_parallel_evaluation_step(
         "agent_1_only": "agent_1_only",
         "agent_2_only": "agent_2_only",
     }
+    if model.config.sender_question_conditioning:
+        intervention_names["wrong_question_message"] = "wrong_question"
 
     def evaluation_step(params: Any, batch: JaxExampleBatch) -> dict[str, Array]:
         """Return globally summed validation statistics."""
