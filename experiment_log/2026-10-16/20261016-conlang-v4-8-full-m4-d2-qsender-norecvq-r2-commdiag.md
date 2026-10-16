@@ -86,8 +86,8 @@ Pending launch and verified completion.
 |---|---|---|
 | Configuration | `configs/conlang-jax-v4-8-full-m4-d2-qsender-norecvq-r2-commdiag.yaml` | parses; correctness and cleanup reviews passed |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` | reviewed implementation/configuration closure pushed |
-| Source snapshot | `/kmh-nfs-ssd-us-mount/staging/kristine/elf/20261016-conlang-v4-8-full-m4-d2-qsender-norecvq-r2-commdiag-20261016T103711.365431876Z`; planned remote `/home/kristinelu/elf-runs/source/20261016-conlang-v4-8-full-m4-d2-qsender-norecvq-r2-commdiag` | 56 files, 425946 bytes, relative SHA-256-manifest digest `a49cb431a00c35980c0f9ef381b1db54ba8c0e710bd3b564b2879aee16998d05`; selected-config SHA-256 `9289846b850928bed986db8f8be2af6d7b96a8c3df44d45bd9d32b5987d66ad1`; remote copy pending |
-| Regional dataset | `/home/kristinelu/elf-data/conlangs-v1` | launch-time revalidation pending; expected manifest SHA-256 `a839b6ac98ba33a008caaebdde40dea7bc1e639106e93aab25ab2af3c29588e8` |
+| Source snapshot | `/kmh-nfs-ssd-us-mount/staging/kristine/elf/20261016-conlang-v4-8-full-m4-d2-qsender-norecvq-r2-commdiag-20261016T103711.365431876Z`; remote `/home/kristinelu/elf-runs/source/20261016-conlang-v4-8-full-m4-d2-qsender-norecvq-r2-commdiag` | local and remote match: 56 files, 425946 bytes, relative SHA-256-manifest digest `a49cb431a00c35980c0f9ef381b1db54ba8c0e710bd3b564b2879aee16998d05`; selected-config SHA-256 `9289846b850928bed986db8f8be2af6d7b96a8c3df44d45bd9d32b5987d66ad1`; no bytecode caches |
+| Regional dataset | `/home/kristinelu/elf-data/conlangs-v1` | revalidated on the TPU: 15,625 worlds / 125,000 questions / 8 questions per world; manifest SHA-256 `a839b6ac98ba33a008caaebdde40dea7bc1e639106e93aab25ab2af3c29588e8` |
 | Tracking run | pending | W&B enabled |
 | Checkpoint | pending | expected at the configured node-local output path |
 
@@ -107,3 +107,4 @@ Pending launch and verified completion.
 - `2026-10-16`: Selected a synchronous second exchange after the message-8 bypass proved question transport but showed no beneficial private-fact transport.
 - `2026-10-16`: Correctness and cleanup reviews passed for the exact implementation/configuration closure; the selected YAML remains the sole run configuration in that closure.
 - `2026-10-16T10:37:11Z`: After the exact Kristine v4-8 appeared in the mandatory final `AVAILABLE` table, created immutable launch snapshot `9b471b0362605a4b7c0583af4ae2998ebd8735ed` and verified its 56-file local manifest.
+- `2026-10-16T10:39:09Z`: Verified the identical node-local source manifest and config hash, JAX `0.6.2`, the complete region-local dataset, 85 GiB free space, a fresh output path, writable TPU log directory, and idle TPU devices; the selected config parses with two communication rounds.
