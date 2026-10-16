@@ -215,7 +215,11 @@ def test_dataset_builds_manifest_and_flattened_examples(tmp_path: Path) -> None:
 
     saved_manifest = json.loads((tmp_path / "manifest.json").read_text(encoding="utf-8"))
     assert saved_manifest == manifest
-    assert verify_dataset(tmp_path) == {"worlds": 9, "questions": 36}
+    assert verify_dataset(tmp_path) == {
+        "worlds": 9,
+        "questions": 36,
+        "questions_per_world": 4,
+    }
     assert manifest["total_worlds"] == 9
     assert manifest["total_questions"] == 36
     train_path = tmp_path / manifest["splits"]["train"]["path"]

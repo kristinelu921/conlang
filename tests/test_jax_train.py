@@ -36,6 +36,7 @@ from train import (
     _read_step_metrics,
     _selected_gradient_norm,
     _top_vocabulary_histogram,
+    _validated_wrong_world_shift,
     build_parallel_evaluation_step,
     build_parallel_train_step,
     evaluate_exact_match,
@@ -375,7 +376,7 @@ def test_throughput_timing_excludes_evaluation_delay(monkeypatch: pytest.MonkeyP
     )
     monkeypatch.setattr(
         "train.build_parallel_evaluation_step",
-        lambda model, collect_message_interventions=False: object(),
+        lambda model, collect_message_interventions=False, wrong_world_shift=1: object(),
     )
     monkeypatch.setattr("train.evaluate_exact_match", fake_evaluation)
     monkeypatch.setattr("train._initialize_wandb", lambda current_config: FakeWandbRun())
@@ -432,7 +433,7 @@ def test_outputs_follow_logging_cadence(
     )
     monkeypatch.setattr(
         "train.build_parallel_evaluation_step",
-        lambda model, collect_message_interventions=False: object(),
+        lambda model, collect_message_interventions=False, wrong_world_shift=1: object(),
     )
     monkeypatch.setattr(
         "train.evaluate_exact_match",
@@ -524,9 +525,17 @@ def test_message_interventions_apply_the_requested_causal_controls() -> None:
 
     assert jnp.array_equal(apply_message_intervention(messages, 3, "intact"), messages)
     assert jnp.array_equal(
-        apply_message_intervention(messages, 3, "wrong_world"),
-        messages[::-1],
+        apply_message_intervention(messages, 3, "wrong_world", wrong_world_shift=1),
+        jnp.roll(messages, shift=1, axis=0),
     )
+    grouped_world_messages = jnp.repeat(jnp.arange(3), 2).reshape(6, 1, 1)
+    wrong_world_messages = apply_message_intervention(
+        grouped_world_messages,
+        1,
+        "wrong_world",
+        wrong_world_shift=2,
+    )
+    assert jnp.all(wrong_world_messages != grouped_world_messages)
     assert jnp.array_equal(
         apply_message_intervention(messages, 3, "swap_senders"),
         jnp.concatenate((message_2, message_1), axis=1),
@@ -542,6 +551,17 @@ def test_message_interventions_apply_the_requested_causal_controls() -> None:
     assert jnp.count_nonzero(apply_message_intervention(messages, 3, "zero")) == 0
     with pytest.raises(ValueError, match="unknown message intervention"):
         apply_message_intervention(messages, 3, "unsupported")
+    with pytest.raises(ValueError, match="another row"):
+        apply_message_intervention(messages[:1], 3, "wrong_world")
+
+
+def test_wrong_world_shift_requires_two_aligned_worlds_per_device() -> None:
+    """Wrong-world evaluation should fail before any same-world pairing is possible."""
+    assert _validated_wrong_world_shift(256, 4, 8) == 8
+    with pytest.raises(ValueError, match="world-aligned"):
+        _validated_wrong_world_shift(24, 4, 8)
+    with pytest.raises(ValueError, match="at least two worlds"):
+        _validated_wrong_world_shift(32, 4, 8)
 
 
 def test_evaluation_reports_every_message_intervention() -> None:
@@ -559,7 +579,11 @@ def test_evaluation_reports_every_message_intervention() -> None:
         tokenized,
         config.batch_size,
         jax.local_device_count(),
-        build_parallel_evaluation_step(model, collect_message_interventions=True),
+        build_parallel_evaluation_step(
+            model,
+            collect_message_interventions=True,
+            wrong_world_shift=1,
+        ),
     )
 
     expected_prefixes = {

@@ -490,6 +490,7 @@ def verify_dataset(output_directory: Path) -> dict[str, int]:
     seen_world_ids: set[str] = set()
     verified_worlds = 0
     verified_questions = 0
+    verified_questions_per_world: int | None = None
     for split, entry in manifest_splits.items():
         assert isinstance(entry, dict)
         split_path = output_directory / entry["path"]
@@ -511,8 +512,13 @@ def verify_dataset(output_directory: Path) -> dict[str, int]:
                 validate_world(world)
                 questions = world["questions"]
                 assert isinstance(questions, list)
+                current_questions_per_world = len(questions)
+                if verified_questions_per_world is None:
+                    verified_questions_per_world = current_questions_per_world
+                elif current_questions_per_world != verified_questions_per_world:
+                    raise ValueError("every dataset world must have the same question count")
                 split_worlds += 1
-                split_questions += len(questions)
+                split_questions += current_questions_per_world
         if split_worlds != entry["worlds"] or split_questions != entry["questions"]:
             raise ValueError(f"count mismatch for {split_path.name}")
         if checksum.hexdigest() != entry["uncompressed_sha256"]:
@@ -521,7 +527,17 @@ def verify_dataset(output_directory: Path) -> dict[str, int]:
         verified_questions += split_questions
     if verified_worlds != manifest["total_worlds"] or verified_questions != manifest["total_questions"]:
         raise ValueError("dataset totals do not match the manifest")
-    return {"worlds": verified_worlds, "questions": verified_questions}
+    if verified_questions_per_world is None:
+        raise ValueError("dataset contains no worlds")
+    manifest_config = manifest["config"]
+    assert isinstance(manifest_config, dict)
+    if verified_questions_per_world != manifest_config["entities_per_world"]:
+        raise ValueError("world question count does not match the generation configuration")
+    return {
+        "worlds": verified_worlds,
+        "questions": verified_questions,
+        "questions_per_world": verified_questions_per_world,
+    }
 
 
 def read_worlds(path: Path) -> Iterator[dict[str, Any]]:

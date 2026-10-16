@@ -99,7 +99,7 @@ Training data, batch size, optimization, seed, hidden width, output width, untie
 ## Observations
 
 - The treatment is evaluation-only: the optimization path is byte-for-byte identical to the established full-data message-4/depth-2 baseline until final evaluation.
-- `wrong_world_message` reverses the messages within each device-local validation shard. Each 64-example shard contains eight sequential eight-question worlds, so every example receives another world's messages rather than another question's identical same-world messages.
+- `wrong_world_message` rotates messages by one verified eight-question world within each device-local validation shard. Each 64-example shard contains eight aligned worlds, so every example receives another world's messages rather than another question's identical same-world messages.
 - W&B inventory at `2026-10-16T06:20:15Z` reached the entity and listed 21 projects, but every project run query was inaccessible; no W&B state was inferred from the empty result. Local immutable artifacts remain the primary evidence.
 
 ## Interpretation

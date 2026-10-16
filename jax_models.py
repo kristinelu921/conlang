@@ -35,6 +35,7 @@ def apply_message_intervention(
     messages: Array,
     message_length: int,
     intervention: str,
+    wrong_world_shift: int = 1,
 ) -> Array:
     """Apply one causal intervention to two concatenated sender messages."""
     if intervention not in MESSAGE_INTERVENTIONS:
@@ -44,7 +45,9 @@ def apply_message_intervention(
     if intervention == "zero":
         return jnp.zeros_like(messages)
     if intervention == "wrong_world":
-        return jnp.flip(messages, axis=0)
+        if wrong_world_shift < 1 or wrong_world_shift >= messages.shape[0]:
+            raise ValueError("wrong-world shift must select another row in the local batch")
+        return jnp.roll(messages, shift=wrong_world_shift, axis=0)
     message_1 = messages[:, :message_length]
     message_2 = messages[:, message_length:]
     if intervention == "swap_senders":
@@ -643,6 +646,7 @@ class JaxCommunicationModel(nn.Module):
         stop_message_2: bool = False,
         stop_receiver_tokens: bool = False,
         message_intervention: str = "intact",
+        wrong_world_shift: int = 1,
     ) -> JaxCommunicationOutput:
         """Teacher-force answers and return their joint log probability."""
         batch_size = answer_token_ids.shape[0]
@@ -663,6 +667,7 @@ class JaxCommunicationModel(nn.Module):
             jnp.concatenate((message_1, message_2), axis=1),
             self.config.message_length,
             message_intervention,
+            wrong_world_shift,
         )
         message_1 = messages[:, : self.config.message_length]
         message_2 = messages[:, self.config.message_length :]
@@ -703,6 +708,7 @@ class JaxCommunicationModel(nn.Module):
         agent_2_token_ids: Array,
         question_token_ids: Array,
         message_intervention: str = "intact",
+        wrong_world_shift: int = 1,
     ) -> Array:
         """Generate a fixed-shape greedy answer without data-dependent control flow."""
         batch_size = agent_1_token_ids.shape[0]
@@ -717,6 +723,7 @@ class JaxCommunicationModel(nn.Module):
             messages,
             self.config.message_length,
             message_intervention,
+            wrong_world_shift,
         )
         beginning = jnp.full((batch_size, 1), self.config.bos_id, dtype=jnp.int32)
         for position in range(self.config.max_answer_length):

@@ -671,6 +671,7 @@ def build_parallel_train_step(
 def build_parallel_evaluation_step(
     model: JaxCommunicationModel,
     collect_message_interventions: bool = False,
+    wrong_world_shift: int = 1,
 ) -> Any:
     """Compile exact-match evaluation across TPU devices."""
 
@@ -694,6 +695,7 @@ def build_parallel_evaluation_step(
                 batch.answer_token_ids,
                 deterministic=True,
                 message_intervention=intervention,
+                wrong_world_shift=wrong_world_shift,
             )
             generated = model.apply(
                 {"params": params},
@@ -701,6 +703,7 @@ def build_parallel_evaluation_step(
                 batch.agent_2_token_ids,
                 batch.question_token_ids,
                 message_intervention=intervention,
+                wrong_world_shift=wrong_world_shift,
                 method=model.greedy_answer_token_ids,
             )
             correct = jnp.all(generated == batch.answer_token_ids, axis=-1).sum()
@@ -724,6 +727,20 @@ def build_parallel_evaluation_step(
         return jax.lax.psum(statistics, axis_name="devices")
 
     return jax.pmap(evaluation_step, axis_name="devices")
+
+
+def _validated_wrong_world_shift(
+    batch_size: int,
+    local_device_count: int,
+    questions_per_world: int,
+) -> int:
+    """Return one world-block shift after validating device-local evaluation layout."""
+    per_device_batch = batch_size // local_device_count
+    if per_device_batch % questions_per_world != 0:
+        raise ValueError("message interventions require world-aligned per-device batches")
+    if per_device_batch < questions_per_world * 2:
+        raise ValueError("message interventions require at least two worlds per device")
+    return questions_per_world
 
 
 def shard_batch(batch: JaxExampleBatch, local_device_count: int) -> JaxExampleBatch:
@@ -868,6 +885,13 @@ def train(config: TrainConfig) -> dict[str, Any]:
             cache_dir=config.dataset_cache_dir,
         )
         verified_dataset = verify_dataset(dataset_directory)
+        wrong_world_shift = 1
+        if config.evaluation_message_interventions:
+            wrong_world_shift = _validated_wrong_world_shift(
+                config.batch_size,
+                local_device_count,
+                verified_dataset["questions_per_world"],
+            )
         train_examples = load_examples(resolve_split_path(dataset_directory, "train"), config.limit_examples)
         validation_examples = load_examples(
             resolve_split_path(dataset_directory, "validation"), config.eval_examples
@@ -897,6 +921,7 @@ def train(config: TrainConfig) -> dict[str, Any]:
         parallel_evaluation_step = build_parallel_evaluation_step(
             model,
             collect_message_interventions=config.evaluation_message_interventions,
+            wrong_world_shift=wrong_world_shift,
         )
         metrics_path = None if output_directory is None else output_directory / "metrics.jsonl"
         outputs_path = None if output_directory is None else output_directory / "outputs.jsonl"
