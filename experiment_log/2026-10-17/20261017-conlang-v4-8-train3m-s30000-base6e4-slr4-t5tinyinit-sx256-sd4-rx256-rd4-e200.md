@@ -12,9 +12,15 @@
 | Git revision | `e38af6e2f3e6761943ed786b32c0737ebf1462aa` (configuration/report closure) |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` |
 | Primary configuration | `configs/conlang-jax-v4-8-train3m-s30000-base6e4-slr4-t5tinyinit-sx256-sd4-rx256-rd4-e200.yaml` |
-| Command | `not recorded; pending immutable snapshot and final launch preflight` |
+| Command | exact command below |
 | Seed | `1730` |
-| Hardware | selected candidate `kmh-tpuvm-v4-8-spot-kristine-17-12-29-15-N-us-central2-b`, `us-central2-b`, Spot `v4-8`; final preflight pending |
+| Hardware | `kmh-tpuvm-v4-8-spot-kristine-17-12-29-15-N-us-central2-b`, `us-central2-b`, Spot `v4-8`; READY, HEALTHY, and idle at final preflight |
+
+## Command
+
+```bash
+/snap/google-cloud-cli/current/bin/gcloud compute tpus tpu-vm ssh kmh-tpuvm-v4-8-spot-kristine-17-12-29-15-N-us-central2-b --project=he-vision-group --zone=us-central2-b --worker=all --internal-ip --ssh-flag=-F --ssh-flag=/dev/null --command='set -euo pipefail; trap "" HUP; source_path=/home/kristinelu/elf-runs/sources/20261017-conlang-v4-8-train3m-s30000-base6e4-slr4-t5tinyinit-sx256-sd4-rx256-rd4-e200-20261017T230015.160947320Z; config_path="$source_path/configs/conlang-jax-v4-8-train3m-s30000-base6e4-slr4-t5tinyinit-sx256-sd4-rx256-rd4-e200.yaml"; output_path=/home/kristinelu/elf-runs/20261017-conlang-v4-8-train3m-s30000-base6e4-slr4-t5tinyinit-sx256-sd4-rx256-rd4-e200; launcher_log=/home/kristinelu/elf-runs/logs/20261017-conlang-v4-8-train3m-s30000-base6e4-slr4-t5tinyinit-sx256-sd4-rx256-rd4-e200.launcher.log; model_path=/home/kristinelu/elf-runs/pretrained/google-t5-efficient-tiny-3441d7e8; test -d "$source_path"; test -f "$config_path"; test ! -e "$output_path"; test ! -e "$launcher_log"; test "$(sha256sum "$model_path/flax_model.msgpack" | cut -d" " -f1)" = 16e959d18596c0cdd9da07fd4fb913f5f9aa7835decfd6a4b9f9fd96e960da26; test "$(sha256sum "$model_path/tokenizer.json" | cut -d" " -f1)" = 88fe1105ba0554a7bf747a0da453b6d5d23c31805f915731ddb4f419bdc45e34; mkdir -p /home/kristinelu/elf-runs/logs /home/kristinelu/elf-runs/wandb; cd "$source_path"; export JAX_PLATFORMS=tpu CUDA_VISIBLE_DEVICES= ELF_TPU_WORKER_INDEX=0 PYTHONPATH="$PWD" HF_HOME=/home/kristinelu/elf-runs/hf-cache WANDB_DIR=/home/kristinelu/elf-runs/wandb PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1; ulimit -c 0; /home/kristinelu/elf-runs/runtime/venv/bin/python -u train.py --config "$config_path" 2>&1 | tee "$launcher_log"' --quiet
+```
 
 ## Configuration
 
@@ -110,10 +116,10 @@ Pending launch and verified completion.
 
 | Artifact | Path or URL | Verified |
 |---|---|---|
-| Configuration | `configs/conlang-jax-v4-8-train3m-s30000-base6e4-slr4-t5tinyinit-sx256-sd4-rx256-rd4-e200.yaml` | pending parse and validation |
-| Immutable source | `not recorded; pending staging` | no |
-| Source model | `/home/kristinelu/elf-runs/pretrained/google-t5-efficient-tiny-3441d7e8` | pending selected-node hash verification |
-| Regional dataset | `/home/kristinelu/elf-data/conlangs-v1-train3m` | pending generation or regional reuse and full verification |
+| Configuration | `configs/conlang-jax-v4-8-train3m-s30000-base6e4-slr4-t5tinyinit-sx256-sd4-rx256-rd4-e200.yaml` | parses and validates; local and remote SHA-256 `7cb028221a5ee781697ac9c03e325333fdc37edd52d405aead9145ff0bd8ff80` |
+| Immutable source | `/kmh-nfs-ssd-us-mount/staging/kristine/elf/20261017-conlang-v4-8-train3m-s30000-base6e4-slr4-t5tinyinit-sx256-sd4-rx256-rd4-e200-20261017T230015.160947320Z`; matching node-local `/home/kristinelu/elf-runs/sources/` path in the command | 71 files / 520,961 bytes / relative-manifest SHA-256 `7354189dd705d2dc07fe5bf1de3f01f65f72e8c1290e29c3833988d2abb0ea88`; no bytecode caches |
+| Source model | `/home/kristinelu/elf-runs/pretrained/google-t5-efficient-tiny-3441d7e8` | checkpoint and tokenizer hashes match the configured fail-closed values |
+| Regional dataset | `/home/kristinelu/elf-data/conlangs-v1-train3m` | generated node-locally in Central2; 378,125 worlds / 3,025,000 questions / 280,390,862 bytes; full streaming verifier passed; manifest SHA-256 `0e37bb12e22e49e74868bb01d225a29e01bd2d8508df8efbcaa1d2d8aca1c1c4` |
 | Checkpoint | `/home/kristinelu/elf-runs/20261017-conlang-v4-8-train3m-s30000-base6e4-slr4-t5tinyinit-sx256-sd4-rx256-rd4-e200/checkpoint.msgpack` | no; pending launch |
 | Tracking run | `not recorded` | no |
 
@@ -133,6 +139,12 @@ Pending launch and verified completion.
 - The required filtered inventory selected only `kristine` resources; the
   Central2 v4-8 candidate is preferred because it is the proven topology for
   this exact model and retains region-local predecessor data/model artifacts.
+- The Central2 GCS prefix contained no 3M dataset objects, so the deterministic
+  seed-1729 dataset was generated directly on the selected Central2 host. No
+  dataset crossed regions. All gzip streams and stored content hashes verify.
+- The final CPU-only preflight reports JAX/JAXlib `0.6.2`, Flax `0.10.5`,
+  Optax `0.2.8`, NumPy `1.26.4`, valid W&B authentication, 84 GiB free, fresh
+  run output/log paths, writable `/tmp/tpu_logs`, no libtpu lock, and idle VFIO.
 
 ## Interpretation
 
@@ -148,3 +160,6 @@ Pending launch and verified completion.
 - `2026-10-17T22:56:12Z`: Recorded the configuration/report closure SHA and
   clarified that the throughput estimate uses the predecessor's last-50
   median.
+- `2026-10-17T23:09:01Z`: Recorded the exact immutable snapshot, launch
+  command, selected-device preflight, source-model hashes, and fully verified
+  node-local Central2 dataset.
