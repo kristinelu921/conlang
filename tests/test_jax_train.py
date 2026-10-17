@@ -551,6 +551,63 @@ def test_config_rejects_negative_bridge_supervision_weight() -> None:
         replace(TrainConfig(), bridge_supervision_weight=-0.1).validate()
 
 
+def test_config_rejects_incomplete_or_incompatible_pretrained_initialization() -> None:
+    """The T5 warm start should fail unless artifacts and model geometry match exactly."""
+    with pytest.raises(ValueError, match="pretrained artifacts require"):
+        replace(TrainConfig(), pretrained_model_dir=Path("/tmp/model")).validate()
+
+    pretrained_config = replace(
+        TrainConfig(),
+        hidden_size=256,
+        output_hidden_size=256,
+        sender_hidden_size=256,
+        sender_num_layers=4,
+        sender_num_heads=4,
+        sender_feedforward_size=1024,
+        sender_average_residual=True,
+        receiver_question_query_only=True,
+        num_layers=4,
+        num_heads=4,
+        pretrained_initialization="google_t5_efficient_tiny",
+        pretrained_model_dir=Path("/tmp/model"),
+        pretrained_checkpoint_sha256="0" * 64,
+        pretrained_tokenizer_sha256="1" * 64,
+    )
+    pretrained_config.validate()
+
+    with pytest.raises(ValueError, match="exact model geometry"):
+        replace(pretrained_config, num_layers=2).validate()
+
+
+def test_tpu_config_requires_node_local_pretrained_artifacts() -> None:
+    """TPU warm starts should reject pretrained files outside node-local run storage."""
+    config = TrainConfig(
+        run_id="gate",
+        device="tpu",
+        dataset_cache_dir=Path("/home/user/elf-data/cache"),
+        output_path=Path("/home/user/elf-runs/gate/checkpoint.msgpack"),
+        throughput_warmup_steps=1,
+        steps=2,
+        hidden_size=256,
+        output_hidden_size=256,
+        sender_hidden_size=256,
+        sender_num_layers=4,
+        sender_num_heads=4,
+        sender_feedforward_size=1024,
+        sender_average_residual=True,
+        receiver_question_query_only=True,
+        num_layers=4,
+        num_heads=4,
+        pretrained_initialization="google_t5_efficient_tiny",
+        pretrained_model_dir=Path("/tmp/model"),
+        pretrained_checkpoint_sha256="0" * 64,
+        pretrained_tokenizer_sha256="1" * 64,
+    )
+
+    with pytest.raises(ValueError, match="pretrained_model_dir"):
+        config.validate()
+
+
 def test_tpu_config_requires_regional_cache_and_node_local_output() -> None:
     """TPU runs should fail before launch when locality paths are missing."""
     config = TrainConfig(device="tpu", throughput_warmup_steps=1, steps=2)

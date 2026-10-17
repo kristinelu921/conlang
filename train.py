@@ -23,6 +23,11 @@ from flax.training.train_state import TrainState
 
 from jax_models import JaxCommunicationModel, JaxCommunicationModelConfig, JaxCommunicationOutput
 from linked_facts.generate_dataset import verify_dataset
+from pretrained_initialization import (
+    T5_EFFICIENT_TINY_INITIALIZATION,
+    initialize_from_t5_efficient_tiny,
+    verify_t5_efficient_tiny_artifacts,
+)
 from tokenizer import TextTokenizer, build_task_tokenizer
 from regional_data import DATASET_PREFIX, resolve_training_dataset
 from training_data import load_examples, resolve_split_path
@@ -67,6 +72,10 @@ class TrainConfig:
     device: str = "cpu"
     precision: str = "float32"
     output_path: Path | None = None
+    pretrained_initialization: str | None = None
+    pretrained_model_dir: Path | None = None
+    pretrained_checkpoint_sha256: str | None = None
+    pretrained_tokenizer_sha256: str | None = None
     limit_examples: int | None = None
     repeat_training_examples_to_batch_size: bool = False
     evaluation_message_interventions: bool = False
@@ -196,6 +205,46 @@ class TrainConfig:
             raise ValueError("relative attention needs an even bucket count of at least 4")
         if self.relative_attention_max_distance <= self.relative_attention_num_buckets // 2:
             raise ValueError("relative attention max distance must exceed half the bucket count")
+        pretrained_artifacts = (
+            self.pretrained_model_dir,
+            self.pretrained_checkpoint_sha256,
+            self.pretrained_tokenizer_sha256,
+        )
+        if self.pretrained_initialization is None:
+            if any(value is not None for value in pretrained_artifacts):
+                raise ValueError("pretrained artifacts require pretrained_initialization")
+        else:
+            if self.pretrained_initialization != T5_EFFICIENT_TINY_INITIALIZATION:
+                raise ValueError("unsupported pretrained initialization")
+            if any(value is None for value in pretrained_artifacts):
+                raise ValueError("pretrained initialization requires model directory and both hashes")
+            pretrained_architecture = (
+                self.hidden_size,
+                self.output_hidden_size,
+                sender_hidden_size,
+                sender_num_layers,
+                sender_num_heads,
+                sender_feedforward_size,
+                self.num_layers,
+                self.num_heads,
+                self.message_length,
+                self.relative_attention_num_buckets,
+                self.relative_attention_max_distance,
+            )
+            if pretrained_architecture != (256, 256, 256, 4, 4, 1024, 4, 4, 4, 32, 128):
+                raise ValueError("T5-Efficient-Tiny initialization requires its exact model geometry")
+            if not (
+                self.sender_average_residual
+                and not self.tie_sender_receiver_encoder
+                and self.role_gate_channels is None
+                and not self.sender_question_conditioning
+                and self.receiver_question_input
+                and self.receiver_question_query_only
+                and self.communication_rounds == 1
+                and self.bridge_supervision_weight == 0
+                and self.dropout == 0.1
+            ):
+                raise ValueError("T5-Efficient-Tiny initialization requires the supported communication path")
         if self.device == "tpu":
             if self.dataset_dir is not None:
                 raise ValueError("TPU runs must resolve the region-matched dataset rather than bypassing it")
@@ -207,6 +256,10 @@ class TrainConfig:
                 raise ValueError("TPU output_path must be node-local under /home/<user>/elf-runs/")
             if self.output_path.parent.name != self.run_id:
                 raise ValueError("TPU output directory must exactly match run_id")
+            if self.pretrained_model_dir is not None and not _is_node_local_path(
+                self.pretrained_model_dir, "elf-runs"
+            ):
+                raise ValueError("TPU pretrained_model_dir must be node-local under /home/<user>/elf-runs/")
 
 
 class JaxExampleBatch(NamedTuple):
@@ -1038,6 +1091,15 @@ def _append_metrics(metrics_path: Path | None, metrics: Mapping[str, Any]) -> No
 def train(config: TrainConfig) -> dict[str, Any]:
     """Train the Flax communication model and return final evaluation metrics."""
     config.validate()
+    if config.pretrained_initialization == T5_EFFICIENT_TINY_INITIALIZATION:
+        assert config.pretrained_model_dir is not None
+        assert config.pretrained_checkpoint_sha256 is not None
+        assert config.pretrained_tokenizer_sha256 is not None
+        verify_t5_efficient_tiny_artifacts(
+            config.pretrained_model_dir,
+            config.pretrained_checkpoint_sha256,
+            config.pretrained_tokenizer_sha256,
+        )
     output_directory = config.output_path.parent if config.output_path is not None else None
     if output_directory is not None:
         if output_directory.exists():
@@ -1089,6 +1151,31 @@ def train(config: TrainConfig) -> dict[str, Any]:
         model = JaxCommunicationModel(_model_config(config, tokenizer))
         initialization_optimizer = optax.identity()
         initial_state = _initialize_state(model, initialization_optimizer, first_batch, config.seed)
+        if config.pretrained_initialization == T5_EFFICIENT_TINY_INITIALIZATION:
+            assert config.pretrained_model_dir is not None
+            assert config.pretrained_checkpoint_sha256 is not None
+            assert config.pretrained_tokenizer_sha256 is not None
+            pretrained_parameters, initialization_summary = initialize_from_t5_efficient_tiny(
+                initial_state.params,
+                tokenizer,
+                config.pretrained_model_dir,
+                config.pretrained_checkpoint_sha256,
+                config.pretrained_tokenizer_sha256,
+            )
+            initial_state = initial_state.replace(params=pretrained_parameters)
+            print(
+                f"pretrained_initialization={config.pretrained_initialization} "
+                f"target_leaves={initialization_summary.target_leaves} "
+                f"checkpoint_leaves={initialization_summary.checkpoint_leaves} "
+                f"checkpoint_derived_leaves={initialization_summary.checkpoint_derived_leaves} "
+                f"explicit_fallback_leaves={initialization_summary.explicit_fallback_leaves} "
+                f"target_parameters={initialization_summary.target_parameters} "
+                f"checkpoint_parameters={initialization_summary.checkpoint_parameters} "
+                f"checkpoint_derived_parameters="
+                f"{initialization_summary.checkpoint_derived_parameters} "
+                f"explicit_fallback_parameters="
+                f"{initialization_summary.explicit_fallback_parameters}"
+            )
         optimizer = _optimizer_for_params(config, initial_state.params)
         state = TrainState.create(apply_fn=model.apply, params=initial_state.params, tx=optimizer)
         replicated_state = jax_utils.replicate(state)
@@ -1222,7 +1309,12 @@ def _load_config_values(path: Path) -> dict[str, Any]:
     if unknown_fields:
         raise ValueError(f"unknown training config fields: {', '.join(unknown_fields)}")
     values = dict(loaded)
-    for path_field in ("dataset_dir", "dataset_cache_dir", "output_path"):
+    for path_field in (
+        "dataset_dir",
+        "dataset_cache_dir",
+        "output_path",
+        "pretrained_model_dir",
+    ):
         if values.get(path_field) is not None:
             values[path_field] = Path(values[path_field])
     return values
