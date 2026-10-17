@@ -140,3 +140,11 @@ Pending launch and verified completion.
   global norm clip remains one, but pre-clipping spikes can still change AdamW
   dynamics; finite early steps and the causal curves must be checked before
   interpreting the longer run.
+
+## Updates
+
+- `2026-10-17T22:51:50Z`: Created the planned report and immutable selected
+  configuration at `e38af6e2f3e6761943ed786b32c0737ebf1462aa`.
+- `2026-10-17T22:56:12Z`: Recorded the configuration/report closure SHA and
+  clarified that the throughput estimate uses the predecessor's last-50
+  median.
