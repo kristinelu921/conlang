@@ -5,7 +5,7 @@
 | Field | Value |
 |---|---|
 | Run ID | `20261017-conlang-v4-8-train1m-s10000-m4-qquery-lr4-sx384-sd4-sff1536-rx256-rd2-rff1024-oh1024-avgres-e200` |
-| Status | `failed before training` |
+| Status | `failed` |
 | Started | `2026-10-17T20:00:48Z` |
 | Finished | `2026-10-17T20:00:48Z` |
 | Baseline | `20261017-conlang-v4-8-train1m-s10000-m4-qquery-senderlr4-sx192-sd4-sff768-avgres-eval200-retry1` |
@@ -187,9 +187,9 @@ produced. The TPU remained unclaimed and is eligible for the corrected retry.
 
 ## Interpretation
 
-- Pending results. A lower loss or larger message magnitude without a durable
-  intact-versus-wrong-world gap would mean additional capacity still optimizes
-  a non-passage-specific carrier or answer prior rather than communication.
+- This attempt produced no scientific result, so its launch-control failure has
+  no bearing on the capacity hypothesis. The unchanged hypothesis and decision
+  rule carry forward to the fresh `retry1` run.
 
 ## Review and Verification
 
