@@ -9,7 +9,7 @@
 | Started | not recorded |
 | Finished | not recorded |
 | Baseline | `20261017-conlang-v4-8-train1m-s10000-m4-qquery-senderlr4-sx192-sd4-sff768-avgres-eval200-retry1` |
-| Git revision | not recorded; pending reviewed configuration closure |
+| Git revision | `97d0c9256d639b21bed05b978f2040eec4df99fa` (configuration/report closure) |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` |
 | Primary configuration | `configs/conlang-jax-v4-8-train1m-s10000-m4-qquery-lr4-sx384-sd4-sff1536-rx256-rd2-rff1024-oh1024-avgres-e200.yaml` |
 | Command | not recorded; pending immutable snapshot |
@@ -86,7 +86,8 @@ relative_attention_max_distance: 128
 | Receiver parameters | `1,720,847` | `6,986,639` (`4.060x`) | initialized production Flax trees |
 | Total parameters | `3,831,759` | `14,845,711` (`3.874x`) | initialized production Flax trees |
 
-All other scientific and operational fields remain matched: sender depth 4,
+Run identity, output path, and W&B display name are fresh. All other scientific
+and operational fields remain matched: sender depth 4,
 receiver depth 2, four message slots per sender, average-passage residual,
 question-blind shared sender, receiver question-only query path, sender learning
 rate multiplier 4, optimizer, seed, 1M-example Central2 dataset, global batch
@@ -118,7 +119,7 @@ Pending launch and verified completion.
 
 | Artifact | Path or URL | Verified |
 |---|---|---|
-| Configuration | `configs/conlang-jax-v4-8-train1m-s10000-m4-qquery-lr4-sx384-sd4-sff1536-rx256-rd2-rff1024-oh1024-avgres-e200.yaml` | parsed, validated, and CPU-initialized; immutable commit pending |
+| Configuration | `configs/conlang-jax-v4-8-train1m-s10000-m4-qquery-lr4-sx384-sd4-sff1536-rx256-rd2-rff1024-oh1024-avgres-e200.yaml` | parsed, validated, and CPU-initialized; committed at `97d0c9256d639b21bed05b978f2040eec4df99fa`; PR publication pending |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` | existing PR; update pending review |
 | Source snapshot | not recorded; pending staging | no |
 | Regional dataset | `/home/kristinelu/elf-data/conlangs-v1-train1m` | prior verified Central2 copy exists; fresh integrity check pending |
@@ -159,8 +160,14 @@ Pending launch and verified completion.
   divisibility and node-local path constraints pass, and the production model
   initializes with the stated parameter counts and a 4-by-256 message from each
   sender.
-- Correctness and cleanup reviews are pending the immutable configuration
-  closure.
+- Correctness review found no confirmed issue in immutable range
+  `708eee6b258df8e9f9049087ad0490b88d8693ae..97d0c9256d639b21bed05b978f2040eec4df99fa`.
+  It independently verified the YAML delta, production shapes and parameter
+  counts, finite forward and greedy paths, seven focused tests, static
+  per-device batch, HBM plausibility, causal rule, scope, and secrets. Cleanup
+  review found only stale commit-state wording and an overbroad matched-fields
+  sentence; this follow-up records the immutable commit and explicitly excludes
+  the three fresh identity/path fields.
 
 ## Updates
 
