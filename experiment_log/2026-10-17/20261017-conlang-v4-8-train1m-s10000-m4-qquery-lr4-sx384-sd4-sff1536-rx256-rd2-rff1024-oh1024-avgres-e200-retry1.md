@@ -108,8 +108,8 @@ Pending launch and verified completion.
 | Artifact | Path or URL | Verified |
 |---|---|---|
 | Configuration | primary configuration above | parses and validates; SHA-256 `fe801cd1caf23def3d97e4da3a0bea20a92e7265e11cb9bf26cccd0b2cab3298`; committed at `3d7597c29275bbc074cb03d26795e8bf9e9e8b13` |
-| Pull request | `https://github.com/kristinelu921/conlang/pull/1` | retry closure pushed at `3d7597c29275bbc074cb03d26795e8bf9e9e8b13`; review follow-up pending |
-| Source snapshot | `/kmh-nfs-ssd-us-mount/staging/kristine/elf/20261017-conlang-v4-8-train1m-s10000-m4-qquery-lr4-sx384-sd4-sff1536-rx256-rd2-rff1024-oh1024-avgres-e200-retry1-20261017T200706.184345335Z` locally; corresponding `/home/kristinelu/elf-runs/sources/` path in the command remotely | local snapshot: 67 files, 480,583 bytes, relative-manifest SHA-256 `2790ee0c5861bd0045f304bbace256bec8b1f8af85113bf9521940a7218f9b81`; remote copy pending |
+| Pull request | `https://github.com/kristinelu921/conlang/pull/1` | retry closure and both review fixes pushed through `bc4c6b9` |
+| Source snapshot | `/kmh-nfs-ssd-us-mount/staging/kristine/elf/20261017-conlang-v4-8-train1m-s10000-m4-qquery-lr4-sx384-sd4-sff1536-rx256-rd2-rff1024-oh1024-avgres-e200-retry1-20261017T200706.184345335Z` locally; corresponding `/home/kristinelu/elf-runs/sources/` path in the command remotely | exact local/remote match: 67 files, 480,583 bytes, relative-manifest SHA-256 `2790ee0c5861bd0045f304bbace256bec8b1f8af85113bf9521940a7218f9b81`; no cache files |
 | Regional dataset | `/home/kristinelu/elf-data/conlangs-v1-train1m` | prior launch preflight verified 95,042,272 bytes and manifest SHA-256 `1a860a5a0ace2d249c0b7e7273925d9545f61aaa261e00f5b9fe75900da91b20`; retry gate pending |
 | Checkpoint | retry output path from configuration | no |
 | Metrics | retry output directory | no |
@@ -132,6 +132,11 @@ Pending launch and verified completion.
   `/home/kristinelu/elf-runs/wandb` path. The exact wrapper creates and checks
   only that sibling after output freshness checks; it never creates the retry
   output directory before `train.py`.
+- The first snapshot-copy invocation was rejected locally before transfer
+  because TPU `scp` accepts `--scp-flag`, not `--ssh-flag`. No remote path was
+  created. The corrected invocation used `--scp-flag=-F`,
+  `--scp-flag=/dev/null`, and `--scp-flag=-O`; the exact-copy verification above
+  then passed. This was transport-command validation, not a run attempt.
 
 ## Interpretation
 
@@ -156,3 +161,6 @@ Pending launch and verified completion.
 - `2026-10-17T20:07:06Z`: Committed and pushed the retry closure, created the
   immutable local snapshot, and corrected the wrapper to create only the
   sibling W&B base after retry-output freshness checks.
+- `2026-10-17T20:09:28Z`: Copied the reviewed snapshot node-locally after one
+  rejected local `scp` flag invocation, then verified exact file count, byte
+  count, manifest digest, config digest, and absence of cache files remotely.
