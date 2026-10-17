@@ -233,7 +233,7 @@ def test_t5_initialization_assigns_every_target_leaf(tmp_path: Path) -> None:
     )
     assert np.array_equal(
         flat_parameters[("sender", "layer_0", "self_attention", "query", "kernel")],
-        source_query_kernel.reshape(256, 4, 64),
+        source_query_kernel.reshape(256, 4, 64) * np.sqrt(64),
     )
     assert np.all(flat_parameters[("sender", "layer_0", "self_attention", "query", "bias")] == 0)
     assert np.array_equal(
@@ -250,6 +250,54 @@ def test_t5_initialization_assigns_every_target_leaf(tmp_path: Path) -> None:
     )
     assert np.all(flat_parameters[("receiver", "decoder_layer_0", "cross_relative_attention_bias")] == 0)
     assert np.all(flat_parameters[("receiver", "output_hidden_projection", "bias")] == 0)
+
+
+def test_t5_query_mapping_preserves_source_attention_logits(tmp_path: Path) -> None:
+    """Mapped attention should retain T5 content logits relative to position bias."""
+    task_tokenizer = TextTokenizer(["buffalo"])
+    checkpoint_sha256, tokenizer_sha256, _embedding, source_parameters = (
+        _write_fake_t5_artifacts(tmp_path, task_tokenizer)
+    )
+    target_parameters = {
+        "sender": {
+            "layer_0": {
+                "self_attention": {
+                    "query": {
+                        "kernel": np.zeros((256, 4, 64), dtype=np.float32),
+                    },
+                },
+            },
+        },
+    }
+    initialized_parameters, _summary = initialize_from_t5_efficient_tiny(
+        target_parameters,
+        task_tokenizer,
+        tmp_path,
+        checkpoint_sha256,
+        tokenizer_sha256,
+    )
+    mapped_query_kernel = flatten_dict(initialized_parameters)[
+        ("sender", "layer_0", "self_attention", "query", "kernel")
+    ]
+    source_query_kernel = source_parameters[
+        ("encoder", "block", "0", "layer", "0", "SelfAttention", "q", "kernel")
+    ]
+    random_generator = np.random.default_rng(7)
+    query_inputs = (
+        random_generator.normal(size=(2, 3, 256)).astype(np.float32) / 10_000
+    )
+    key_states = random_generator.normal(size=(2, 5, 4, 64)).astype(np.float32)
+    relative_bias = random_generator.normal(size=(1, 4, 3, 5)).astype(np.float32)
+
+    source_queries = (query_inputs @ source_query_kernel).reshape(2, 3, 4, 64)
+    source_logits = np.einsum("bqhd,bkhd->bhqk", source_queries, key_states) + relative_bias
+    mapped_queries = np.einsum("bqd,dhk->bqhk", query_inputs, mapped_query_kernel)
+    target_logits = (
+        np.einsum("bqhd,bkhd->bhqk", mapped_queries, key_states) / np.sqrt(64)
+        + relative_bias
+    )
+
+    assert np.allclose(target_logits, source_logits, rtol=1e-5, atol=1e-4)
 
 
 def test_t5_initialization_rejects_artifact_hash_mismatch(tmp_path: Path) -> None:

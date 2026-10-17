@@ -88,13 +88,20 @@ def _source_array(
     return np.asarray(source_parameters[path], dtype=np.float32)
 
 
-def _reshape_attention_kernel(source: np.ndarray, target: np.ndarray) -> np.ndarray:
-    """Reshape a T5 flattened attention kernel into Flax multi-head axes."""
+def _reshape_attention_kernel(
+    source: np.ndarray,
+    target: np.ndarray,
+    compensate_query_scaling: bool,
+) -> np.ndarray:
+    """Reshape a T5 attention kernel and preserve its query-scaling convention."""
     if source.size != target.size:
         raise ValueError(
             f"attention kernel size mismatch: source {source.shape}, target {target.shape}"
         )
-    return source.reshape(target.shape)
+    reshaped = source.reshape(target.shape)
+    if compensate_query_scaling:
+        reshaped = reshaped * np.sqrt(target.shape[-1])
+    return reshaped
 
 
 def _encoder_parameter(
@@ -129,7 +136,12 @@ def _encoder_parameter(
             source_parameters,
             (*source_prefix, "0", "SelfAttention", source_names[attention_part], "kernel"),
         )
-        return _reshape_attention_kernel(source, target), "checkpoint"
+        compensate_query_scaling = attention_part == "query"
+        category = "derived" if compensate_query_scaling else "checkpoint"
+        return (
+            _reshape_attention_kernel(source, target, compensate_query_scaling),
+            category,
+        )
     if suffix[0] == "attention_norm":
         if suffix[1] == "bias":
             return np.zeros_like(target), "fallback"
@@ -211,7 +223,12 @@ def _decoder_parameter(
                 "kernel",
             ),
         )
-        return _reshape_attention_kernel(source, target), "checkpoint"
+        compensate_query_scaling = attention_part == "query"
+        category = "derived" if compensate_query_scaling else "checkpoint"
+        return (
+            _reshape_attention_kernel(source, target, compensate_query_scaling),
+            category,
+        )
     norm_layers = {
         "self_attention_norm": "0",
         "cross_attention_norm": "1",
@@ -257,7 +274,12 @@ def _question_message_parameter(
             source_parameters,
             (*source_prefix, "1", "EncDecAttention", source_names[attention_part], "kernel"),
         )
-        return _reshape_attention_kernel(source, target), "checkpoint"
+        compensate_query_scaling = attention_part == "query"
+        category = "derived" if compensate_query_scaling else "checkpoint"
+        return (
+            _reshape_attention_kernel(source, target, compensate_query_scaling),
+            category,
+        )
     if suffix[0] == "attention_norm":
         if suffix[1] == "bias":
             return np.zeros_like(target), "fallback"

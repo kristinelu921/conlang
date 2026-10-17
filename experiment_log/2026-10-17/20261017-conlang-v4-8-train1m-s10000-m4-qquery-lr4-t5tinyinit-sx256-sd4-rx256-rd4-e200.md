@@ -110,10 +110,11 @@ Both hashes were verified on the control host and are launch-time fail-closed
 inputs.
 
 Every target parameter leaf receives an explicit value. Of 12,580,239 target
-parameters across 272 leaves, 11,281,408 parameters in 136 leaves are copied or
-reshaped directly from matching T5 encoder/decoder tensors; 1,253,888 parameters
-in five leaves are checkpoint-derived task embeddings, sentinel query slots,
-T5 final-normalization diagonals, and the tied-style task readout; and 44,943
+parameters across 272 leaves, 10,167,296 parameters in 119 leaves are copied or
+reshaped directly from matching T5 encoder/decoder tensors; 2,368,000 parameters
+in 22 leaves are checkpoint-derived task embeddings, sentinel query slots,
+attention-scaled query kernels, T5 final-normalization diagonals, and the tied-style
+task readout; and 44,943
 parameters in 131 leaves use explicit zero fallbacks for biases and decoder
 cross-position biases that do not exist in T5. Thus 99.64% of scalar parameters
 are checkpoint-direct or checkpoint-derived, while no random initializer value
@@ -126,7 +127,10 @@ scale does not create pathological post-norm logits. The four sender query slots
 use `<extra_id_0>` through `<extra_id_3>`. The sender message and receiver output-
 hidden adapters use the T5 encoder and decoder final-normalization weights as
 diagonal projections. The answer readout reuses the derived task embeddings with
-the T5 `1/sqrt(d_model)` scale.
+the T5 `1/sqrt(d_model)` scale. Imported query kernels are multiplied by
+`sqrt(head_dim) = 8` because native Flax T5 cancels Flax attention's built-in
+query scaling; a differential logit oracle verifies content logits and relative
+position bias retain their source balance.
 
 This transfers parameter content, not the exact pretrained T5 function. T5 uses
 pre-norm RMSNorm and bias-free layers, while this communication model retains
@@ -168,8 +172,8 @@ Pending launch and verified completion.
 ## Observations
 
 - A CPU oracle with the exact production parameter tree initialized all 272
-  leaves and produced a finite one-example loss of `18.2122917` with finite
-  sender and receiver gradients.
+  leaves and produced a finite one-example loss of `16.6716576`, sender gradient
+  norm `16.9545975`, and receiver gradient norm `149.6481628`.
 - All 71 sender leaves had nonzero first-backward gradients; this removes the
   prior zero-message-projection one-update gate.
 - The oracle is a numerical startup check, not an experiment result.
