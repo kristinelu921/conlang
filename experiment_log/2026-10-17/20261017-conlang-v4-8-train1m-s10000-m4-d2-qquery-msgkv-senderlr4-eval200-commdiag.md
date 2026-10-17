@@ -5,9 +5,9 @@
 | Field | Value |
 |---|---|
 | Run ID | `20261017-conlang-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-eval200-commdiag` |
-| Status | `running` |
+| Status | `completed` |
 | Started | `2026-10-17T03:02:11Z` |
-| Finished | not started |
+| Finished | `2026-10-17T03:16:18Z` |
 | Baseline | `20261016-conlang-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-commdiag` |
 | Git revision | primary configuration/report commit `6003960c6e9c3caffe5d1b2ef044d35e9d604180`; reviewed immutable launch snapshot `967a9be97c9b4ddd7a55d967901f07c5a81d523c` |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` |
@@ -96,9 +96,51 @@ throughput separately from the baseline.
 
 ## Results
 
-Pending launch and verified completion. The expected record contains 50
-evaluation points from steps 200 through 10,000, each with exact match and mean
-joint log probability for all six intervention arms.
+The run completed all 10,000 optimizer steps and recorded all 50 scheduled
+evaluations. Selected points around the transition and at the endpoint are:
+
+| Step | Intact correct | Zero correct | Wrong-world correct | Intact - zero | Intact - wrong world |
+|---:|---:|---:|---:|---:|---:|
+| 200 | 3/256 | 4/256 | 3/256 | -0.000400 nats | +0.000216 nats |
+| 600 | 2/256 | 2/256 | 2/256 | -0.000064 nats | -0.000028 nats |
+| 800 | 4/256 | 4/256 | 4/256 | +0.008385 nats | +0.000000 nats |
+| 1,000 | 4/256 | 1/256 | 4/256 | +0.832998 nats | +0.000304 nats |
+| 1,200 | 2/256 | 2/256 | 2/256 | +2.482804 nats | -0.000897 nats |
+| 10,000 | 0/256 | 0/256 | 0/256 | +1.108767 nats | +0.001019 nats |
+
+The step-830 loss transition is accompanied by a short, selective sender-credit
+pulse. The median mean-sender gradient norm over steps 600--790 is
+`0.0003479248`; it reaches `0.02337617` at step 820, a `67.19x` increase. The
+receiver gradient rises only `1.49x` over its matched pre-transition median, so
+the receiver-to-sender ratio temporarily contracts from a median `3723.48x` to
+`84.02x`. At step 820 the sender update-to-weight ratio (`0.00326129`) even
+slightly exceeds the receiver ratio (`0.00302606`). There is no abrupt weight-
+norm or activation saturation: from step 790 to 840, sender weight norm moves
+only from `59.7317` to `59.7999`, while message-1 RMS moves from `1.01869` to
+`1.03731`.
+
+The intervention trajectory changes the interpretation of that pulse. The
+first large intact-versus-zero gap appears at step 1,000, but it is not stable:
+across all 50 evaluations the gap ranges from `-1.410881` to `+4.596873` nats,
+is positive at only 21 points, and has median `-0.011885` nats. Zeroing the
+entire learned message is out of distribution, so this is volatile carrier
+sensitivity rather than evidence of a robust communication circuit.
+
+Correct passage alignment remains absent throughout. Intact and wrong-world
+exact-match counts tie at 49/50 evaluations, and their maximum absolute
+likelihood difference is only `0.001106` nats. Swapping sender channels ties
+intact exact match at all 50 points and differs by at most `0.008024` nats.
+Single-agent messages usually have *higher* likelihood than both messages:
+the median intact-minus-agent gaps are `-0.185288` and `-0.169647` nats. This
+is consistent with two-channel interference, not productive composition.
+
+Saved greedy outputs also remain largely collapsed: 923/1,000 logged training
+batches emit one answer for all 256 examples. The transition-region batches
+are uniform (`penguin` at step 600, `bookcase` at 800, `meerkat` at 1,000, and
+`sparrow` at 1,200). The full outputs artifact is byte-identical to the matched
+baseline. All 1,000 non-throughput training records are also exactly identical,
+and the final intervention record matches exactly, proving that the extra
+evaluations measured rather than perturbed the scientific trajectory.
 
 ## Artifacts
 
@@ -108,17 +150,21 @@ joint log probability for all six intervention arms.
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` | branch updated through launch closure `967a9be97c9b4ddd7a55d967901f07c5a81d523c` |
 | Source snapshot | `/kmh-nfs-ssd-us-mount/staging/kristine/elf/20261017-conlang-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-eval200-commdiag-20261017T025836.329941057Z`; remote `/home/kristinelu/elf-runs/source/20261017-conlang-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-eval200-commdiag` | local and remote match: 63 files, 462255 bytes, relative SHA-256-manifest digest `489054a3ea9e475cc70bed19af058a8a0034d9b41992e08b3768e7852b8988b8`; no cache files |
 | Regional dataset | `/home/kristinelu/elf-data/conlangs-v1-train1m` | freshly verified: 128125 worlds, 1025000 questions, 8 questions/world; manifest SHA-256 `1a860a5a0ace2d249c0b7e7273925d9545f61aaa261e00f5b9fe75900da91b20` |
-| Checkpoint | `/home/kristinelu/elf-runs/20261017-conlang-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-eval200-commdiag/checkpoint.msgpack` | pending |
-| Metrics | pending | no |
-| Outputs | pending | no |
-| Launcher log | pending | no |
-| Tracking run | `https://wandb.ai/kaynelu921-massachusetts-institute-of-technology/conlangs/runs/dr3ydegs` | run ID `dr3ydegs`; live sync confirmed at launch |
+| Checkpoint | `/home/kristinelu/elf-runs/20261017-conlang-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-eval200-commdiag/checkpoint.msgpack` | 28,799,175 bytes; SHA-256 `2beb75200686a46323f7cd41c18abb8c081126ca11bf4d335fdc7fcac1e50427`; CPU-only Flax restore verified step 10,000 |
+| Metrics | `experiment_log/2026-10-17/artifacts/20261017-conlang-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-eval200-commdiag/metrics.jsonl` | 1,940,943 bytes; SHA-256 `5309962729054cb2c8dcae27d9e1895eab70337ca96712953522d40013380891`; 1,050 parsed records including 50 evaluations; byte-identical to remote |
+| Outputs | `experiment_log/2026-10-17/artifacts/20261017-conlang-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-eval200-commdiag/outputs.jsonl` | 14,054,917 bytes; SHA-256 `a45406b0a385a949bcc369474dd614d4dbd27877efd4ef44c39bb8115f4fdca0`; 1,000 parsed records; byte-identical to remote and matched baseline |
+| Launcher log | `experiment_log/2026-10-17/artifacts/20261017-conlang-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-eval200-commdiag/launcher.log.gz` | 14,958 bytes; SHA-256 `d222b630c7708b5a648b423c5c1f62cf9a422dc54f7d3e5f45ed072b70007fb0`; decompressed SHA-256 `35365f25edd9295b8bd0d96e897595a25e5a7c54c9274fdda03910c312e85d0a` matches the 85,357-byte remote log |
+| Tracking run | `https://wandb.ai/kaynelu921-massachusetts-institute-of-technology/conlangs/runs/dr3ydegs` | authenticated API reports `finished`, step 10,000, matching final metrics, and 5 synced files |
 
 ## Failure Details
 
-- Last known step: not applicable; run not started.
-- Error summary: not applicable.
-- Detailed output: not recorded; launch pending.
+- Last known step: `10,000`; completion sentinel and checkpoint agree.
+- Training error summary: none; canonical log error scan is clean.
+- Post-run monitoring transport: the first all-worker reconnect failed before
+  authentication with malformed SSH banner data while the TPU API remained
+  READY/HEALTHY. The documented explicit `--worker=0 --internal-ip` bounded
+  retry succeeded; later SCP retries produced exact remote/local hashes. No
+  training process, checkpoint, or result was altered.
 
 ## Observations
 
@@ -128,12 +174,18 @@ joint log probability for all six intervention arms.
   runtime has JAX `0.6.2`, Flax `0.10.5`, Optax `0.2.8`, and W&B `0.28.1`.
 - The matched baseline completed on the same TPU and node-local dataset at a
   median final-50 throughput of `5,682.36` examples/s.
+- This run's median final-50 throughput is `5,681.41` examples/s, only `0.017%`
+  below the matched baseline; the evaluation timer is excluded from this rate.
 
 ## Interpretation
 
-- This design can establish when the receiver becomes dependent on learned
-  messages and whether aligned passage content becomes causally beneficial. It
-  cannot localize a change more finely than the 200-step evaluation cadence.
+- The loss transition is a real optimization phase change with a brief sender
+  gradient/update pulse. It is not grokking or a useful communication phase:
+  correctness remains near zero, outputs remain mostly batch-constant, the
+  intact-versus-zero effect is volatile, and correct versus wrong passage
+  messages remain indistinguishable. The most supported circuit-level account
+  is a receiver that becomes sensitive to the learned message manifold without
+  reliably decoding passage-specific content.
 
 ## Review and Verification
 
@@ -156,3 +208,7 @@ joint log probability for all six intervention arms.
   regional data, disk, and idle-device launch gates.
 - `2026-10-17T03:02:11Z`: Launched on the selected v4-8. W&B run `dr3ydegs`
   began syncing, and the exact trainer process was confirmed active on worker 0.
+- `2026-10-17T03:16:18Z`: Reached step 10,000 and emitted the completion
+  sentinel. Verified 50/50 intervention records, restorable checkpoint step,
+  canonical log, W&B finalization, TPU health, absent trainer/lock/VFIO holder,
+  and exact remote/local artifact hashes.
