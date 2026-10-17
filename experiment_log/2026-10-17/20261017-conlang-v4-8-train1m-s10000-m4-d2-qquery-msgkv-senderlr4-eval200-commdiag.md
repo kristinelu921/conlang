@@ -198,6 +198,10 @@ evaluations measured rather than perturbed the scientific trajectory.
   `466a54096d90c5095b3872deb231f77d6eac3b33..95c6686cabbee89cf0159abbb492f2c71cc109d3`.
   Cleanup review found two report-table issues; both are fixed in
   `16e97a980009eb858922187454c60bbd6ae70625`.
+- Completed-result correctness review independently passed at evidence commit
+  `07b22a52b4b57d1f124acfa7a9e2e993b04760c5`. The completed-result cleanup
+  review found only this missing ledger distinction, corrected here before its
+  narrow re-review.
 
 ## Updates
 
