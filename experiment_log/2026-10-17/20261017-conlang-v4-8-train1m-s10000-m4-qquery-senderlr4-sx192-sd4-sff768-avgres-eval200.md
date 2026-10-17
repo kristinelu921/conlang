@@ -5,14 +5,14 @@
 | Field | Value |
 |---|---|
 | Run ID | `20261017-conlang-v4-8-train1m-s10000-m4-qquery-senderlr4-sx192-sd4-sff768-avgres-eval200` |
-| Status | `planned` |
-| Started | not started |
-| Finished | not applicable |
+| Status | `failed before cloud access` |
+| Started | `2026-10-17T15:27Z` (local runtime-initialization attempt) |
+| Finished | `2026-10-17T15:27Z` |
 | Baseline | `20261017-conlang-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-eval200-commdiag` |
-| Git revision | pending immutable launch snapshot |
+| Git revision | `dbc5ed661c1647501e4dd24e1dad0c8f4e2f5744` |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` |
 | Primary configuration | `configs/conlang-jax-v4-8-train1m-s10000-m4-qquery-senderlr4-sx192-sd4-sff768-avgres-eval200.yaml` |
-| Command | not recorded; pending immutable snapshot and final launch gate |
+| Command | `bash tpu_scripts/initialize_elf_runtime.sh he-vision-group kmh-tpuvm-v4-8-spot-kristine-17-12-29-15-N-us-central2-b us-central2-b` |
 | Seed | `1730` |
 | Hardware | selected `kmh-tpuvm-v4-8-spot-kristine-17-12-29-15-N-us-central2-b`, `us-central2-b`, Spot `v4-8`; current API state READY/HEALTHY and occupancy AVAILABLE |
 
@@ -110,27 +110,46 @@ positive result to the combined sender treatment rather than either component.
 
 ## Results
 
-Pending launch and verified completion.
+The local runtime initializer exited `1` before its first cloud call because
+the isolated launch worktree intentionally contained no `.netrc`. No source,
+data, output, checkpoint, W&B run, TPU process, or accelerator state was
+created or changed. Per the immutable failure policy, this run identity is
+retired; the unchanged scientific configuration continues as `retry1`.
 
 ## Artifacts
 
 | Artifact | Path or URL | Verified |
 |---|---|---|
-| Configuration | `configs/conlang-jax-v4-8-train1m-s10000-m4-qquery-senderlr4-sx192-sd4-sff768-avgres-eval200.yaml` | pending immutable snapshot |
+| Configuration | `configs/conlang-jax-v4-8-train1m-s10000-m4-qquery-senderlr4-sx192-sd4-sff768-avgres-eval200.yaml` | committed at the recorded revision |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` | existing PR; update pending |
-| Source snapshot | not recorded | no |
-| Regional dataset | `/home/kristinelu/elf-data/conlangs-v1-train1m` | pending selected-worker verification |
+| Source snapshot | not created | no |
+| Regional dataset | `/home/kristinelu/elf-data/conlangs-v1-train1m` | not accessed by this attempt |
 | Checkpoint | `/home/kristinelu/elf-runs/20261017-conlang-v4-8-train1m-s10000-m4-qquery-senderlr4-sx192-sd4-sff768-avgres-eval200/checkpoint.msgpack` | no |
-| Metrics | pending run-scoped artifact directory | no |
-| Outputs | pending run-scoped artifact directory | no |
-| Launcher log | pending run-scoped artifact directory | no |
-| Tracking run | not recorded | no |
+| Metrics | none | no |
+| Outputs | none | no |
+| Runtime-initializer log | `experiment_log/2026-10-17/artifacts/20261017-conlang-v4-8-train1m-s10000-m4-qquery-senderlr4-sx192-sd4-sff768-avgres-eval200-runtime-init.log` | exact command, exit status, and error recorded |
+| Tracking run | none created | no |
 
 ## Failure Details
 
-- Last known step: not applicable
-- Error summary: not applicable
-- Detailed output: not recorded
+- Stage reached: local runtime-initializer credential preflight, before cloud
+  access and before source/data staging.
+- Last known step: zero; Python training never started.
+- Error summary: `ERROR: ELF W&B credential file is missing:
+  /tmp/conlang-launch-top100/.netrc`.
+- Exit status: `1`.
+- Detailed output:
+  `experiment_log/2026-10-17/artifacts/20261017-conlang-v4-8-train1m-s10000-m4-qquery-senderlr4-sx192-sd4-sff768-avgres-eval200-runtime-init.log`.
+- Root cause: the initializer resolved its default credential path relative to
+  the isolated worktree, where credentials are intentionally absent.
+- Alternatives rejected: TPU health, occupancy, packages, source, regional
+  data, model construction, compilation, and W&B authentication were not
+  reached by this command.
+- Repair: verified `/home/kristinelu/.netrc` is owned by `kristinelu`, mode
+  `0600`, and contains an `api.wandb.ai` authentication entry without printing
+  its contents. Retry with that exact path in `ELF_NETRC_PATH`.
+- Checkpoint / artifact state: no output path, checkpoint, metric, or W&B run
+  was created by the failed initializer.
 
 ## Observations
 
@@ -175,3 +194,7 @@ Pending launch and verified completion.
 - `2026-10-17`: Planned the jointly larger and average-initialized shared sender
   treatment, preserving receiver and channel dimensions and the matched
   10,000-step/evaluation protocol.
+- `2026-10-17T15:27Z`: Runtime initialization stopped locally at the credential
+  preflight because the isolated worktree had no `.netrc`. Retired this
+  zero-step identity and selected a fresh `retry1` identity with unchanged
+  science; no cloud or TPU mutation occurred.
