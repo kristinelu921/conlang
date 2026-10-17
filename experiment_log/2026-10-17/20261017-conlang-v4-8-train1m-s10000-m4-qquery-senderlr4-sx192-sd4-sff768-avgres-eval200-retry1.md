@@ -5,17 +5,17 @@
 | Field | Value |
 |---|---|
 | Run ID | `20261017-conlang-v4-8-train1m-s10000-m4-qquery-senderlr4-sx192-sd4-sff768-avgres-eval200-retry1` |
-| Status | `planned` |
+| Status | `preflight passed; launch pending` |
 | Started | not started |
 | Finished | not applicable |
 | Baseline | `20261017-conlang-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-eval200-commdiag` |
 | Retry of | `20261017-conlang-v4-8-train1m-s10000-m4-qquery-senderlr4-sx192-sd4-sff768-avgres-eval200` |
-| Git revision | pending immutable launch snapshot |
+| Git revision | `53151f17b14841f6275793a96459785ec59720d9` (reviewed configuration closure used for the immutable snapshot) |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` |
 | Primary configuration | `configs/conlang-jax-v4-8-train1m-s10000-m4-qquery-senderlr4-sx192-sd4-sff768-avgres-eval200-retry1.yaml` |
-| Command | not recorded; pending immutable snapshot and final launch gate |
+| Command | `/snap/google-cloud-cli/current/bin/gcloud compute tpus tpu-vm ssh kmh-tpuvm-v4-8-spot-kristine-17-12-29-15-N-us-central2-b --project=he-vision-group --zone=us-central2-b --worker=all --internal-ip --ssh-flag=-F --ssh-flag=/dev/null --command='set -euo pipefail; source_dir=/home/kristinelu/elf-runs/sources/20261017-conlang-v4-8-train1m-s10000-m4-qquery-senderlr4-sx192-sd4-sff768-avgres-eval200-retry1-20261017T153818.926176475Z; output_dir=/home/kristinelu/elf-runs/20261017-conlang-v4-8-train1m-s10000-m4-qquery-senderlr4-sx192-sd4-sff768-avgres-eval200-retry1; launcher_log=/home/kristinelu/elf-runs/20261017-conlang-v4-8-train1m-s10000-m4-qquery-senderlr4-sx192-sd4-sff768-avgres-eval200-retry1.launcher.log; test -d "$source_dir"; test ! -e "$output_dir"; test ! -e "$launcher_log"; test ! -e /tmp/libtpu_lockfile; test -z "$(sudo fuser /dev/vfio/* 2>/dev/null || true)"; cd "$source_dir"; export JAX_PLATFORMS=tpu CUDA_VISIBLE_DEVICES= ELF_TPU_WORKER_INDEX=0 PYTHONPATH="$PWD" HF_HOME=/home/kristinelu/elf-runs/hf-cache PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1; ulimit -c 0; /home/kristinelu/elf-runs/runtime/venv/bin/python -u train.py --config configs/conlang-jax-v4-8-train1m-s10000-m4-qquery-senderlr4-sx192-sd4-sff768-avgres-eval200-retry1.yaml 2>&1 | tee "$launcher_log"' --quiet` |
 | Seed | `1730` |
-| Hardware | selected `kmh-tpuvm-v4-8-spot-kristine-17-12-29-15-N-us-central2-b`, `us-central2-b`, Spot `v4-8`; API state READY/HEALTHY and occupancy AVAILABLE before initialization |
+| Hardware | `kmh-tpuvm-v4-8-spot-kristine-17-12-29-15-N-us-central2-b`, `us-central2-b`, Spot `v4-8`; API state READY/HEALTHY, one host/four TPU devices, 85 GiB free, runtime and occupancy gates passed |
 
 ## Configuration
 
@@ -117,10 +117,10 @@ Pending launch and verified completion.
 
 | Artifact | Path or URL | Verified |
 |---|---|---|
-| Configuration | `configs/conlang-jax-v4-8-train1m-s10000-m4-qquery-senderlr4-sx192-sd4-sff768-avgres-eval200-retry1.yaml` | pending immutable snapshot |
+| Configuration | `configs/conlang-jax-v4-8-train1m-s10000-m4-qquery-senderlr4-sx192-sd4-sff768-avgres-eval200-retry1.yaml` | local and remote SHA-256 `4a0fb81af1d6a1b4845537305b8ba7415c405c0063dd475467603123e4eaf7f8`; parsed and validated remotely |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` | existing PR; update pending |
-| Source snapshot | not recorded | no |
-| Regional dataset | `/home/kristinelu/elf-data/conlangs-v1-train1m` | pending selected-worker verification |
+| Source snapshot | `/kmh-nfs-ssd-us-mount/staging/kristine/elf/20261017-conlang-v4-8-train1m-s10000-m4-qquery-senderlr4-sx192-sd4-sff768-avgres-eval200-retry1-20261017T153818.926176475Z`; remote `/home/kristinelu/elf-runs/sources/20261017-conlang-v4-8-train1m-s10000-m4-qquery-senderlr4-sx192-sd4-sff768-avgres-eval200-retry1-20261017T153818.926176475Z` | local and remote match: 65 files, 477,532 bytes, relative manifest digest `c8b9145d6e91773b4b3b228ae12610c9e3ddd23ee282a61b180ccc64c07a04ea`; no bytecode/test caches |
+| Regional dataset | `/home/kristinelu/elf-data/conlangs-v1-train1m` | generated on the selected Central2 TPU; 128,125 worlds / 1,025,000 questions / 8 questions per world; 95,042,272 bytes; all six gzip streams and content checks passed; manifest SHA-256 `1a860a5a0ace2d249c0b7e7273925d9545f61aaa261e00f5b9fe75900da91b20` |
 | Checkpoint | `/home/kristinelu/elf-runs/20261017-conlang-v4-8-train1m-s10000-m4-qquery-senderlr4-sx192-sd4-sff768-avgres-eval200-retry1/checkpoint.msgpack` | no |
 | Metrics | pending run-scoped artifact directory | no |
 | Outputs | pending run-scoped artifact directory | no |
@@ -145,6 +145,18 @@ Pending launch and verified completion.
 - The baseline receiver has `1,720,847` parameters. The selected sender has
   `1,830,464` parameters, 6.37% more than the unchanged receiver. The full
   initialized model has `3,831,759` FP32 parameters (`15,327,036` raw bytes).
+- The regional bucket reports location `US-CENTRAL2`, but
+  `gs://kmh-gcp-us-central2/kristine/datasets/conlangs-train1m` contains no
+  objects. Matching the previous 1M run, the deterministic dataset was
+  regenerated on the selected Central2 host with seed `1729`, starter split
+  sizes except `train_worlds=125000`, then fully stream-verified. No dataset
+  crossed regions.
+- The installed runtime reports JAX/JAXlib `0.6.2`, Flax `0.10.5`, Optax
+  `0.2.8`, NumPy `1.26.4`, and W&B `0.28.1`; the runtime freeze digest is
+  `775959a9a56fe178a814793e9bf32ad6c779933d1f4900cbb2239a8e18cd1346`.
+  The repository preflight and a separate CPU-only integrity probe confirmed
+  output/log freshness, source/config hashes, W&B authentication, writable
+  local paths, no canonical libtpu lock, and idle VFIO resources.
 
 ## Interpretation
 
@@ -177,3 +189,10 @@ Pending launch and verified completion.
 - `2026-10-17T15:27Z`: Created retry 1 after the isolated-worktree credential
   preflight stopped retry 0 before cloud access. Scientific settings are
   unchanged; run, output, and W&B identities are fresh.
+- `2026-10-17T15:38:18Z`: Created and copied the immutable 65-file source
+  snapshot, then verified identical local and remote manifests and selected
+  config hashes.
+- `2026-10-17T15:42Z`: Finished deterministic node-local dataset generation
+  and full integrity verification. The isolated runtime and final prelaunch
+  integrity gates passed; launch remains pending the immediate final occupancy
+  recheck.
