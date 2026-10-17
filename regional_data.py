@@ -86,13 +86,20 @@ def resolve_training_dataset(
 
 def gcloud_bucket_location(bucket: str) -> str:
     """Return the location reported for one bucket."""
-    completed = subprocess.run(
-        ["gcloud", "storage", "buckets", "describe", f"gs://{bucket}", "--format=value(location)"],
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    location = completed.stdout.strip()
+    try:
+        completed = subprocess.run(
+            ["gcloud", "storage", "buckets", "describe", f"gs://{bucket}", "--format=value(location)"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        location = completed.stdout.strip()
+    except FileNotFoundError:
+        location = _gsutil_bucket_location(bucket)
+    except subprocess.CalledProcessError as error:
+        if not _gcloud_storage_is_unavailable(error):
+            raise
+        location = _gsutil_bucket_location(bucket)
     if not location:
         raise ValueError(f"bucket {bucket} did not report a location")
     return location
@@ -101,7 +108,40 @@ def gcloud_bucket_location(bucket: str) -> str:
 def gcloud_copy_dataset(uri: str, destination: Path) -> None:
     """Copy one regional dataset prefix into a local directory."""
     destination.mkdir(parents=True, exist_ok=True)
-    subprocess.run(["gcloud", "storage", "cp", f"{uri}/*", str(destination)], check=True)
+    try:
+        subprocess.run(
+            ["gcloud", "storage", "cp", f"{uri}/*", str(destination)],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except FileNotFoundError:
+        subprocess.run(["gsutil", "-m", "cp", f"{uri}/*", str(destination)], check=True)
+    except subprocess.CalledProcessError as error:
+        if not _gcloud_storage_is_unavailable(error):
+            raise
+        subprocess.run(["gsutil", "-m", "cp", f"{uri}/*", str(destination)], check=True)
+
+
+def _gcloud_storage_is_unavailable(error: subprocess.CalledProcessError) -> bool:
+    """Recognize Cloud SDK releases that predate the gcloud storage surface."""
+    assert isinstance(error.stderr, str)
+    return "Invalid choice: 'storage'" in error.stderr
+
+
+def _gsutil_bucket_location(bucket: str) -> str:
+    """Read a bucket location with the legacy gsutil bundled on older TPU images."""
+    completed = subprocess.run(
+        ["gsutil", "ls", "-Lb", f"gs://{bucket}"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    for line in completed.stdout.splitlines():
+        label, separator, value = line.strip().partition(":")
+        if separator and label == "Location constraint":
+            return value.strip()
+    raise ValueError(f"bucket {bucket} did not report a location")
 
 
 def _read_metadata(path: str) -> str | None:
