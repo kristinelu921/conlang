@@ -5,9 +5,9 @@
 | Field | Value |
 |---|---|
 | Run ID | `20261017-conlang-v4-8-train1m-s10000-m4-qquery-senderlr4-sx192-sd4-sff768-avgres-eval200-retry1` |
-| Status | `running` |
+| Status | `completed` |
 | Started | `2026-10-17T15:44:16Z` |
-| Finished | not applicable |
+| Finished | `2026-10-17T16:11:10Z` |
 | Baseline | `20261017-conlang-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-eval200-commdiag` |
 | Retry of | `20261017-conlang-v4-8-train1m-s10000-m4-qquery-senderlr4-sx192-sd4-sff768-avgres-eval200` |
 | Git revision | `53151f17b14841f6275793a96459785ec59720d9` (reviewed configuration closure used for the immutable snapshot) |
@@ -111,29 +111,88 @@ positive result to the combined treatment rather than either component.
 
 ## Results
 
-Training reached step 50 with finite loss/gradients and approximately 2,413
-examples/s after warmup. The foreground launch and recurring read-only monitor
-remain active; final results are pending verified completion.
+Training completed all `10,000` optimizer steps. The run emitted `1,000`
+training records at ten-step intervals and `50` evaluations of the same fixed
+256-example validation prefix at 200-step intervals.
+
+| Final training metric | Value |
+|---|---:|
+| Loss | `4.0355186` |
+| Total gradient norm | `0.7791419` |
+| Agent 1 / agent 2 path-gradient norm | `0.1207619` / `0.1497786` |
+| Receiver path-gradient norm | `0.7649000` |
+| Sender / receiver relative update norm | `0.00157285` / `0.000246879` |
+| Agent 1 / agent 2 message RMS | `4.8659577` / `4.8848920` |
+| Throughput | `2,376.52` examples/s |
+
+| Final validation intervention | Exact match | Count | Mean joint log probability |
+|---|---:|---:|---:|
+| Intact messages | `0.01953125` | 5/256 | `-5.9475145` |
+| Wrong-world messages | `0.01953125` | 5/256 | `-5.9499369` |
+| Swapped senders | `0.01953125` | 5/256 | `-5.9427977` |
+| Zero messages | `0.00000000` | 0/256 | `-11.9979849` |
+| Agent 1 only | `0.00000000` | 0/256 | `-5.5615034` |
+| Agent 2 only | `0.00000000` | 0/256 | `-5.5275278` |
+
+The run fails the preregistered communication rule. Intact and wrong-world
+messages have identical exact-match counts in every one of the 50 evaluations.
+The intact-minus-wrong-world likelihood gap is positive in 28/50 evaluations,
+but its median is only `+0.0000348` nats, with range `-0.0014191` to
+`+0.0024223`. The final `+0.0024223`-nat aligned-passage advantage is therefore
+small, sign-unstable over training, and not accompanied by any exact-answer
+advantage. The `+6.0504704`-nat intact-versus-zero gap establishes dependence
+on a learned nonzero carrier, not passage-specific content. Swapping channels
+slightly improves final likelihood by `0.0047169` nats, while either isolated
+sender improves likelihood but gets no exact answer.
+
+The capacity/residual treatment removes raw sender-gradient starvation without
+repairing passage use. Over the last 50 logged steps, median agent path-gradient
+norms are `0.1356820` and `0.1500125`, versus `0.7444219` for the receiver:
+receiver ratios of only `5.49x` and `4.96x`. The matched baseline ratios are
+`13,005.91x` and `13,558.64x`. Median sender relative update is `0.00179503`,
+`10.67x` the receiver's `0.000168306`; the baseline sender is only `0.623x` its
+receiver. Treatment sender relative updates are `17.27x` baseline, while
+receiver relative updates are essentially unchanged (`1.009x`). Message RMS
+is `3.83x` baseline. From step 10 to 10,000, sender and receiver weight norms
+grow `66.07%` and `78.01%`; baseline sender norm instead falls `4.27%`.
+
+The largest non-initial adjacent five-record-versus-five-record loss decline
+after step 100 begins at step 980 (`5.2955249` before versus `4.9101499` after),
+about 150 steps later than the matched baseline's step-830 transition. A second
+smaller decline appears near step 3330 (`4.1111673` to `3.9435777`). Neither is
+a communication transition: validation likelihood worsens from `-5.3896303` at
+step 200 to `-5.9020844` at step 1,000 and `-11.3220463` at step 3,400, while
+the wrong-world exact count remains tied. Late optimization is also less
+stable: the maximum logged pre-clipping gradient norm is `132.1732` at step
+8,920, and 11 logged steps exceed 10, versus a baseline maximum of `25.3769`
+and two such records. All values remain finite and training completes.
+
+Median final-50 loss is `3.9889567`, effectively the same as baseline
+`3.9882981`, while median throughput falls from `5,681.41` to `2,380.07`
+examples/s (`-58.11%`). The final logged training batch emits `walrus` for
+255/256 examples and `jaguar` once. This output artifact records training-batch
+generations; validation generations are not persisted.
 
 ## Artifacts
 
 | Artifact | Path or URL | Verified |
 |---|---|---|
 | Configuration | `configs/conlang-jax-v4-8-train1m-s10000-m4-qquery-senderlr4-sx192-sd4-sff768-avgres-eval200-retry1.yaml` | local and remote SHA-256 `4a0fb81af1d6a1b4845537305b8ba7415c405c0063dd475467603123e4eaf7f8`; parsed and validated remotely |
-| Pull request | `https://github.com/kristinelu921/conlang/pull/1` | existing PR; update pending |
+| Pull request | `https://github.com/kristinelu921/conlang/pull/1` | existing PR updated with the immutable run closure and completed evidence |
 | Source snapshot | `/kmh-nfs-ssd-us-mount/staging/kristine/elf/20261017-conlang-v4-8-train1m-s10000-m4-qquery-senderlr4-sx192-sd4-sff768-avgres-eval200-retry1-20261017T153818.926176475Z`; remote `/home/kristinelu/elf-runs/sources/20261017-conlang-v4-8-train1m-s10000-m4-qquery-senderlr4-sx192-sd4-sff768-avgres-eval200-retry1-20261017T153818.926176475Z` | local and remote match: 65 files, 477,532 bytes, relative manifest digest `c8b9145d6e91773b4b3b228ae12610c9e3ddd23ee282a61b180ccc64c07a04ea`; no bytecode/test caches |
 | Regional dataset | `/home/kristinelu/elf-data/conlangs-v1-train1m` | generated on the selected Central2 TPU; 128,125 worlds / 1,025,000 questions / 8 questions per world; 95,042,272 bytes; all six gzip streams and content checks passed; manifest SHA-256 `1a860a5a0ace2d249c0b7e7273925d9545f61aaa261e00f5b9fe75900da91b20` |
-| Checkpoint | `/home/kristinelu/elf-runs/20261017-conlang-v4-8-train1m-s10000-m4-qquery-senderlr4-sx192-sd4-sff768-avgres-eval200-retry1/checkpoint.msgpack` | no |
-| Metrics | pending run-scoped artifact directory | no |
-| Outputs | pending run-scoped artifact directory | no |
-| Launcher log | pending run-scoped artifact directory | no |
-| Tracking run | `https://wandb.ai/kaynelu921-massachusetts-institute-of-technology/conlangs/runs/hqwvdzrr` | live run ID `hqwvdzrr`; initialized and syncing |
+| Checkpoint | `/home/kristinelu/elf-runs/20261017-conlang-v4-8-train1m-s10000-m4-qquery-senderlr4-sx192-sd4-sff768-avgres-eval200-retry1/checkpoint.msgpack` | 46,001,025 bytes; SHA-256 `01c7b39f7498184f79b28f43573ba01237c1194911b7e7a215f4e74863daff87`; CPU restore verified step `10000` |
+| Metrics | `experiment_log/2026-10-17/artifacts/20261017-conlang-v4-8-train1m-s10000-m4-qquery-senderlr4-sx192-sd4-sff768-avgres-eval200-retry1/metrics.jsonl` | 1,984,543 bytes; SHA-256 `068a92268c87d7020aab35f93a4e64198633c3a837b9b1c4beb6066863cdb501`; 1,050 JSON records parsed |
+| Outputs | `experiment_log/2026-10-17/artifacts/20261017-conlang-v4-8-train1m-s10000-m4-qquery-senderlr4-sx192-sd4-sff768-avgres-eval200-retry1/outputs.jsonl` | 13,825,638 bytes; SHA-256 `439600f2baff8a2236f89d056e31fb38a063c0b5e9d4b8c63e6ef89a49f4c046`; 1,000 JSON records parsed |
+| Launcher log | `experiment_log/2026-10-17/artifacts/20261017-conlang-v4-8-train1m-s10000-m4-qquery-senderlr4-sx192-sd4-sff768-avgres-eval200-retry1/launcher.log.gz` | 14,755 bytes; SHA-256 `e539b9222653b1b4ef42f849662e719e7db2ca1d4afd0e9ebd6d8f7db611349e`; gzip verified; decompressed 85,558-byte SHA-256 `77d2bc5d0e9e70f3d24fd8ed80261ba53666740447b85299a9d772ba66f4e92e` matches remote canonical log |
+| Tracking run | `https://wandb.ai/kaynelu921-massachusetts-institute-of-technology/conlangs/runs/hqwvdzrr` | run ID `hqwvdzrr`; API state `finished`, step `10000`, final metrics match, five files synced |
 
 ## Failure Details
 
-- Last known step: not applicable.
-- Error summary: not applicable.
-- Detailed output: not recorded.
+- Last known step: `10000` (successful completion).
+- Error summary: no training failure.
+- Detailed output: the canonical launcher log contains the completion sentinel
+  and no traceback.
 
 ## Observations
 
@@ -159,12 +218,34 @@ remain active; final results are pending verified completion.
   The repository preflight and a separate CPU-only integrity probe confirmed
   output/log freshness, source/config hashes, W&B authentication, writable
   local paths, no canonical libtpu lock, and idle VFIO resources.
+- The first artifact-copy attempt over the external SSH endpoint packet-failed
+  after metrics completed. The canonical remote artifacts were never modified.
+  The launcher log was recovered through the internal endpoint; the large
+  outputs file was transferred as a remote gzip, locally decompressed, and
+  accepted only after its decompressed byte count and SHA-256 matched the
+  original. The temporary transfer gzip is not part of the committed evidence.
+- One monitor iteration used an invalid `gcloud describe` formatter and was
+  replaced by a corrected read-only monitor. Training was not signaled or
+  restarted. Subsequent checks and the terminal audit reported READY/HEALTHY,
+  and the final audit found no trainer, no lock, and idle VFIO resources.
 
 ## Interpretation
 
-- Pending results. A lower loss without a durable intact-versus-wrong-world gap
-  would mean greater sender capacity or the average bypass improves optimization
-  without establishing useful private-content transport.
+- The combined capacity/average-residual treatment decisively fixes the raw
+  sender-credit imbalance and drives much larger messages, updates, and weight
+  growth. It does not create useful private-content transport: wrong-world is
+  exactly tied at every scheduled evaluation, and its likelihood effect remains
+  tiny and sign-unstable. The failure is therefore not explained by sender
+  gradient magnitude or aggregate sender movement alone.
+- Because sender depth, width, FFN size, and residual initialization change
+  together, this run cannot attribute its optimization dynamics to one of those
+  components. It does establish that simply making question-blind shared
+  senders receiver-sized, initializing a strong average carrier, and training
+  for 10,000 steps is insufficient under answer-token cross-entropy alone.
+- The treatment is not a useful default: it is `58.11%` slower, produces larger
+  late gradient excursions, collapses the final logged training batch to two
+  outputs, and leaves final-50 loss unchanged. The five final exact answers do
+  not show communication because wrong-world preserves all five.
 
 ## Review and Verification
 
@@ -204,3 +285,8 @@ remain active; final results are pending verified completion.
   256 validation examples, batch 256, bfloat16, and four TPU devices. The run
   reached step 50 with loss `5.4793`, gradient norm `1.5060`, and approximately
   `2,413` examples/s.
+- `2026-10-17T16:11:10Z`: Training completed step 10,000 with a saved and
+  restorable checkpoint, finalized metrics and outputs, completion sentinel,
+  and W&B state `finished`. The recurring monitor stopped only after the
+  terminal process, checkpoint, log, W&B, VFIO, lock, TPU state, and artifact
+  checks passed.
