@@ -9,7 +9,7 @@
 | Started | not started |
 | Finished | not applicable |
 | Baseline | `20261017-conlang-v4-8-train1m-s10000-m4-qquery-lr4-sx384-sd4-sff1536-rx256-rd2-rff1024-oh1024-avgres-e200-retry1` |
-| Git revision | `0bd31a3eb13b24c04da82985ea011df06b8883c0` (implementation/configuration closure; launch snapshot pending) |
+| Git revision | `cc4990a3db0aae3c1d4c64233c76eb4074ef8dab` (implementation/configuration closure; launch snapshot pending) |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` |
 | Primary configuration | `configs/conlang-jax-v4-8-train1m-s10000-m4-qquery-lr4-t5tinyinit-sx256-sd4-rx256-rd4-e200.yaml` |
 | Command | not recorded; pending immutable snapshot and final launch gate |
@@ -195,3 +195,6 @@ Pending launch and verified completion.
   complete-tree mapping, finite-loss, and first-backward gradient checks.
 - `2026-10-17T21:48:00Z`: recorded immutable implementation/configuration
   closure and the complete CPU verification result.
+- `2026-10-17T21:50:23Z`: corrected imported query-kernel scaling to preserve
+  native Flax T5 attention logits and recorded the differential and production-tree
+  oracle results.
