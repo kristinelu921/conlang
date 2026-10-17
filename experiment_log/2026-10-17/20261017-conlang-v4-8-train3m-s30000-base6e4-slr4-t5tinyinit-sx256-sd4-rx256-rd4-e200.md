@@ -5,8 +5,8 @@
 | Field | Value |
 |---|---|
 | Run ID | `20261017-conlang-v4-8-train3m-s30000-base6e4-slr4-t5tinyinit-sx256-sd4-rx256-rd4-e200` |
-| Status | `planned` |
-| Started | `not recorded` |
+| Status | `running` |
+| Started | `2026-10-17T23:10:08Z` |
 | Finished | `not recorded` |
 | Baseline | `20261017-conlang-v4-8-train1m-s10000-m4-qquery-lr4-t5tinyinit-sx256-sd4-rx256-rd4-e200` |
 | Git revision | `e38af6e2f3e6761943ed786b32c0737ebf1462aa` (configuration/report closure) |
@@ -110,7 +110,10 @@ loss discontinuity.
 
 ## Results
 
-Pending launch and verified completion.
+Running. The first compiled interval completed with finite metrics, and the run
+reached step 480 at the first installed-monitor check. Steps 20--200 sustained
+approximately 2,144--2,153 examples/s, matching the completed baseline. Final
+scientific results remain pending.
 
 ## Artifacts
 
@@ -121,7 +124,8 @@ Pending launch and verified completion.
 | Source model | `/home/kristinelu/elf-runs/pretrained/google-t5-efficient-tiny-3441d7e8` | checkpoint and tokenizer hashes match the configured fail-closed values |
 | Regional dataset | `/home/kristinelu/elf-data/conlangs-v1-train3m` | generated node-locally in Central2; 378,125 worlds / 3,025,000 questions / 280,390,862 bytes; full streaming verifier passed; manifest SHA-256 `0e37bb12e22e49e74868bb01d225a29e01bd2d8508df8efbcaa1d2d8aca1c1c4` |
 | Checkpoint | `/home/kristinelu/elf-runs/20261017-conlang-v4-8-train3m-s30000-base6e4-slr4-t5tinyinit-sx256-sd4-rx256-rd4-e200/checkpoint.msgpack` | no; pending launch |
-| Tracking run | `not recorded` | no |
+| Tracking run | `https://wandb.ai/kaynelu921-massachusetts-institute-of-technology/conlangs/runs/rsjglvk6` | W&B ID `rsjglvk6`, state `running`; first monitor observed summary step 440 |
+| Recurring monitor | `conlang-monitor-rsjglvk6.service`; run-scoped script `/tmp/conlang_monitor_rsjglvk6.sh` | five-minute cadence; clean-environment cloud/W&B check passed; first service check saw READY/HEALTHY, live trainer, step 480 |
 
 ## Failure Details
 
@@ -145,6 +149,13 @@ Pending launch and verified completion.
 - The final CPU-only preflight reports JAX/JAXlib `0.6.2`, Flax `0.10.5`,
   Optax `0.2.8`, NumPy `1.26.4`, valid W&B authentication, 84 GiB free, fresh
   run output/log paths, writable `/tmp/tpu_logs`, no libtpu lock, and idle VFIO.
+- Startup verified all four TPU devices, 3,000,000 training examples, 256 fixed
+  validation examples, and the exact 12,580,239-parameter warm-start tree. Step
+  10 was finite; step 200 completed at `2147.43` examples/s.
+- The generic monitor named by repository policy is absent from this source
+  tree. The installed run-scoped fallback pins the direct gcloud binary and a
+  W&B-capable Python, is TERM-safe, and passed both a cron-like clean-environment
+  check and its first systemd cadence check.
 
 ## Interpretation
 
@@ -163,3 +174,5 @@ Pending launch and verified completion.
 - `2026-10-17T23:09:01Z`: Recorded the exact immutable snapshot, launch
   command, selected-device preflight, source-model hashes, and fully verified
   node-local Central2 dataset.
+- `2026-10-17T23:29:04Z`: Marked the run running after finite step 200, recorded
+  W&B run `rsjglvk6`, and installed the verified five-minute recurring monitor.
