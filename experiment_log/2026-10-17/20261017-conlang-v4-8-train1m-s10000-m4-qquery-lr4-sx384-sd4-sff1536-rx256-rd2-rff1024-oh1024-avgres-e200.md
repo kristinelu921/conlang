@@ -5,11 +5,11 @@
 | Field | Value |
 |---|---|
 | Run ID | `20261017-conlang-v4-8-train1m-s10000-m4-qquery-lr4-sx384-sd4-sff1536-rx256-rd2-rff1024-oh1024-avgres-e200` |
-| Status | `planned` |
-| Started | not recorded |
-| Finished | not recorded |
+| Status | `failed before training` |
+| Started | `2026-10-17T20:00:48Z` |
+| Finished | `2026-10-17T20:00:48Z` |
 | Baseline | `20261017-conlang-v4-8-train1m-s10000-m4-qquery-senderlr4-sx192-sd4-sff768-avgres-eval200-retry1` |
-| Git revision | `97d0c9256d639b21bed05b978f2040eec4df99fa` (configuration/report closure) |
+| Git revision | `4cca1d6a61ed409e476ad880f290badbde1ec775` (launch snapshot; configuration/report closure at `97d0c9256d639b21bed05b978f2040eec4df99fa`) |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` |
 | Primary configuration | `configs/conlang-jax-v4-8-train1m-s10000-m4-qquery-lr4-sx384-sd4-sff1536-rx256-rd2-rff1024-oh1024-avgres-e200.yaml` |
 | Command | recorded under Exact Launch Command below |
@@ -119,7 +119,9 @@ the coupled scaling treatment and cannot identify one component as causal.
 
 ## Results
 
-Pending launch and verified completion.
+The wrapper exited before W&B initialization, JAX distributed initialization,
+dataset loading, model initialization, or step 1. No scientific result was
+produced. The TPU remained unclaimed and is eligible for the corrected retry.
 
 ## Artifacts
 
@@ -129,17 +131,38 @@ Pending launch and verified completion.
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` | existing PR updated through `4cca1d6a61ed409e476ad880f290badbde1ec775` |
 | Source snapshot | `/kmh-nfs-ssd-us-mount/staging/kristine/elf/20261017-conlang-v4-8-train1m-s10000-m4-qquery-lr4-sx384-sd4-sff1536-rx256-rd2-rff1024-oh1024-avgres-e200-20261017T195535.297491701Z` locally; `/home/kristinelu/elf-runs/sources/20261017-conlang-v4-8-train1m-s10000-m4-qquery-lr4-sx384-sd4-sff1536-rx256-rd2-rff1024-oh1024-avgres-e200-20261017T195535.297491701Z` remotely | exact match: 66 files, 479,047 bytes, relative-manifest SHA-256 `cb8f09f63c9f5123b1488e855254b0e68d2ca202ea3b5914eceff008d8774508`; no cache files |
 | Regional dataset | `/home/kristinelu/elf-data/conlangs-v1-train1m` | 95,042,272 bytes; manifest SHA-256 `1a860a5a0ace2d249c0b7e7273925d9545f61aaa261e00f5b9fe75900da91b20`; all gzip streams and generator verifier pass: 128,125 worlds, 1,025,000 questions, 8 questions/world |
-| Checkpoint | `/home/kristinelu/elf-runs/20261017-conlang-v4-8-train1m-s10000-m4-qquery-lr4-sx384-sd4-sff1536-rx256-rd2-rff1024-oh1024-avgres-e200/checkpoint.msgpack` | no |
-| Metrics | pending run-scoped artifact directory | no |
-| Outputs | pending run-scoped artifact directory | no |
-| Launcher log | pending run-scoped artifact directory | no |
-| Tracking run | not recorded; pending W&B initialization | no |
+| Checkpoint | `/home/kristinelu/elf-runs/20261017-conlang-v4-8-train1m-s10000-m4-qquery-lr4-sx384-sd4-sff1536-rx256-rd2-rff1024-oh1024-avgres-e200/checkpoint.msgpack` | absent |
+| Metrics | run-scoped output directory | absent |
+| Outputs | run-scoped output directory | absent |
+| Launcher log | `/home/kristinelu/elf-runs/20261017-conlang-v4-8-train1m-s10000-m4-qquery-lr4-sx384-sd4-sff1536-rx256-rd2-rff1024-oh1024-avgres-e200.launcher.log` | 998 bytes; preserved with traceback |
+| Tracking run | not created | trainer freshness guard ran before W&B initialization |
 
 ## Failure Details
 
-- Last known step: not applicable.
-- Error summary: not applicable.
-- Detailed output: not recorded.
+- Attempt / retry: original attempt; corrected run is `retry1`.
+- TPU / zone / topology: selected Central2 Spot v4-8 above.
+- Stage reached and last step: launch wrapper; zero training steps.
+- First error and exit status: `FileExistsError` at `train.py:1044`; launcher
+  exited 1 because the run output directory already existed.
+- Detailed log path: launcher log recorded in Artifacts.
+- Confirmed root cause and evidence: the launch wrapper created
+  `$output_dir/wandb` before calling `train.py`; the trainer intentionally
+  rejects any pre-existing output directory. The only output entry is the
+  empty `wandb/` directory, and the log contains the freshness traceback.
+- Alternative causes rejected: no trainer survived, no libtpu lock exists,
+  every VFIO device is idle, and no checkpoint, metric, output, config copy, or
+  W&B run was created.
+- Packages before / after: unchanged.
+- Repair command: use a fresh `retry1` identity and place W&B files under the
+  pre-existing `/home/kristinelu/elf-runs/wandb` parent without creating the
+  scientific output directory before `train.py`.
+- Verification command and result: exact process, lock, VFIO, output-tree, and
+  launcher-log audit passed; only the audit shell itself matched the run ID.
+- Checkpoint / artifact state: no checkpoint; failed output and launcher log
+  preserved in place.
+- Recovery action: prepare and immutably stage a fresh retry configuration.
+- Prevention gate added: wrapper review now checks that no preparation command
+  creates `config.output_path.parent` before the trainer freshness guard.
 
 ## Observations
 
@@ -191,3 +214,6 @@ Pending launch and verified completion.
 - `2026-10-17T19:58:57Z`: Staged and byte-verified the immutable source on the
   selected TPU, freshly verified the regional dataset, and passed the official
   and run-specific remote preflight gates. Training remained unstarted.
+- `2026-10-17T20:00:48Z`: Launch exited before training because the wrapper
+  pre-created the output directory for W&B. Preserved the zero-step attempt,
+  proved the TPU and runtime remained idle, and began a fresh `retry1` closure.
