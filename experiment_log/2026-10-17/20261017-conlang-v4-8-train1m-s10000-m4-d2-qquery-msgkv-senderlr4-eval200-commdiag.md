@@ -9,7 +9,7 @@
 | Started | not started |
 | Finished | not started |
 | Baseline | `20261016-conlang-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-commdiag` |
-| Git revision | pending immutable configuration commit and launch snapshot |
+| Git revision | primary configuration/report commit `6003960c6e9c3caffe5d1b2ef044d35e9d604180`; immutable launch snapshot pending final review |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` |
 | Primary configuration | `configs/conlang-jax-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-eval200-commdiag.yaml` |
 | Command | `/snap/google-cloud-cli/current/bin/gcloud compute tpus tpu-vm ssh kmh-tpuvm-v4-8-spot-kristine-14-23-12-28-N-us-central2-b --project=he-vision-group --zone=us-central2-b --worker=all --internal-ip --ssh-flag=-F --ssh-flag=/dev/null --command='set -euo pipefail; source_dir=/home/kristinelu/elf-runs/source/20261017-conlang-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-eval200-commdiag; output_dir=/home/kristinelu/elf-runs/20261017-conlang-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-eval200-commdiag; launcher_log=/home/kristinelu/elf-runs/20261017-conlang-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-eval200-commdiag.launcher.log; test -d "$source_dir"; test ! -e "$output_dir"; test ! -e "$launcher_log"; test ! -e /tmp/libtpu_lockfile; test -z "$(sudo fuser /dev/vfio/* 2>/dev/null || true)"; cd "$source_dir"; export JAX_PLATFORMS=tpu CUDA_VISIBLE_DEVICES= ELF_TPU_WORKER_INDEX=0 PYTHONPATH="$PWD" HF_HOME=/home/kristinelu/elf-runs/hf-cache PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1; ulimit -c 0; /home/kristinelu/elf-runs/runtime/venv/bin/python -u train.py --config configs/conlang-jax-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-eval200-commdiag.yaml 2>&1 \| tee "$launcher_log"' --quiet` |
@@ -104,7 +104,7 @@ joint log probability for all six intervention arms.
 
 | Artifact | Path or URL | Verified |
 |---|---|---|
-| Configuration | `configs/conlang-jax-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-eval200-commdiag.yaml` | local pre-launch copy; immutable commit pending |
+| Configuration | `configs/conlang-jax-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-eval200-commdiag.yaml` | committed in `6003960c6e9c3caffe5d1b2ef044d35e9d604180`; launch snapshot pending |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` | existing run PR; update pending |
 | Source snapshot | pending staging |
 | Regional dataset | `/home/kristinelu/elf-data/conlangs-v1-train1m` | previously verified on selected Central2 TPU; fresh preflight pending |
