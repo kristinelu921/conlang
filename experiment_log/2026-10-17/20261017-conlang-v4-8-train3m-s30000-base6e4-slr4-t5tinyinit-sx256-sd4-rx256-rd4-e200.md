@@ -9,7 +9,7 @@
 | Started | `not recorded` |
 | Finished | `not recorded` |
 | Baseline | `20261017-conlang-v4-8-train1m-s10000-m4-qquery-lr4-t5tinyinit-sx256-sd4-rx256-rd4-e200` |
-| Git revision | `not recorded; pending immutable configuration commit` |
+| Git revision | `e38af6e2f3e6761943ed786b32c0737ebf1462aa` (configuration/report closure) |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` |
 | Primary configuration | `configs/conlang-jax-v4-8-train3m-s30000-base6e4-slr4-t5tinyinit-sx256-sd4-rx256-rd4-e200.yaml` |
 | Command | `not recorded; pending immutable snapshot and final launch preflight` |
@@ -127,9 +127,9 @@ Pending launch and verified completion.
 
 - The requested scaling preserves data exposure in epochs: both arms present
   each training example 2.56 times on average.
-- The completed baseline sustained a median `2,143.996` examples/s. At that
-  rate, 30,000 training steps contain about 59.7 minutes of steady-state work,
-  plus compilation and 150 intervention evaluations.
+- The completed baseline sustained a last-50 median `2,143.996` examples/s. At
+  that rate, 30,000 training steps contain about 59.7 minutes of steady-state
+  work, plus compilation and 150 intervention evaluations.
 - The required filtered inventory selected only `kristine` resources; the
   Central2 v4-8 candidate is preferred because it is the proven topology for
   this exact model and retains region-local predecessor data/model artifacts.
