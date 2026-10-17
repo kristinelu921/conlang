@@ -382,23 +382,12 @@ class EncoderStack(nn.Module):
     """Apply one reusable stack of Transformer encoder blocks."""
 
     config: JaxCommunicationModelConfig
-    hidden_size: int | None = None
-    num_layers: int | None = None
-    num_heads: int | None = None
-    feedforward_size: int | None = None
 
     @nn.compact
     def __call__(self, hidden: Array, valid: Array, deterministic: bool) -> Array:
         """Encode a padded sequence through every configured layer."""
-        num_layers = self.config.num_layers if self.num_layers is None else self.num_layers
-        for layer_index in range(num_layers):
-            hidden = EncoderBlock(
-                self.config,
-                hidden_size=self.hidden_size,
-                num_heads=self.num_heads,
-                feedforward_size=self.feedforward_size,
-                name=f"layer_{layer_index}",
-            )(
+        for layer_index in range(self.config.num_layers):
+            hidden = EncoderBlock(self.config, name=f"layer_{layer_index}")(
                 hidden, valid, deterministic
             )
         return hidden

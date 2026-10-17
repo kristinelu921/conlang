@@ -164,7 +164,11 @@ Pending launch and verified completion.
   `JAX_PLATFORMS=cpu`.
 - Correctness review found no confirmed issue in immutable range
   `930cc28689ad3d4a2d3b24fb487b570a2a140db4..e236107a0e0cd814e9b32c06c2ad9bfdded29701`.
-  Cleanup review is pending the updated closure.
+  Cleanup review of the updated closure found one unused set of sender override
+  fields on `EncoderStack`; they were removed before launch while retaining the
+  directly exercised sender-specific `EncoderBlock` path. The cleanup fix
+  passed 7 focused tests in `30.12s`, then the full `142`-test/`7`-subtest suite
+  again in `216.43s` with the same two existing warnings.
 
 ## Updates
 
