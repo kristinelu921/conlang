@@ -18,6 +18,7 @@ from flax.traverse_util import flatten_dict
 
 from jax_models import (
     JaxCommunicationModel,
+    _masked_region_average,
     _relative_position_bucket,
     apply_message_intervention,
 )
@@ -487,6 +488,24 @@ def test_config_rejects_nonpositive_role_gate_channels() -> None:
         replace(TrainConfig(), role_gate_channels=0).validate()
 
 
+def test_config_validates_sender_specific_dimensions() -> None:
+    """Sender-only dimensions should be positive, divisible, and incompatible with tying."""
+    with pytest.raises(ValueError, match="sender width, depth, heads"):
+        replace(TrainConfig(), sender_num_layers=0).validate()
+    with pytest.raises(ValueError, match="sender hidden size must be divisible"):
+        replace(
+            TrainConfig(),
+            sender_hidden_size=18,
+            sender_num_heads=4,
+        ).validate()
+    with pytest.raises(ValueError, match="incompatible with a tied encoder"):
+        replace(
+            TrainConfig(),
+            sender_num_layers=3,
+            tie_sender_receiver_encoder=True,
+        ).validate()
+
+
 def test_config_requires_one_question_path() -> None:
     """The question must reach either the senders or the receiver."""
     with pytest.raises(ValueError, match="question must be available"):
@@ -764,6 +783,68 @@ def test_each_sender_emits_four_message_vectors() -> None:
 
     assert config.message_length == 4
     assert messages.shape == (2, 8, config.hidden_size)
+
+
+def test_masked_region_average_uses_equal_population_contiguous_regions() -> None:
+    """The sender bypass should average valid tokens without including padding."""
+    hidden = jnp.arange(1, 9, dtype=jnp.float32).reshape(1, 8, 1)
+    valid = jnp.array([[True, True, True, True, True, True, False, False]])
+
+    averages = _masked_region_average(hidden, valid, region_count=4)
+
+    assert jnp.allclose(averages[0, :, 0], jnp.array([1.5, 3.0, 4.5, 6.0]))
+
+
+def test_sender_specific_capacity_starts_from_the_average_residual() -> None:
+    """A wider shared sender should retain receiver width and begin at regional averages."""
+    tokenizer = _example_tokenizer()
+    config = replace(
+        _small_config(),
+        sender_hidden_size=24,
+        sender_num_layers=2,
+        sender_num_heads=6,
+        sender_feedforward_size=72,
+        sender_average_residual=True,
+    )
+    batch = tokenize_examples(_examples(), tokenizer, config).select([0, 1])
+    model = JaxCommunicationModel(_model_config(config, tokenizer))
+    variables = model.init(
+        {"params": jax.random.PRNGKey(0)},
+        jnp.asarray(batch.agent_1_token_ids),
+        jnp.asarray(batch.agent_2_token_ids),
+        jnp.asarray(batch.question_token_ids),
+        jnp.asarray(batch.answer_token_ids),
+        deterministic=True,
+    )
+    messages = model.apply(
+        variables,
+        jnp.asarray(batch.agent_1_token_ids),
+        jnp.asarray(batch.agent_2_token_ids),
+        deterministic=True,
+        method=model.encode_messages,
+    )
+    sender_parameters = variables["params"]["sender"]
+    embedding = variables["params"]["token_embedding"]["embedding"]
+    expected_agent_1 = _masked_region_average(
+        embedding[jnp.asarray(batch.agent_1_token_ids)],
+        jnp.asarray(batch.agent_1_token_ids) != tokenizer.pad_id,
+        config.message_length,
+    )
+    expected_agent_2 = _masked_region_average(
+        embedding[jnp.asarray(batch.agent_2_token_ids)],
+        jnp.asarray(batch.agent_2_token_ids) != tokenizer.pad_id,
+        config.message_length,
+    )
+
+    assert messages.shape == (2, config.message_length * 2, config.hidden_size)
+    assert sender_parameters["query_embedding"].shape == (config.message_length, 24)
+    assert sender_parameters["input_projection"]["kernel"].shape == (16, 24)
+    assert sender_parameters["layer_0"]["feedforward_in"]["kernel"].shape == (24, 72)
+    assert "layer_1" in sender_parameters
+    assert sender_parameters["message_projection"]["kernel"].shape == (24, 16)
+    assert jnp.all(sender_parameters["message_projection"]["kernel"] == 0)
+    assert jnp.allclose(messages[:, : config.message_length], expected_agent_1)
+    assert jnp.allclose(messages[:, config.message_length :], expected_agent_2)
 
 
 def test_question_conditioned_senders_require_and_use_the_question() -> None:

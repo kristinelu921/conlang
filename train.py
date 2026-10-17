@@ -75,6 +75,11 @@ class TrainConfig:
     wandb_enabled: bool = True
     hidden_size: int = 128
     output_hidden_size: int | None = None
+    sender_hidden_size: int | None = None
+    sender_num_layers: int | None = None
+    sender_num_heads: int | None = None
+    sender_feedforward_size: int | None = None
+    sender_average_residual: bool = False
     tie_sender_receiver_encoder: bool = False
     role_gate_channels: int | None = None
     sender_question_conditioning: bool = False
@@ -135,6 +140,37 @@ class TrainConfig:
             raise ValueError("dataset prefix must be an object path inside the regional bucket")
         if self.hidden_size % self.num_heads != 0:
             raise ValueError("hidden size must be divisible by the number of attention heads")
+        sender_hidden_size = (
+            self.hidden_size if self.sender_hidden_size is None else self.sender_hidden_size
+        )
+        sender_num_layers = (
+            self.num_layers if self.sender_num_layers is None else self.sender_num_layers
+        )
+        sender_num_heads = (
+            self.num_heads if self.sender_num_heads is None else self.sender_num_heads
+        )
+        sender_feedforward_size = (
+            sender_hidden_size * 4
+            if self.sender_feedforward_size is None
+            else self.sender_feedforward_size
+        )
+        sender_sizes = (
+            sender_hidden_size,
+            sender_num_layers,
+            sender_num_heads,
+            sender_feedforward_size,
+        )
+        if min(sender_sizes) < 1:
+            raise ValueError("sender width, depth, heads, and feed-forward size must be positive")
+        if sender_hidden_size % sender_num_heads != 0:
+            raise ValueError("sender hidden size must be divisible by sender attention heads")
+        if self.tie_sender_receiver_encoder and sender_sizes != (
+            self.hidden_size,
+            self.num_layers,
+            self.num_heads,
+            self.hidden_size * 4,
+        ):
+            raise ValueError("sender-specific dimensions are incompatible with a tied encoder")
         if self.output_hidden_size is not None and self.output_hidden_size < 1:
             raise ValueError("output hidden size must be positive when configured")
         if self.role_gate_channels is not None and self.role_gate_channels < 1:
@@ -275,6 +311,11 @@ def _model_config(config: TrainConfig, tokenizer: TextTokenizer) -> JaxCommunica
         vocab_size=tokenizer.vocab_size,
         hidden_size=config.hidden_size,
         output_hidden_size=config.output_hidden_size,
+        sender_hidden_size=config.sender_hidden_size,
+        sender_num_layers=config.sender_num_layers,
+        sender_num_heads=config.sender_num_heads,
+        sender_feedforward_size=config.sender_feedforward_size,
+        sender_average_residual=config.sender_average_residual,
         tie_sender_receiver_encoder=config.tie_sender_receiver_encoder,
         role_gate_channels=config.role_gate_channels,
         sender_question_conditioning=config.sender_question_conditioning,

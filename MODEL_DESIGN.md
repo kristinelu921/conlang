@@ -17,12 +17,14 @@ and a receiver must answer a question from the two messages alone.
 | Role gates | Disabled by default; optional separate sender and receiver bottleneck gates | A configured gate width lets each role adapt the tied encoder output without duplicating the encoder. The residual output starts at zero, so enabling gates preserves the initial ungated function. |
 | Communication rounds | One by default; optional second synchronous exchange | In round two, each sender receives the other sender's first-round continuous message alongside its original private input, which creates a direct path for complementary facts to be joined before the receiver. |
 | Width and depth | Hidden 128, 2 layers, 4 heads, feedforward 512 | 128 was requested. Two layers and four heads keep it a small encoder-decoder. Feedforward width is the usual 4 times the hidden size from Attention Is All You Need. Each head is 32 wide. |
+| Sender-only capacity | Defaults to the shared width, depth, heads, and 4x feedforward width; each can be overridden | A sender can use a larger internal Transformer while projecting its four messages back to the receiver width. Both agents still reuse exactly one sender parameter tree. Tied sender/receiver encoders require identical dimensions. |
+| Sender average residual | Disabled by default; optionally four masked regional averages | The content-preserving path partitions valid input tokens into four contiguous equal-population regions and starts as the exact message because the learned sender projection is zero-initialized. This supplies passage-dependent values before the learned communication path has aligned with the receiver. |
 | Attention KV | Standard multi-head attention | One fused query/key/value projection per block, full keys and values for every head. No grouped-query or multi-query attention, and no KV cache. |
 | Channel contents | Continuous hidden states | The joint answer log probability has to train both messages. Continuous vectors let that gradient pass through the sender. A discrete codebook would need an extra sampling step that was not requested. |
 | Tokenizer | Characters for text, one token per answer word | Passages must expose held-out spellings. Answers are 4–13 characters, so a character answer cannot fit in 4 tokens. |
 | Objective | Sum of answer-token log probabilities | You asked for joint log probabilities. The scalar loss is the negative of that sum, averaged over the batch. |
 | Optional bridge supervision | Shared vocabulary head over the person-side sender message | A nonzero weight gives direct training credit for selecting the question-specific middle entity without exposing the label as a model input. |
-| Initialization | Flax linen defaults, with token embeddings drawn from a normal of standard deviation 1 | Standard library initialization. The embedding scale is the one explicit choice. |
+| Initialization | Flax linen defaults, with token embeddings drawn from a normal of standard deviation 1 | A wider sender's input projection can use an identity-aligned rectangular kernel. When the average residual is enabled, the learned message projection starts at zero so the initial channel is exactly the regional averages. |
 | Optimizer | AdamW, learning rate `3e-4`, gradient clip `1.0` | AdamW is the usual Transformer optimizer. `3e-4` is a standard small-model step size. The clip limits a step from the large initial embeddings. |
 | Weight decay | `0.01` on matrices, `0` on biases and layer-norm scales | `0.01` is AdamW's usual default. Vector parameters such as layer-norm scales are left without decay so the decay does not shrink them toward zero. |
 | Position encoding | T5 relative attention bias, 32 buckets, maximum distance 128 | Relative buckets preserve order without allocating absolute tables at every supported sequence length. |
@@ -47,6 +49,15 @@ character embeddings and runs a batch-first Transformer encoder. The returned
 message is the encoder state at the 4 query positions, shape `(batch, 4, 128)`.
 `encode_messages` runs that module twice and concatenates on the length axis,
 shape `(batch, 8, 128)`.
+
+Optional sender-specific width, depth, head count, and feed-forward width leave
+the receiver unchanged. A wider sender applies one input projection before its
+shared encoder and one output projection after the four query states, so the
+public message shape remains `(batch, 4, 128)`. With
+`sender_average_residual`, a parameter-free masked average of four contiguous
+regions is added after the output projection. The projection starts at zero,
+making the initial message exactly passage-dependent while retaining an
+end-to-end learned residual path.
 
 Setting `communication_rounds` to 2 reuses the same sender and its parameters
 for a synchronous second exchange. Each sender sees the other sender's

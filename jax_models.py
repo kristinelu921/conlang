@@ -88,6 +88,11 @@ class JaxCommunicationModelConfig:
     vocab_size: int
     hidden_size: int = 128
     output_hidden_size: int | None = None
+    sender_hidden_size: int | None = None
+    sender_num_layers: int | None = None
+    sender_num_heads: int | None = None
+    sender_feedforward_size: int | None = None
+    sender_average_residual: bool = False
     tie_sender_receiver_encoder: bool = False
     role_gate_channels: int | None = None
     sender_question_conditioning: bool = False
@@ -114,12 +119,51 @@ class JaxCommunicationModelConfig:
         """Return the Transformer feedforward width."""
         return self.hidden_size * 4
 
+    @property
+    def resolved_sender_hidden_size(self) -> int:
+        """Return the sender width after applying its optional override."""
+        return self.hidden_size if self.sender_hidden_size is None else self.sender_hidden_size
+
+    @property
+    def resolved_sender_num_layers(self) -> int:
+        """Return the sender depth after applying its optional override."""
+        return self.num_layers if self.sender_num_layers is None else self.sender_num_layers
+
+    @property
+    def resolved_sender_num_heads(self) -> int:
+        """Return the sender head count after applying its optional override."""
+        return self.num_heads if self.sender_num_heads is None else self.sender_num_heads
+
+    @property
+    def resolved_sender_feedforward_size(self) -> int:
+        """Return the sender feed-forward width after applying its optional override."""
+        if self.sender_feedforward_size is None:
+            return self.resolved_sender_hidden_size * 4
+        return self.sender_feedforward_size
+
     def validate(self) -> None:
         """Reject dimensions that the Transformer cannot use."""
         if self.vocab_size < 4:
             raise ValueError("vocab_size must include the special tokens")
         if self.hidden_size % self.num_heads != 0:
             raise ValueError("hidden_size must be divisible by num_heads")
+        sender_sizes = (
+            self.resolved_sender_hidden_size,
+            self.resolved_sender_num_layers,
+            self.resolved_sender_num_heads,
+            self.resolved_sender_feedforward_size,
+        )
+        if min(sender_sizes) < 1:
+            raise ValueError("sender width, depth, heads, and feed-forward size must be positive")
+        if self.resolved_sender_hidden_size % self.resolved_sender_num_heads != 0:
+            raise ValueError("sender hidden size must be divisible by sender attention heads")
+        if self.tie_sender_receiver_encoder and sender_sizes != (
+            self.hidden_size,
+            self.num_layers,
+            self.num_heads,
+            self.feedforward_size,
+        ):
+            raise ValueError("sender-specific dimensions are incompatible with a tied encoder")
         if self.output_hidden_size is not None and self.output_hidden_size < 1:
             raise ValueError("output_hidden_size must be positive when configured")
         if self.role_gate_channels is not None and self.role_gate_channels < 1:
@@ -212,12 +256,14 @@ def _relative_attention_bias(
     config: JaxCommunicationModelConfig,
     bidirectional: bool,
     name: str,
+    num_heads: int | None = None,
 ) -> Array:
     """Return a head-wise relative bias of shape (1, heads, query, key)."""
+    resolved_num_heads = config.num_heads if num_heads is None else num_heads
     relative_embedding = module.param(
         name,
         nn.initializers.normal(stddev=1.0),
-        (config.num_heads, config.relative_attention_num_buckets),
+        (resolved_num_heads, config.relative_attention_num_buckets),
         jnp.float32,
     )
     query_positions = jnp.arange(query_length)
@@ -270,11 +316,19 @@ class EncoderBlock(nn.Module):
     """Apply one post-norm Transformer encoder block."""
 
     config: JaxCommunicationModelConfig
+    hidden_size: int | None = None
+    num_heads: int | None = None
+    feedforward_size: int | None = None
 
     @nn.compact
     def __call__(self, hidden: Array, valid: Array, deterministic: bool) -> Array:
         """Encode one padded sequence while masking invalid keys."""
         config = self.config
+        hidden_size = config.hidden_size if self.hidden_size is None else self.hidden_size
+        num_heads = config.num_heads if self.num_heads is None else self.num_heads
+        feedforward_size = (
+            config.feedforward_size if self.feedforward_size is None else self.feedforward_size
+        )
         sequence_length = hidden.shape[1]
         relative_bias = _relative_attention_bias(
             self,
@@ -283,11 +337,12 @@ class EncoderBlock(nn.Module):
             config,
             bidirectional=True,
             name="relative_attention_bias",
+            num_heads=num_heads,
         )
         attention = nn.MultiHeadDotProductAttention(
-            num_heads=config.num_heads,
-            qkv_features=config.hidden_size,
-            out_features=config.hidden_size,
+            num_heads=num_heads,
+            qkv_features=hidden_size,
+            out_features=hidden_size,
             dropout_rate=config.dropout,
             dtype=config.dtype,
             param_dtype=jnp.float32,
@@ -302,7 +357,7 @@ class EncoderBlock(nn.Module):
             )
         ).astype(config.dtype)
         feedforward = nn.Dense(
-            config.feedforward_size,
+            feedforward_size,
             dtype=config.dtype,
             param_dtype=jnp.float32,
             name="feedforward_in",
@@ -312,7 +367,7 @@ class EncoderBlock(nn.Module):
             feedforward, deterministic=deterministic
         )
         feedforward = nn.Dense(
-            config.hidden_size,
+            hidden_size,
             dtype=config.dtype,
             param_dtype=jnp.float32,
             name="feedforward_out",
@@ -327,12 +382,23 @@ class EncoderStack(nn.Module):
     """Apply one reusable stack of Transformer encoder blocks."""
 
     config: JaxCommunicationModelConfig
+    hidden_size: int | None = None
+    num_layers: int | None = None
+    num_heads: int | None = None
+    feedforward_size: int | None = None
 
     @nn.compact
     def __call__(self, hidden: Array, valid: Array, deterministic: bool) -> Array:
         """Encode a padded sequence through every configured layer."""
-        for layer_index in range(self.config.num_layers):
-            hidden = EncoderBlock(self.config, name=f"layer_{layer_index}")(
+        num_layers = self.config.num_layers if self.num_layers is None else self.num_layers
+        for layer_index in range(num_layers):
+            hidden = EncoderBlock(
+                self.config,
+                hidden_size=self.hidden_size,
+                num_heads=self.num_heads,
+                feedforward_size=self.feedforward_size,
+                name=f"layer_{layer_index}",
+            )(
                 hidden, valid, deterministic
             )
         return hidden
@@ -532,6 +598,43 @@ class DecoderBlock(nn.Module):
         ).astype(config.dtype)
 
 
+def _masked_region_average(
+    hidden: Array,
+    valid: Array,
+    region_count: int,
+) -> Array:
+    """Average valid sequence states into contiguous equal-population regions."""
+    valid_float = valid.astype(jnp.float32)
+    valid_count = jnp.sum(valid_float, axis=1, keepdims=True)
+    valid_rank = jnp.cumsum(valid, axis=1).astype(jnp.int32) - 1
+    region_index = jnp.minimum(
+        valid_rank * region_count // jnp.maximum(valid_count.astype(jnp.int32), 1),
+        region_count - 1,
+    )
+    region_weight = jax.nn.one_hot(
+        region_index,
+        region_count,
+        dtype=jnp.float32,
+    ) * valid_float[:, :, None]
+    region_sum = jnp.einsum(
+        "blr,bld->brd",
+        region_weight,
+        hidden.astype(jnp.float32),
+    )
+    region_size = jnp.sum(region_weight, axis=1)[:, :, None]
+    return (region_sum / jnp.maximum(region_size, 1.0)).astype(hidden.dtype)
+
+
+def _rectangular_identity(
+    _key: Array,
+    shape: tuple[int, ...],
+    dtype: Any = jnp.float32,
+) -> Array:
+    """Initialize one rectangular dense kernel with an identity-aligned prefix."""
+    assert len(shape) == 2
+    return jnp.eye(shape[0], shape[1], dtype=dtype)
+
+
 class Sender(nn.Module):
     """Read one private passage, optionally question-prefixed, and return messages."""
 
@@ -548,10 +651,14 @@ class Sender(nn.Module):
         """Encode text into message vectors and optional sender gate activations."""
         config = self.config
         batch_size = token_ids.shape[0]
+        sender_hidden_size = config.resolved_sender_hidden_size
+        sender_num_layers = config.resolved_sender_num_layers
+        sender_num_heads = config.resolved_sender_num_heads
+        sender_feedforward_size = config.resolved_sender_feedforward_size
         query_embedding = self.param(
             "query_embedding",
             nn.initializers.normal(stddev=1.0),
-            (config.message_length, config.hidden_size),
+            (config.message_length, sender_hidden_size),
             jnp.float32,
         ).astype(config.dtype)
         text_length = text_embeddings.shape[1]
@@ -562,6 +669,25 @@ class Sender(nn.Module):
             maximum_sender_input_length += config.message_length
         if text_length > maximum_sender_input_length:
             raise ValueError("text is longer than the configured maximum")
+        average_residual = None
+        if config.sender_average_residual:
+            average_residual = _masked_region_average(
+                text_embeddings,
+                token_ids != config.padding_id,
+                config.message_length,
+            )
+        if sender_hidden_size != config.hidden_size:
+            text_embeddings = nn.Dense(
+                sender_hidden_size,
+                dtype=config.dtype,
+                param_dtype=jnp.float32,
+                kernel_init=(
+                    _rectangular_identity
+                    if config.sender_average_residual
+                    else nn.initializers.lecun_normal()
+                ),
+                name="input_projection",
+            )(text_embeddings)
         queries = jnp.broadcast_to(query_embedding[None], (batch_size, *query_embedding.shape))
         hidden = jnp.concatenate((queries, text_embeddings), axis=1)
         valid = jnp.concatenate(
@@ -572,13 +698,33 @@ class Sender(nn.Module):
             axis=1,
         )
         if self.shared_encoder is None:
-            for layer_index in range(config.num_layers):
-                hidden = EncoderBlock(config, name=f"layer_{layer_index}")(
+            for layer_index in range(sender_num_layers):
+                hidden = EncoderBlock(
+                    config,
+                    hidden_size=sender_hidden_size,
+                    num_heads=sender_num_heads,
+                    feedforward_size=sender_feedforward_size,
+                    name=f"layer_{layer_index}",
+                )(
                     hidden, valid, deterministic
                 )
         else:
             hidden = self.shared_encoder(hidden, valid, deterministic)
         messages = hidden[:, : config.message_length]
+        if sender_hidden_size != config.hidden_size or config.sender_average_residual:
+            messages = nn.Dense(
+                config.hidden_size,
+                dtype=config.dtype,
+                param_dtype=jnp.float32,
+                kernel_init=(
+                    nn.initializers.zeros_init()
+                    if config.sender_average_residual
+                    else nn.initializers.lecun_normal()
+                ),
+                name="message_projection",
+            )(messages)
+        if average_residual is not None:
+            messages = messages + average_residual
         gate = None
         if config.role_gate_channels is not None:
             messages, gate = ResidualRoleGate(
