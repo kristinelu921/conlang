@@ -12,9 +12,15 @@
 | Git revision | `97d0c9256d639b21bed05b978f2040eec4df99fa` (configuration/report closure) |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` |
 | Primary configuration | `configs/conlang-jax-v4-8-train1m-s10000-m4-qquery-lr4-sx384-sd4-sff1536-rx256-rd2-rff1024-oh1024-avgres-e200.yaml` |
-| Command | not recorded; pending immutable snapshot |
+| Command | recorded under Exact Launch Command below |
 | Seed | `1730` |
 | Hardware | selected `kmh-tpuvm-v4-8-spot-kristine-17-12-29-15-N-us-central2-b`, `us-central2-b`, Spot `v4-8`; current API state READY/HEALTHY and occupancy AVAILABLE |
+
+## Exact Launch Command
+
+```bash
+/snap/google-cloud-cli/current/bin/gcloud compute tpus tpu-vm ssh kmh-tpuvm-v4-8-spot-kristine-17-12-29-15-N-us-central2-b --project=he-vision-group --zone=us-central2-b --worker=all --internal-ip --ssh-flag=-F --ssh-flag=/dev/null --command='set -euo pipefail; trap "" HUP; source_dir=/home/kristinelu/elf-runs/sources/20261017-conlang-v4-8-train1m-s10000-m4-qquery-lr4-sx384-sd4-sff1536-rx256-rd2-rff1024-oh1024-avgres-e200-20261017T195535.297491701Z; output_dir=/home/kristinelu/elf-runs/20261017-conlang-v4-8-train1m-s10000-m4-qquery-lr4-sx384-sd4-sff1536-rx256-rd2-rff1024-oh1024-avgres-e200; launcher_log=/home/kristinelu/elf-runs/20261017-conlang-v4-8-train1m-s10000-m4-qquery-lr4-sx384-sd4-sff1536-rx256-rd2-rff1024-oh1024-avgres-e200.launcher.log; test -d "$source_dir"; test ! -e "$output_dir"; test ! -e "$launcher_log"; test ! -e /tmp/libtpu_lockfile; test -z "$(sudo fuser /dev/vfio/* 2>/dev/null || true)"; mkdir -p "$output_dir/wandb"; cd "$source_dir"; export JAX_PLATFORMS=tpu CUDA_VISIBLE_DEVICES= ELF_TPU_WORKER_INDEX=0 PYTHONPATH="$PWD" HF_HOME=/home/kristinelu/elf-runs/hf-cache WANDB_DIR="$output_dir/wandb" PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1; ulimit -c 0; /home/kristinelu/elf-runs/runtime/venv/bin/python -u train.py --config configs/conlang-jax-v4-8-train1m-s10000-m4-qquery-lr4-sx384-sd4-sff1536-rx256-rd2-rff1024-oh1024-avgres-e200.yaml 2>&1 | tee "$launcher_log"' --quiet
+```
 
 ## Configuration
 
@@ -119,10 +125,10 @@ Pending launch and verified completion.
 
 | Artifact | Path or URL | Verified |
 |---|---|---|
-| Configuration | `configs/conlang-jax-v4-8-train1m-s10000-m4-qquery-lr4-sx384-sd4-sff1536-rx256-rd2-rff1024-oh1024-avgres-e200.yaml` | parsed, validated, and CPU-initialized; committed at `97d0c9256d639b21bed05b978f2040eec4df99fa`; PR publication pending |
-| Pull request | `https://github.com/kristinelu921/conlang/pull/1` | existing PR; update pending review |
-| Source snapshot | not recorded; pending staging | no |
-| Regional dataset | `/home/kristinelu/elf-data/conlangs-v1-train1m` | prior verified Central2 copy exists; fresh integrity check pending |
+| Configuration | `configs/conlang-jax-v4-8-train1m-s10000-m4-qquery-lr4-sx384-sd4-sff1536-rx256-rd2-rff1024-oh1024-avgres-e200.yaml` | parsed, validated, and CPU-initialized; SHA-256 `2554d0b48d5c74a943884459069e5781adfdbced25faaa7d5357358d8290e640`; committed at `97d0c9256d639b21bed05b978f2040eec4df99fa` |
+| Pull request | `https://github.com/kristinelu921/conlang/pull/1` | existing PR updated through `4cca1d6a61ed409e476ad880f290badbde1ec775` |
+| Source snapshot | `/kmh-nfs-ssd-us-mount/staging/kristine/elf/20261017-conlang-v4-8-train1m-s10000-m4-qquery-lr4-sx384-sd4-sff1536-rx256-rd2-rff1024-oh1024-avgres-e200-20261017T195535.297491701Z` locally; `/home/kristinelu/elf-runs/sources/20261017-conlang-v4-8-train1m-s10000-m4-qquery-lr4-sx384-sd4-sff1536-rx256-rd2-rff1024-oh1024-avgres-e200-20261017T195535.297491701Z` remotely | exact match: 66 files, 479,047 bytes, relative-manifest SHA-256 `cb8f09f63c9f5123b1488e855254b0e68d2ca202ea3b5914eceff008d8774508`; no cache files |
+| Regional dataset | `/home/kristinelu/elf-data/conlangs-v1-train1m` | 95,042,272 bytes; manifest SHA-256 `1a860a5a0ace2d249c0b7e7273925d9545f61aaa261e00f5b9fe75900da91b20`; all gzip streams and generator verifier pass: 128,125 worlds, 1,025,000 questions, 8 questions/world |
 | Checkpoint | `/home/kristinelu/elf-runs/20261017-conlang-v4-8-train1m-s10000-m4-qquery-lr4-sx384-sd4-sff1536-rx256-rd2-rff1024-oh1024-avgres-e200/checkpoint.msgpack` | no |
 | Metrics | pending run-scoped artifact directory | no |
 | Outputs | pending run-scoped artifact directory | no |
@@ -147,6 +153,14 @@ Pending launch and verified completion.
   selected Central2 v4-8 already holds the verified regional dataset and runtime
   from the matched baseline. A direct describe reports READY/HEALTHY, and the
   read-only occupancy helper reports AVAILABLE.
+- Required remote preflight passed with 85 GiB free, no libtpu lock, all VFIO
+  devices idle, a fresh output/log path, JAX `0.6.2`, Flax `0.10.5`, Optax
+  `0.2.8`, NumPy `1.26.4`, W&B `0.28.1`, and a valid W&B netrc entry.
+- The first read-only dataset-content verifier was malformed by controller-side
+  shell quoting and exited with Python `SyntaxError` before reading content. It
+  created no trainer, W&B run, output, checkpoint, lock, or TPU holder. The
+  corrected module verifier then passed the counts recorded above; this was a
+  prelaunch verification-command incident, not a training attempt.
 
 ## Interpretation
 
@@ -174,3 +188,6 @@ Pending launch and verified completion.
 - `2026-10-17T19:43:50Z`: Selected the approximately 4x-capacity treatment,
   confirmed current filtered Kristine TPU availability, and created the planned
   report. No TPU state was changed and no training process was started.
+- `2026-10-17T19:58:57Z`: Staged and byte-verified the immutable source on the
+  selected TPU, freshly verified the regional dataset, and passed the official
+  and run-specific remote preflight gates. Training remained unstarted.
