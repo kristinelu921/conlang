@@ -104,6 +104,26 @@ def _reshape_attention_kernel(
     return reshaped
 
 
+def _attention_parameter(
+    source_parameters: Mapping[tuple[str, ...], Any],
+    source_attention_path: tuple[str, ...],
+    attention_part: str,
+    parameter_name: str,
+    target: np.ndarray,
+) -> tuple[np.ndarray, str]:
+    """Map one attention leaf while preserving native T5 query scaling."""
+    if parameter_name == "bias":
+        return np.zeros_like(target), "fallback"
+    source_names = {"query": "q", "key": "k", "value": "v", "out": "o"}
+    source = _source_array(
+        source_parameters,
+        (*source_attention_path, source_names[attention_part], "kernel"),
+    )
+    compensate_query_scaling = attention_part == "query"
+    category = "derived" if compensate_query_scaling else "checkpoint"
+    return _reshape_attention_kernel(source, target, compensate_query_scaling), category
+
+
 def _encoder_parameter(
     source_parameters: Mapping[tuple[str, ...], Any],
     layer_index: int,
@@ -129,18 +149,12 @@ def _encoder_parameter(
         return source.T, "checkpoint"
     if suffix[0] == "self_attention":
         attention_part, parameter_name = suffix[1:]
-        if parameter_name == "bias":
-            return np.zeros_like(target), "fallback"
-        source_names = {"query": "q", "key": "k", "value": "v", "out": "o"}
-        source = _source_array(
+        return _attention_parameter(
             source_parameters,
-            (*source_prefix, "0", "SelfAttention", source_names[attention_part], "kernel"),
-        )
-        compensate_query_scaling = attention_part == "query"
-        category = "derived" if compensate_query_scaling else "checkpoint"
-        return (
-            _reshape_attention_kernel(source, target, compensate_query_scaling),
-            category,
+            (*source_prefix, "0", "SelfAttention"),
+            attention_part,
+            parameter_name,
+            target,
         )
     if suffix[0] == "attention_norm":
         if suffix[1] == "bias":
@@ -206,28 +220,16 @@ def _decoder_parameter(
         return np.zeros_like(target), "fallback"
     if suffix[0] in {"self_attention", "cross_attention"}:
         target_attention_name, attention_part, parameter_name = suffix
-        if parameter_name == "bias":
-            return np.zeros_like(target), "fallback"
         source_layer = "0" if target_attention_name == "self_attention" else "1"
         source_attention_name = (
             "SelfAttention" if target_attention_name == "self_attention" else "EncDecAttention"
         )
-        source_names = {"query": "q", "key": "k", "value": "v", "out": "o"}
-        source = _source_array(
+        return _attention_parameter(
             source_parameters,
-            (
-                *source_prefix,
-                source_layer,
-                source_attention_name,
-                source_names[attention_part],
-                "kernel",
-            ),
-        )
-        compensate_query_scaling = attention_part == "query"
-        category = "derived" if compensate_query_scaling else "checkpoint"
-        return (
-            _reshape_attention_kernel(source, target, compensate_query_scaling),
-            category,
+            (*source_prefix, source_layer, source_attention_name),
+            attention_part,
+            parameter_name,
+            target,
         )
     norm_layers = {
         "self_attention_norm": "0",
@@ -267,18 +269,12 @@ def _question_message_parameter(
     source_prefix = ("decoder", "block", "0", "layer")
     if suffix[0] == "question_message_attention":
         attention_part, parameter_name = suffix[1:]
-        if parameter_name == "bias":
-            return np.zeros_like(target), "fallback"
-        source_names = {"query": "q", "key": "k", "value": "v", "out": "o"}
-        source = _source_array(
+        return _attention_parameter(
             source_parameters,
-            (*source_prefix, "1", "EncDecAttention", source_names[attention_part], "kernel"),
-        )
-        compensate_query_scaling = attention_part == "query"
-        category = "derived" if compensate_query_scaling else "checkpoint"
-        return (
-            _reshape_attention_kernel(source, target, compensate_query_scaling),
-            category,
+            (*source_prefix, "1", "EncDecAttention"),
+            attention_part,
+            parameter_name,
+            target,
         )
     if suffix[0] == "attention_norm":
         if suffix[1] == "bias":

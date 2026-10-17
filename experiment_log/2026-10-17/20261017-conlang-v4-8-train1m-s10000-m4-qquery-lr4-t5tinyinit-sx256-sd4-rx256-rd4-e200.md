@@ -177,7 +177,7 @@ Pending launch and verified completion.
 - All 71 sender leaves had nonzero first-backward gradients; this removes the
   prior zero-message-projection one-update gate.
 - The oracle is a numerical startup check, not an experiment result.
-- The complete CPU repository suite passed at the reviewed closure: `146 passed,
+- The complete CPU repository suite passed at the reviewed closure: `147 passed,
   7 subtests passed, 2 existing Pydantic warnings` in `211.29s`.
 
 ## Interpretation

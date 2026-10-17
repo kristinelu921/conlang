@@ -1091,15 +1091,17 @@ def _append_metrics(metrics_path: Path | None, metrics: Mapping[str, Any]) -> No
 def train(config: TrainConfig) -> dict[str, Any]:
     """Train the Flax communication model and return final evaluation metrics."""
     config.validate()
+    pretrained_artifacts: tuple[Path, str, str] | None = None
     if config.pretrained_initialization == T5_EFFICIENT_TINY_INITIALIZATION:
         assert config.pretrained_model_dir is not None
         assert config.pretrained_checkpoint_sha256 is not None
         assert config.pretrained_tokenizer_sha256 is not None
-        verify_t5_efficient_tiny_artifacts(
+        pretrained_artifacts = (
             config.pretrained_model_dir,
             config.pretrained_checkpoint_sha256,
             config.pretrained_tokenizer_sha256,
         )
+        verify_t5_efficient_tiny_artifacts(*pretrained_artifacts)
     output_directory = config.output_path.parent if config.output_path is not None else None
     if output_directory is not None:
         if output_directory.exists():
@@ -1151,16 +1153,11 @@ def train(config: TrainConfig) -> dict[str, Any]:
         model = JaxCommunicationModel(_model_config(config, tokenizer))
         initialization_optimizer = optax.identity()
         initial_state = _initialize_state(model, initialization_optimizer, first_batch, config.seed)
-        if config.pretrained_initialization == T5_EFFICIENT_TINY_INITIALIZATION:
-            assert config.pretrained_model_dir is not None
-            assert config.pretrained_checkpoint_sha256 is not None
-            assert config.pretrained_tokenizer_sha256 is not None
+        if pretrained_artifacts is not None:
             pretrained_parameters, initialization_summary = initialize_from_t5_efficient_tiny(
                 initial_state.params,
                 tokenizer,
-                config.pretrained_model_dir,
-                config.pretrained_checkpoint_sha256,
-                config.pretrained_tokenizer_sha256,
+                *pretrained_artifacts,
             )
             initial_state = initial_state.replace(params=pretrained_parameters)
             print(
