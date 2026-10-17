@@ -5,8 +5,8 @@
 | Field | Value |
 |---|---|
 | Run ID | `20261017-conlang-v4-8-train1m-s10000-m4-qquery-lr4-sx384-sd4-sff1536-rx256-rd2-rff1024-oh1024-avgres-e200-retry1` |
-| Status | `planned` |
-| Started | not recorded |
+| Status | `running` |
+| Started | `2026-10-17T20:11:37Z` |
 | Finished | not recorded |
 | Baseline | `20261017-conlang-v4-8-train1m-s10000-m4-qquery-senderlr4-sx192-sd4-sff768-avgres-eval200-retry1` |
 | Supersedes | zero-step launch-control failure `20261017-conlang-v4-8-train1m-s10000-m4-qquery-lr4-sx384-sd4-sff1536-rx256-rd2-rff1024-oh1024-avgres-e200` |
@@ -101,7 +101,10 @@ coupled treatment rather than one isolated component.
 
 ## Results
 
-Pending launch and verified completion.
+Running. The first compiled interval reached step 140 with finite losses and
+gradients. Steps 20--140 sustained approximately 1,274--1,277 examples/second;
+step 140 reported training loss `5.2984` and gradient norm `1.7762`. This is an
+interim liveness/throughput observation, not a scientific result.
 
 ## Artifacts
 
@@ -111,15 +114,15 @@ Pending launch and verified completion.
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` | retry closure and both review fixes pushed through `bc4c6b9` |
 | Source snapshot | `/kmh-nfs-ssd-us-mount/staging/kristine/elf/20261017-conlang-v4-8-train1m-s10000-m4-qquery-lr4-sx384-sd4-sff1536-rx256-rd2-rff1024-oh1024-avgres-e200-retry1-20261017T200706.184345335Z` locally; corresponding `/home/kristinelu/elf-runs/sources/` path in the command remotely | exact local/remote match: 67 files, 480,583 bytes, relative-manifest SHA-256 `2790ee0c5861bd0045f304bbace256bec8b1f8af85113bf9521940a7218f9b81`; no cache files |
 | Regional dataset | `/home/kristinelu/elf-data/conlangs-v1-train1m` | prior launch preflight verified 95,042,272 bytes and manifest SHA-256 `1a860a5a0ace2d249c0b7e7273925d9545f61aaa261e00f5b9fe75900da91b20`; retry gate pending |
-| Checkpoint | retry output path from configuration | no |
-| Metrics | retry output directory | no |
-| Outputs | retry output directory | no |
-| Launcher log | retry run-scoped launcher log | no |
-| Tracking run | pending W&B initialization | no |
+| Checkpoint | retry output path from configuration | pending terminal save |
+| Metrics | retry output directory | advancing through step 140 |
+| Outputs | retry output directory | advancing through step 140 |
+| Launcher log | `/home/kristinelu/elf-runs/20261017-conlang-v4-8-train1m-s10000-m4-qquery-lr4-sx384-sd4-sff1536-rx256-rd2-rff1024-oh1024-avgres-e200-retry1.launcher.log` | canonical foreground log advancing |
+| Tracking run | `https://wandb.ai/kaynelu921-massachusetts-institute-of-technology/conlangs/runs/iv9wan21` | initialized as run `iv9wan21`; running |
 
 ## Failure Details
 
-- Last known step: not applicable.
+- Last known step: 140 while running.
 - Error summary: not applicable.
 - Detailed output: not recorded.
 
@@ -164,3 +167,9 @@ Pending launch and verified completion.
 - `2026-10-17T20:09:28Z`: Copied the reviewed snapshot node-locally after one
   rejected local `scp` flag invocation, then verified exact file count, byte
   count, manifest digest, config digest, and absence of cache files remotely.
+- `2026-10-17T20:11:37Z`: Launched on the selected v4-8. W&B initialized as
+  `iv9wan21`; the trainer verified 1,025,000 questions, 1,000,000 training
+  examples, 256 validation examples, and all four TPU devices.
+- `2026-10-17T20:21:30Z`: First-step gate passed. Training advanced through
+  step 140 at approximately 1,275 examples/second with finite loss and
+  gradients. Foreground launch and recurring monitoring remain active.
