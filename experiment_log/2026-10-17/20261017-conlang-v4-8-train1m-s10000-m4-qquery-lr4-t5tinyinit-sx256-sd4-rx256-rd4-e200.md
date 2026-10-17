@@ -1,0 +1,189 @@
+# T5-Efficient-Tiny maximal warm-start pilot
+
+## Run Summary
+
+| Field | Value |
+|---|---|
+| Run ID | `20261017-conlang-v4-8-train1m-s10000-m4-qquery-lr4-t5tinyinit-sx256-sd4-rx256-rd4-e200` |
+| Status | `planned` |
+| Started | not started |
+| Finished | not applicable |
+| Baseline | `20261017-conlang-v4-8-train1m-s10000-m4-qquery-lr4-sx384-sd4-sff1536-rx256-rd2-rff1024-oh1024-avgres-e200-retry1` |
+| Git revision | not recorded; pending immutable configuration closure |
+| Pull request | `https://github.com/kristinelu921/conlang/pull/1` |
+| Primary configuration | `configs/conlang-jax-v4-8-train1m-s10000-m4-qquery-lr4-t5tinyinit-sx256-sd4-rx256-rd4-e200.yaml` |
+| Command | not recorded; pending immutable snapshot and final launch gate |
+| Seed | `1730` |
+| Hardware | planned `v4-8` from the final authorized `AVAILABLE` table; exact resource pending final occupancy gate |
+
+## Configuration
+
+Source: `configs/conlang-jax-v4-8-train1m-s10000-m4-qquery-lr4-t5tinyinit-sx256-sd4-rx256-rd4-e200.yaml`
+
+```yaml
+run_id: 20261017-conlang-v4-8-train1m-s10000-m4-qquery-lr4-t5tinyinit-sx256-sd4-rx256-rd4-e200
+dataset_dir: null
+dataset_cache_dir: /home/kristinelu/elf-data/conlangs-v1-train1m
+dataset_prefix: kristine/datasets/conlangs-train1m
+batch_size: 256
+learning_rate: 0.0003
+sender_learning_rate_multiplier: 4.0
+weight_decay: 0.01
+max_gradient_norm: 1.0
+steps: 10000
+eval_every: 200
+eval_examples: 256
+log_every: 10
+throughput_warmup_steps: 10
+seed: 1730
+device: tpu
+precision: bfloat16
+output_path: /home/kristinelu/elf-runs/20261017-conlang-v4-8-train1m-s10000-m4-qquery-lr4-t5tinyinit-sx256-sd4-rx256-rd4-e200/checkpoint.msgpack
+pretrained_initialization: google_t5_efficient_tiny
+pretrained_model_dir: /home/kristinelu/elf-runs/pretrained/google-t5-efficient-tiny-3441d7e8
+pretrained_checkpoint_sha256: 16e959d18596c0cdd9da07fd4fb913f5f9aa7835decfd6a4b9f9fd96e960da26
+pretrained_tokenizer_sha256: 88fe1105ba0554a7bf747a0da453b6d5d23c31805f915731ddb4f419bdc45e34
+limit_examples: null
+repeat_training_examples_to_batch_size: false
+evaluation_message_interventions: true
+wandb_project: conlangs
+wandb_run_name: 20261017-conlang-v4-8-train1m-s10000-m4-qquery-lr4-t5tinyinit-sx256-sd4-rx256-rd4-e200
+wandb_enabled: true
+hidden_size: 256
+output_hidden_size: 256
+sender_hidden_size: 256
+sender_num_layers: 4
+sender_num_heads: 4
+sender_feedforward_size: 1024
+sender_average_residual: true
+tie_sender_receiver_encoder: false
+role_gate_channels: null
+sender_question_conditioning: false
+receiver_question_input: true
+receiver_question_query_only: true
+communication_rounds: 1
+bridge_supervision_weight: 0.0
+message_length: 4
+max_answer_length: 4
+max_text_length: 512
+max_question_length: 128
+num_layers: 4
+num_heads: 4
+dropout: 0.1
+relative_attention_num_buckets: 32
+relative_attention_max_distance: 128
+```
+
+## Changed Hyperparameters
+
+| Parameter | Completed baseline | Current | Source |
+|---|---:|---:|---|
+| Initialization | random Flax initializers | maximal `google/t5-efficient-tiny` warm start | selected config and `pretrained_initialization.py` |
+| Total parameters | `14,845,711` | `12,580,239` | initialized production trees |
+| Sender hidden width | `384` | `256` | selected configs |
+| Sender depth | `4` | `4` | selected configs |
+| Sender heads / head width | `12 / 32` | `4 / 64` | selected configs |
+| Sender FFN width | `1536` | `1024` | selected configs |
+| Receiver hidden width | `256` | `256` | selected configs |
+| Receiver depth | `2` | `4` | selected configs |
+| Receiver heads / head width | `8 / 32` | `4 / 64` | selected configs |
+| Receiver FFN width | `1024` | `1024` | selected configs |
+| Output-hidden width | `1024` | `256` | selected configs |
+
+Training data, batch size, 10,000-step budget, seed, optimizer, sender learning-rate
+multiplier, message length, sender sharing, question-only receiver query path,
+question-blind senders, and 200-step causal evaluation cadence remain unchanged.
+This is necessarily a coupled architecture-and-initialization pilot, not an
+isolated estimate of pretraining benefit. A random-initialized run with this
+exact 256/4/1024 geometry would be required for that isolation.
+
+## Initialization Contract
+
+The source is the native Flax checkpoint for
+`google/t5-efficient-tiny` at immutable Hugging Face revision
+`3441d7e8bf3f89841f366d39452b95200416e4a9`. The 62,286,648-byte
+`flax_model.msgpack` has SHA-256
+`16e959d18596c0cdd9da07fd4fb913f5f9aa7835decfd6a4b9f9fd96e960da26`;
+the 1,387,470-byte `tokenizer.json` has SHA-256
+`88fe1105ba0554a7bf747a0da453b6d5d23c31805f915731ddb4f419bdc45e34`.
+Both hashes were verified on the control host and are launch-time fail-closed
+inputs.
+
+Every target parameter leaf receives an explicit value. Of 12,580,239 target
+parameters across 272 leaves, 11,281,408 parameters in 136 leaves are copied or
+reshaped directly from matching T5 encoder/decoder tensors; 1,253,888 parameters
+in five leaves are checkpoint-derived task embeddings, sentinel query slots,
+T5 final-normalization diagonals, and the tied-style task readout; and 44,943
+parameters in 131 leaves use explicit zero fallbacks for biases and decoder
+cross-position biases that do not exist in T5. Thus 99.64% of scalar parameters
+are checkpoint-direct or checkpoint-derived, while no random initializer value
+survives.
+
+The task keeps its existing character inputs and one-token answer vocabulary.
+Each task token is initialized by averaging its T5 SentencePiece rows; the whole
+source embedding table is RMS-normalized first so its unusually large trained
+scale does not create pathological post-norm logits. The four sender query slots
+use `<extra_id_0>` through `<extra_id_3>`. The sender message and receiver output-
+hidden adapters use the T5 encoder and decoder final-normalization weights as
+diagonal projections. The answer readout reuses the derived task embeddings with
+the T5 `1/sqrt(d_model)` scale.
+
+This transfers parameter content, not the exact pretrained T5 function. T5 uses
+pre-norm RMSNorm and bias-free layers, while this communication model retains
+post-norm LayerNorm and explicit biases. The character-level input representation
+also differs from T5 pretraining. These are interpretation limitations rather
+than hidden configuration changes.
+
+## Hypothesis and Decision Rule
+
+The pilot asks whether language-pretrained directions and a live nonzero sender
+path can help answer-token cross-entropy discover passage-specific communication.
+The primary success criterion remains a repeatable intact-over-wrong-world
+validation advantage across the 50 scheduled evaluations, preferably in exact
+match and with a stable positive likelihood gap. Intact-versus-zero remains only
+an out-of-distribution learned-carrier diagnostic. Earlier loss reduction is
+interesting only if it is accompanied by the matched passage intervention gap;
+otherwise it may again be question-domain prior learning.
+
+## Results
+
+Pending launch and verified completion.
+
+## Artifacts
+
+| Artifact | Path or URL | Verified |
+|---|---|---|
+| Configuration | `configs/conlang-jax-v4-8-train1m-s10000-m4-qquery-lr4-t5tinyinit-sx256-sd4-rx256-rd4-e200.yaml` | yes, parses and validates |
+| Source model | `https://huggingface.co/google/t5-efficient-tiny/tree/3441d7e8bf3f89841f366d39452b95200416e4a9` | yes, control-host hashes above |
+| Checkpoint | planned node-local path from the configuration | no, not launched |
+| Tracking run | not recorded | no, not launched |
+| Metrics and outputs | planned under the fresh run output directory | no, not launched |
+
+## Failure Details
+
+- Last known step: not applicable
+- Error summary: not applicable
+- Detailed output: not recorded
+
+## Observations
+
+- A CPU oracle with the exact production parameter tree initialized all 272
+  leaves and produced a finite one-example loss of `18.2122917` with finite
+  sender and receiver gradients.
+- All 71 sender leaves had nonzero first-backward gradients; this removes the
+  prior zero-message-projection one-update gate.
+- The oracle is a numerical startup check, not an experiment result.
+
+## Interpretation
+
+- Any result is jointly attributable to exact T5 geometry, checkpoint transfer,
+  checkpoint-derived boundary initialization, and the retained communication
+  adapters. It cannot by itself establish that pretraining rather than geometry
+  caused a change.
+- This is not a muP experiment; optimizer scaling is unchanged from the completed
+  sender-4x baseline.
+
+## Updates
+
+- `2026-10-17T21:35:00Z`: planned report created after artifact-integrity,
+  complete-tree mapping, finite-loss, and first-backward gradient checks.
