@@ -178,7 +178,7 @@ generations; validation generations are not persisted.
 | Artifact | Path or URL | Verified |
 |---|---|---|
 | Configuration | `configs/conlang-jax-v4-8-train1m-s10000-m4-qquery-senderlr4-sx192-sd4-sff768-avgres-eval200-retry1.yaml` | local and remote SHA-256 `4a0fb81af1d6a1b4845537305b8ba7415c405c0063dd475467603123e4eaf7f8`; parsed and validated remotely |
-| Pull request | `https://github.com/kristinelu921/conlang/pull/1` | existing PR updated with the immutable run closure and completed evidence |
+| Pull request | `https://github.com/kristinelu921/conlang/pull/1` | PR branch contains completed-evidence commit `663c6d5844f61829d8de9d291e3fab2440f6618d` |
 | Source snapshot | `/kmh-nfs-ssd-us-mount/staging/kristine/elf/20261017-conlang-v4-8-train1m-s10000-m4-qquery-senderlr4-sx192-sd4-sff768-avgres-eval200-retry1-20261017T153818.926176475Z`; remote `/home/kristinelu/elf-runs/sources/20261017-conlang-v4-8-train1m-s10000-m4-qquery-senderlr4-sx192-sd4-sff768-avgres-eval200-retry1-20261017T153818.926176475Z` | local and remote match: 65 files, 477,532 bytes, relative manifest digest `c8b9145d6e91773b4b3b228ae12610c9e3ddd23ee282a61b180ccc64c07a04ea`; no bytecode/test caches |
 | Regional dataset | `/home/kristinelu/elf-data/conlangs-v1-train1m` | generated on the selected Central2 TPU; 128,125 worlds / 1,025,000 questions / 8 questions per world; 95,042,272 bytes; all six gzip streams and content checks passed; manifest SHA-256 `1a860a5a0ace2d249c0b7e7273925d9545f61aaa261e00f5b9fe75900da91b20` |
 | Checkpoint | `/home/kristinelu/elf-runs/20261017-conlang-v4-8-train1m-s10000-m4-qquery-senderlr4-sx192-sd4-sff768-avgres-eval200-retry1/checkpoint.msgpack` | 46,001,025 bytes; SHA-256 `01c7b39f7498184f79b28f43573ba01237c1194911b7e7a215f4e74863daff87`; CPU restore verified step `10000` |
@@ -266,6 +266,16 @@ generations; validation generations are not persisted.
   removed them. Seven focused tests passed in `30.12s`, then the full
   `142`-test/`7`-subtest suite passed again in `216.43s` with the same two
   existing warnings.
+- A separate completed-result correctness review found no confirmed issue in
+  exact range
+  `3194e4b7059bf89b079c0fd7cd70900228c3370b..663c6d5844f61829d8de9d291e3fab2440f6618d`.
+  It independently recomputed all metrics and comparisons, parsed both JSONL
+  artifacts, verified artifact/checkpoint/source/config/dataset/runtime hashes,
+  restored checkpoint step 10,000, confirmed W&B completion, checked causal
+  language and secrets, and found a clean diff and worktree. The completed-result
+  cleanup pass found only stale PR-publication and review-ledger wording; this
+  follow-up records the already pushed evidence commit and the distinct result
+  review.
 
 ## Updates
 
