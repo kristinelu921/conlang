@@ -5,8 +5,8 @@
 | Field | Value |
 |---|---|
 | Run ID | `20261017-conlang-v4-8-train1m-s10000-m4-qquery-senderlr4-sx192-sd4-sff768-avgres-eval200-retry1` |
-| Status | `preflight passed; launch pending` |
-| Started | not started |
+| Status | `running` |
+| Started | `2026-10-17T15:44:16Z` |
 | Finished | not applicable |
 | Baseline | `20261017-conlang-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-eval200-commdiag` |
 | Retry of | `20261017-conlang-v4-8-train1m-s10000-m4-qquery-senderlr4-sx192-sd4-sff768-avgres-eval200` |
@@ -111,7 +111,9 @@ positive result to the combined treatment rather than either component.
 
 ## Results
 
-Pending launch and verified completion.
+Training reached step 50 with finite loss/gradients and approximately 2,413
+examples/s after warmup. The foreground launch and recurring read-only monitor
+remain active; final results are pending verified completion.
 
 ## Artifacts
 
@@ -125,7 +127,7 @@ Pending launch and verified completion.
 | Metrics | pending run-scoped artifact directory | no |
 | Outputs | pending run-scoped artifact directory | no |
 | Launcher log | pending run-scoped artifact directory | no |
-| Tracking run | not recorded | no |
+| Tracking run | `https://wandb.ai/kaynelu921-massachusetts-institute-of-technology/conlangs/runs/hqwvdzrr` | live run ID `hqwvdzrr`; initialized and syncing |
 
 ## Failure Details
 
@@ -196,3 +198,9 @@ Pending launch and verified completion.
   and full integrity verification. The isolated runtime and final prelaunch
   integrity gates passed; launch remains pending the immediate final occupancy
   recheck.
+- `2026-10-17T15:44:16Z`: Launched the exact recorded command on
+  `kmh-tpuvm-v4-8-spot-kristine-17-12-29-15-N-us-central2-b`; W&B run
+  `hqwvdzrr` initialized. Data loading confirmed 1,000,000 training examples,
+  256 validation examples, batch 256, bfloat16, and four TPU devices. The run
+  reached step 50 with loss `5.4793`, gradient norm `1.5060`, and approximately
+  `2,413` examples/s.
