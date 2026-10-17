@@ -49,9 +49,14 @@ Exit status: `1` after the bounded gcloud retry loop.
 - Recovery: use the documented explicit `--worker=0` internal-IP path with bounded
   retry for this single-worker v4-8, then require runtime, W&B authentication,
   dataset, disk, lock, and output-freshness checks before any mutation.
-- Verification command: the explicit-worker read-only preflight is pending.
+- Verification command/result: explicit `--worker=0 --internal-ip` probes with
+  `-F /dev/null` subsequently verified the runtime, regional dataset, output
+  freshness, source/model hashes, W&B authentication, absent libtpu lock, and
+  85 GiB free. The repository preflight then passed after one transient packet/MAC
+  retry and reported `tpu_device=idle`.
 
 ## Artifacts
 
 No source snapshot, remote source, model artifact, output directory, W&B run,
 trainer, checkpoint, or launch log was created by this failed read-only attempt.
+Subsequent staging belongs to the separately logged planned training run.

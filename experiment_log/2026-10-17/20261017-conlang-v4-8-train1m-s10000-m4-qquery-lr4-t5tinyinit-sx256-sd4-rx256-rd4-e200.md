@@ -9,12 +9,18 @@
 | Started | not started |
 | Finished | not applicable |
 | Baseline | `20261017-conlang-v4-8-train1m-s10000-m4-qquery-lr4-sx384-sd4-sff1536-rx256-rd2-rff1024-oh1024-avgres-e200-retry1` |
-| Git revision | `b986703a62168220314820334b5cbea1ad0a59d3` (implementation/configuration closure; launch snapshot pending) |
+| Git revision | `b986703a62168220314820334b5cbea1ad0a59d3` (implementation/configuration closure) |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` |
 | Primary configuration | `configs/conlang-jax-v4-8-train1m-s10000-m4-qquery-lr4-t5tinyinit-sx256-sd4-rx256-rd4-e200.yaml` |
-| Command | not recorded; pending immutable snapshot and final launch gate |
+| Command | exact command below; pending final occupancy gate |
 | Seed | `1730` |
-| Hardware | planned `v4-8` from the final authorized `AVAILABLE` table; exact resource pending final occupancy gate |
+| Hardware | `kmh-tpuvm-v4-8-spot-kristine-17-12-29-15-N-us-central2-b`, `us-central2-b`, Spot `v4-8`; pending final occupancy gate |
+
+## Command
+
+```bash
+/snap/google-cloud-cli/current/bin/gcloud compute tpus tpu-vm ssh kmh-tpuvm-v4-8-spot-kristine-17-12-29-15-N-us-central2-b --project=he-vision-group --zone=us-central2-b --worker=0 --internal-ip --ssh-flag=-F --ssh-flag=/dev/null --command='set -euo pipefail; trap "" HUP; source_path=/home/kristinelu/elf-runs/sources/20261017-conlang-v4-8-train1m-s10000-m4-qquery-lr4-t5tinyinit-sx256-sd4-rx256-rd4-e200-20261017T220459.865879959Z; config_path="$source_path/configs/conlang-jax-v4-8-train1m-s10000-m4-qquery-lr4-t5tinyinit-sx256-sd4-rx256-rd4-e200.yaml"; output_path=/home/kristinelu/elf-runs/20261017-conlang-v4-8-train1m-s10000-m4-qquery-lr4-t5tinyinit-sx256-sd4-rx256-rd4-e200; launcher_log=/home/kristinelu/elf-runs/logs/20261017-conlang-v4-8-train1m-s10000-m4-qquery-lr4-t5tinyinit-sx256-sd4-rx256-rd4-e200.launcher.log; model_path=/home/kristinelu/elf-runs/pretrained/google-t5-efficient-tiny-3441d7e8; test -d "$source_path"; test -f "$config_path"; test ! -e "$output_path"; test ! -e "$launcher_log"; test "$(sha256sum "$model_path/flax_model.msgpack" | cut -d" " -f1)" = 16e959d18596c0cdd9da07fd4fb913f5f9aa7835decfd6a4b9f9fd96e960da26; test "$(sha256sum "$model_path/tokenizer.json" | cut -d" " -f1)" = 88fe1105ba0554a7bf747a0da453b6d5d23c31805f915731ddb4f419bdc45e34; mkdir -p /home/kristinelu/elf-runs/logs /home/kristinelu/elf-runs/wandb; cd "$source_path"; export JAX_PLATFORMS=tpu CUDA_VISIBLE_DEVICES= ELF_TPU_WORKER_INDEX=0 PYTHONPATH="$PWD" HF_HOME=/home/kristinelu/elf-runs/hf-cache WANDB_DIR=/home/kristinelu/elf-runs/wandb PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1; ulimit -c 0; /home/kristinelu/elf-runs/runtime/venv/bin/python -u train.py --config "$config_path" 2>&1 | tee "$launcher_log"' --quiet
+```
 
 ## Configuration
 
@@ -158,7 +164,9 @@ Pending launch and verified completion.
 | Artifact | Path or URL | Verified |
 |---|---|---|
 | Configuration | `configs/conlang-jax-v4-8-train1m-s10000-m4-qquery-lr4-t5tinyinit-sx256-sd4-rx256-rd4-e200.yaml` | yes, parses and validates |
+| Immutable source | `/kmh-nfs-ssd-us-mount/staging/kristine/elf/20261017-conlang-v4-8-train1m-s10000-m4-qquery-lr4-t5tinyinit-sx256-sd4-rx256-rd4-e200-20261017T220459.865879959Z` | yes, 70 files / 519,174 bytes / relative-manifest SHA-256 `b0b01aacfd2e284c4fe7778be47d132e0fa3999fb0a876f85204683965dcdb85` |
 | Source model | `https://huggingface.co/google/t5-efficient-tiny/tree/3441d7e8bf3f89841f366d39452b95200416e4a9` | yes, control-host hashes above |
+| Regional dataset | `/home/kristinelu/elf-data/conlangs-v1-train1m` | yes, manifest SHA-256 `1a860a5a0ace2d249c0b7e7273925d9545f61aaa261e00f5b9fe75900da91b20` |
 | Checkpoint | planned node-local path from the configuration | no, not launched |
 | Tracking run | not recorded | no, not launched |
 | Metrics and outputs | planned under the fresh run output directory | no, not launched |
@@ -200,3 +208,7 @@ Pending launch and verified completion.
   oracle results.
 - `2026-10-17T21:59:19Z`: resolved the cleanup review by centralizing attention
   transfer policy and pretrained artifact binding; the final full CPU suite passed.
+- `2026-10-17T22:06:00Z`: selected the available READY/HEALTHY Central2 v4-8,
+  staged and byte-verified the immutable source and pinned model artifacts, verified
+  the existing regional dataset and W&B login, and passed the standard disk/device/
+  output-freshness preflight through the documented explicit-worker SSH recovery.
