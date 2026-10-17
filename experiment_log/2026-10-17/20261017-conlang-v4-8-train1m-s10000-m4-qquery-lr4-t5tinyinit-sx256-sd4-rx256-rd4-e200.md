@@ -5,9 +5,9 @@
 | Field | Value |
 |---|---|
 | Run ID | `20261017-conlang-v4-8-train1m-s10000-m4-qquery-lr4-t5tinyinit-sx256-sd4-rx256-rd4-e200` |
-| Status | `planned` |
-| Started | not started |
-| Finished | not applicable |
+| Status | `running` |
+| Started | `2026-10-17T22:08:09Z` |
+| Finished | pending |
 | Baseline | `20261017-conlang-v4-8-train1m-s10000-m4-qquery-lr4-sx384-sd4-sff1536-rx256-rd2-rff1024-oh1024-avgres-e200-retry1` |
 | Git revision | `b986703a62168220314820334b5cbea1ad0a59d3` (implementation/configuration closure) |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` |
@@ -157,7 +157,11 @@ otherwise it may again be question-domain prior learning.
 
 ## Results
 
-Pending launch and verified completion.
+Running. The compiled path reached step 10 with training loss `10.3851`, then
+step 200 with loss `6.6595` and `2,159.90` examples/s. The independent recurring
+gate observed one exact trainer, READY/HEALTHY TPU state, W&B `running`, and
+step 640 at `2026-10-17T22:21:41Z`. Final causal evaluations and checkpoint are
+pending.
 
 ## Artifacts
 
@@ -167,9 +171,10 @@ Pending launch and verified completion.
 | Immutable source | `/kmh-nfs-ssd-us-mount/staging/kristine/elf/20261017-conlang-v4-8-train1m-s10000-m4-qquery-lr4-t5tinyinit-sx256-sd4-rx256-rd4-e200-20261017T220459.865879959Z` | yes, 70 files / 519,174 bytes / relative-manifest SHA-256 `b0b01aacfd2e284c4fe7778be47d132e0fa3999fb0a876f85204683965dcdb85` |
 | Source model | `https://huggingface.co/google/t5-efficient-tiny/tree/3441d7e8bf3f89841f366d39452b95200416e4a9` | yes, control-host hashes above |
 | Regional dataset | `/home/kristinelu/elf-data/conlangs-v1-train1m` | yes, manifest SHA-256 `1a860a5a0ace2d249c0b7e7273925d9545f61aaa261e00f5b9fe75900da91b20` |
-| Checkpoint | planned node-local path from the configuration | no, not launched |
-| Tracking run | not recorded | no, not launched |
-| Metrics and outputs | planned under the fresh run output directory | no, not launched |
+| Checkpoint | node-local path from the configuration | pending final step |
+| Tracking run | `https://wandb.ai/kaynelu921-massachusetts-institute-of-technology/conlangs/runs/scrhodwe` | yes, authenticated and running |
+| Metrics and outputs | `/home/kristinelu/elf-runs/20261017-conlang-v4-8-train1m-s10000-m4-qquery-lr4-t5tinyinit-sx256-sd4-rx256-rd4-e200/` | yes, advancing |
+| Recurring monitor | `conlang-monitor-t5tiny-scrhodwe.service` | yes, five-minute cadence; first check completed and entered one sleep child |
 
 ## Failure Details
 
@@ -212,3 +217,8 @@ Pending launch and verified completion.
   staged and byte-verified the immutable source and pinned model artifacts, verified
   the existing regional dataset and W&B login, and passed the standard disk/device/
   output-freshness preflight through the documented explicit-worker SSH recovery.
+- `2026-10-17T22:08:09Z`: launched the exact recorded command; W&B run
+  `scrhodwe` initialized before JAX opened the TPU.
+- `2026-10-17T22:21:41Z`: first-step and steady-state execution verified. The
+  five-minute recurring monitor observed one trainer and step 640 while the TPU
+  remained READY/HEALTHY and W&B remained running.
