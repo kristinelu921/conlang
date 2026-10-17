@@ -162,8 +162,9 @@ Pending launch and verified completion.
 - The full CPU suite passed `142` tests and `7` subtests with two existing
   Pydantic warnings in `204.71s` under `USE_TORCH_XLA=0` and
   `JAX_PLATFORMS=cpu`.
-- Sequential correctness and cleanup reviews are pending the immutable
-  implementation/configuration closure.
+- Correctness review found no confirmed issue in immutable range
+  `930cc28689ad3d4a2d3b24fb487b570a2a140db4..e236107a0e0cd814e9b32c06c2ad9bfdded29701`.
+  Cleanup review is pending the updated closure.
 
 ## Updates
 
