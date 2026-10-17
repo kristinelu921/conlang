@@ -5,8 +5,8 @@
 | Field | Value |
 |---|---|
 | Run ID | `20261017-conlang-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-eval200-commdiag` |
-| Status | `planned` |
-| Started | not started |
+| Status | `running` |
+| Started | `2026-10-17T03:02:11Z` |
 | Finished | not started |
 | Baseline | `20261016-conlang-v4-8-train1m-s10000-m4-d2-qquery-msgkv-senderlr4-commdiag` |
 | Git revision | primary configuration/report commit `6003960c6e9c3caffe5d1b2ef044d35e9d604180`; reviewed immutable launch snapshot `967a9be97c9b4ddd7a55d967901f07c5a81d523c` |
@@ -112,7 +112,7 @@ joint log probability for all six intervention arms.
 | Metrics | pending | no |
 | Outputs | pending | no |
 | Launcher log | pending | no |
-| Tracking run | pending W&B assignment | no |
+| Tracking run | `https://wandb.ai/kaynelu921-massachusetts-institute-of-technology/conlangs/runs/dr3ydegs` | run ID `dr3ydegs`; live sync confirmed at launch |
 
 ## Failure Details
 
@@ -154,3 +154,5 @@ joint log probability for all six intervention arms.
 - `2026-10-17T02:58:36Z`: Staged immutable source commit `967a9be`, copied it
   once to node-local TPU storage, and verified source, configuration, runtime,
   regional data, disk, and idle-device launch gates.
+- `2026-10-17T03:02:11Z`: Launched on the selected v4-8. W&B run `dr3ydegs`
+  began syncing, and the exact trainer process was confirmed active on worker 0.
