@@ -215,7 +215,11 @@ def test_dataset_builds_manifest_and_flattened_examples(tmp_path: Path) -> None:
 
     saved_manifest = json.loads((tmp_path / "manifest.json").read_text(encoding="utf-8"))
     assert saved_manifest == manifest
-    assert verify_dataset(tmp_path) == {"worlds": 9, "questions": 36}
+    assert verify_dataset(tmp_path) == {
+        "worlds": 9,
+        "questions": 36,
+        "questions_per_world": 4,
+    }
     assert manifest["total_worlds"] == 9
     assert manifest["total_questions"] == 36
     train_path = tmp_path / manifest["splits"]["train"]["path"]
@@ -229,4 +233,14 @@ def test_dataset_builds_manifest_and_flattened_examples(tmp_path: Path) -> None:
         "agent_2_input",
         "question",
         "answer",
+        "bridge",
+        "person_side_agent",
     }
+    first_world = next(read_worlds(train_path))
+    first_question = first_world["questions"][0]
+    first_person, first_bridge, _first_answer = first_question["reasoning_path"]
+    assert examples[0]["bridge"] == first_bridge
+    assert (
+        examples[0]["person_side_agent"]
+        == first_world["metadata"]["person_side_agent"][first_person]
+    )
