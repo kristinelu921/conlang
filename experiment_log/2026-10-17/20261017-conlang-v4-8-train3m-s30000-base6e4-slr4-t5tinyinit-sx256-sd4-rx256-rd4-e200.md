@@ -5,16 +5,16 @@
 | Field | Value |
 |---|---|
 | Run ID | `20261017-conlang-v4-8-train3m-s30000-base6e4-slr4-t5tinyinit-sx256-sd4-rx256-rd4-e200` |
-| Status | `running` |
+| Status | `completed` |
 | Started | `2026-10-17T23:10:08Z` |
-| Finished | `not recorded` |
+| Finished | `2026-10-18T00:28:51Z` |
 | Baseline | `20261017-conlang-v4-8-train1m-s10000-m4-qquery-lr4-t5tinyinit-sx256-sd4-rx256-rd4-e200` |
 | Git revision | `e38af6e2f3e6761943ed786b32c0737ebf1462aa` (configuration/report closure) |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/1` |
 | Primary configuration | `configs/conlang-jax-v4-8-train3m-s30000-base6e4-slr4-t5tinyinit-sx256-sd4-rx256-rd4-e200.yaml` |
 | Command | exact command below |
 | Seed | `1730` |
-| Hardware | `kmh-tpuvm-v4-8-spot-kristine-17-12-29-15-N-us-central2-b`, `us-central2-b`, Spot `v4-8`; READY, HEALTHY, and idle at final preflight |
+| Hardware | `kmh-tpuvm-v4-8-spot-kristine-17-12-29-15-N-us-central2-b`, `us-central2-b`, Spot `v4-8`; terminal API state READY/HEALTHY |
 
 ## Command
 
@@ -110,10 +110,55 @@ loss discontinuity.
 
 ## Results
 
-Running. The first compiled interval completed with finite metrics, and the run
-reached step 480 at the first installed-monitor check. Steps 20--200 sustained
-approximately 2,144--2,153 examples/s, matching the completed baseline. Final
-scientific results remain pending.
+The run completed all 30,000 steps but fails the preregistered communication
+criterion. No intervention produced a correct example in any of the 150 fixed
+validation-prefix evaluations.
+
+| Intervention at step 30,000 | Exact match | Exact count | Mean joint log probability |
+|---|---:|---:|---:|
+| Intact | `0.00000000` | 0/256 | `-12.3712816` |
+| Wrong-world messages | `0.00000000` | 0/256 | `-12.3695698` |
+| Zero messages | `0.00000000` | 0/256 | `-12.3032227` |
+| Swapped senders | `0.00000000` | 0/256 | `-12.3710213` |
+| Agent 1 only | `0.00000000` | 0/256 | `-12.3836479` |
+| Agent 2 only | `0.00000000` | 0/256 | `-12.3906155` |
+
+Intact-minus-wrong-world likelihood is positive in only 70/150 evaluations,
+with median `-0.0000575` nats, range `-0.0035400` to `+0.0042601`, and final
+gap `-0.0017118`. The sign is unstable and the magnitude remains negligible.
+Intact-minus-zero is positive in 73/150 checks, with median `-0.0000763` and
+final gap `-0.0680590`; zero messages are better at the final evaluation. The
+longer treatment therefore provides neither passage-specific communication nor
+a reliably beneficial learned carrier.
+
+At the matched step-10,000 evaluation in the trajectory, the treatment has
+zero exact matches and likelihood `-7.7996254`, `0.9970388` nats worse than the
+completed baseline's `-6.8025866`. At step 30,000 it is `5.5686951` nats worse
+than that baseline endpoint. Because data scale, duration, and learning rate
+change together, this is a treatment comparison rather than an isolated
+learning-rate effect.
+
+The longer run strengthens sender-side optimization without making it useful.
+Over the final 50 logged steps, median path-gradient norms are `33.3000` and
+`27.9988` for the sender paths versus `3.18493` for the receiver, giving
+receiver-to-sender ratios `0.0956x` and `0.1138x`. Median relative updates are
+`0.000942118` for the sender and `0.000136782` for the receiver, a `6.89x`
+sender advantage. Sender, receiver, and embedding weight norms fall `34.24%`,
+`14.71%`, and `16.44%` from step 10 to 30,000, so rising weight norms are not
+the failure mode. In contrast, message activation RMS grows `28.28x` and
+`28.49x` to `43.8333` and `43.5214`, indicating a large activation-scale drift.
+
+Only one logged pre-clipping gradient exceeds one million; its maximum is
+`5,796,095`, below the baseline's `89,957,224`. Global clipping keeps every
+update finite. The largest adjacent five-record loss decline after step 100
+begins at step 15,650 (`5.96569` to `5.42605`), but it is not a communication
+transition: exact match remains zero and wrong-world stays matched.
+
+The final-50 median training loss is `5.3405187`, only `0.1329637` lower than
+the 10,000-step baseline. Median throughput is `2,121.250` examples/s, `1.06%`
+below the matched baseline's `2,143.996`. Greedy training-batch generation is
+collapsed in all 3,000 output records: every generated string is empty, and at
+step 30,000 every row emits token IDs `(2, 0, 0, 0)` (EOS then padding).
 
 ## Artifacts
 
@@ -123,15 +168,20 @@ scientific results remain pending.
 | Immutable source | `/kmh-nfs-ssd-us-mount/staging/kristine/elf/20261017-conlang-v4-8-train3m-s30000-base6e4-slr4-t5tinyinit-sx256-sd4-rx256-rd4-e200-20261017T230015.160947320Z`; matching node-local `/home/kristinelu/elf-runs/sources/` path in the command | 71 files / 520,961 bytes / relative-manifest SHA-256 `7354189dd705d2dc07fe5bf1de3f01f65f72e8c1290e29c3833988d2abb0ea88`; no bytecode caches |
 | Source model | `/home/kristinelu/elf-runs/pretrained/google-t5-efficient-tiny-3441d7e8` | checkpoint and tokenizer hashes match the configured fail-closed values |
 | Regional dataset | `/home/kristinelu/elf-data/conlangs-v1-train3m` | generated node-locally in Central2; 378,125 worlds / 3,025,000 questions / 280,390,862 bytes; full streaming verifier passed; manifest SHA-256 `0e37bb12e22e49e74868bb01d225a29e01bd2d8508df8efbcaa1d2d8aca1c1c4` |
-| Checkpoint | `/home/kristinelu/elf-runs/20261017-conlang-v4-8-train3m-s30000-base6e4-slr4-t5tinyinit-sx256-sd4-rx256-rd4-e200/checkpoint.msgpack` | no; pending launch |
-| Tracking run | `https://wandb.ai/kaynelu921-massachusetts-institute-of-technology/conlangs/runs/rsjglvk6` | W&B ID `rsjglvk6`, state `running`; first monitor observed summary step 440 |
-| Recurring monitor | `conlang-monitor-rsjglvk6.service`; run-scoped script `/tmp/conlang_monitor_rsjglvk6.sh` | five-minute cadence; clean-environment cloud/W&B check passed; first service check saw READY/HEALTHY, live trainer, step 480 |
+| Checkpoint | `/home/kristinelu/elf-runs/20261017-conlang-v4-8-train3m-s30000-base6e4-slr4-t5tinyinit-sx256-sd4-rx256-rd4-e200/checkpoint.msgpack` | 150,992,703 bytes; SHA-256 `ce936c4edb80cd77e943d81659cd2f79805a8f3c39366ce2ca10a2cd3a52f2a4`; CPU restore verified step 30,000 |
+| Metrics | `experiment_log/2026-10-17/artifacts/20261017-conlang-v4-8-train3m-s30000-base6e4-slr4-t5tinyinit-sx256-sd4-rx256-rd4-e200/metrics.jsonl` | local-only, not pushed; 5,759,458 bytes; SHA-256 `e3fc6ee20652935e127b5cb1da924eaac4f8b7ede83ee2c04915a62698856629`; 3,150 records: 3,000 training and 150 evaluation |
+| Outputs | `experiment_log/2026-10-17/artifacts/20261017-conlang-v4-8-train3m-s30000-base6e4-slr4-t5tinyinit-sx256-sd4-rx256-rd4-e200/outputs.jsonl` | local-only, not pushed because it contains dataset-derived text; 35,102,397 bytes; SHA-256 `ab463f15a197c7163cdc22577c2f63e82a863fc38b5cb9e467bbb4ece0ce62b4`; 3,000 records through step 30,000 |
+| Launcher log | `experiment_log/2026-10-17/artifacts/20261017-conlang-v4-8-train3m-s30000-base6e4-slr4-t5tinyinit-sx256-sd4-rx256-rd4-e200/launcher.log.gz` | local-only, not pushed; 44,222 bytes; SHA-256 `58c41294fd23a79b7e53a1a82229d6d7d94510be6196ded7f4d2dccee12cb700`; decompressed SHA-256 `ca1b559cda265ba89bb14bcc5de3e3cb34111f8618246598752e36d3be481724` matches the 251,907-byte remote log |
+| Tracking run | `https://wandb.ai/kaynelu921-massachusetts-institute-of-technology/conlangs/runs/rsjglvk6` | API state `finished`, summary step 30,000, exact match 0, five files synced |
+| Recurring monitor | `conlang-monitor-rsjglvk6.service`; run-scoped script `/tmp/conlang_monitor_rsjglvk6.sh` | five-minute cadence remained healthy; retired after independent terminal verification |
 
 ## Failure Details
 
-- Last known step: not applicable; not launched.
+- Last known step: 30,000, completed.
 - Error summary: not applicable.
-- Detailed output: not recorded.
+- Detailed output: canonical launcher log recorded under Artifacts. A local-only
+  credential-path preflight failure that made no cloud contact is preserved in
+  `20261017-conlang-train3m-runtime-preflight-attempt1.md`.
 
 ## Observations
 
@@ -156,13 +206,26 @@ scientific results remain pending.
   tree. The installed run-scoped fallback pins the direct gcloud binary and a
   W&B-capable Python, is TERM-safe, and passed both a cron-like clean-environment
   check and its first systemd cadence check.
+- Terminal verification found no trainer, libtpu lock, or VFIO holder; the TPU
+  remained READY/HEALTHY. The checkpoint restored on CPU at step 30,000 and W&B
+  independently reported `finished` at summary step 30,000.
+- All preserved local artifacts match their remote byte counts and SHA-256
+  values. The raw evidence directory remains local and untracked; it is excluded
+  from the GitHub push because `outputs.jsonl` contains dataset-derived text.
 
 ## Interpretation
 
-- The doubled base learning rate is a meaningful stability intervention. The
-  global norm clip remains one, but pre-clipping spikes can still change AdamW
-  dynamics; finite early steps and the causal curves must be checked before
-  interpreting the longer run.
+- Doubling the base learning rate while tripling data and duration does not
+  rescue this objective. The model receives stronger sender-relative updates,
+  yet learns neither correct free generation nor a beneficial passage-specific
+  message gap.
+- Weight norms decline substantially, ruling out simple weight-norm growth as
+  the explanation for the failure. Message activations instead expand about
+  28x, so activation-scale drift is a concrete target for a narrower follow-up
+  such as message normalization or explicit message-scale regularization.
+- The result does not isolate learning rate, data size, or training duration.
+  It only rejects their requested joint treatment as sufficient for this seed,
+  fixed validation prefix, and architecture.
 
 ## Updates
 
@@ -176,3 +239,6 @@ scientific results remain pending.
   node-local Central2 dataset.
 - `2026-10-17T23:29:04Z`: Marked the run running after finite step 200, recorded
   W&B run `rsjglvk6`, and installed the verified five-minute recurring monitor.
+- `2026-10-18T00:28:51Z`: Completed step 30,000, saved and restored the final
+  checkpoint, verified W&B `finished`, preserved byte-matched evidence, and
+  retired the recurring monitor after the TPU returned to READY/HEALTHY idle.
