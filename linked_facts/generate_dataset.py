@@ -17,7 +17,7 @@ from typing import Any, TextIO, TypeVar
 from linked_facts.relation_domains import DOMAINS_BY_ID, LEXICONS, RELATION_DOMAINS
 
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 SampledItem = TypeVar("SampledItem")
 
@@ -164,38 +164,28 @@ def _render_fact_sentences(
     return rendered
 
 
-def _mix_sender_facts(
+def _assign_sender_facts(
     person_side: Mapping[str, tuple[str, str]],
     answer_side: Mapping[str, tuple[str, str]],
     random_generator: random.Random,
-) -> tuple[str, list[str], str, list[str], dict[str, str]]:
-    """Give each sender a balanced mix of the two hops, split per person."""
+) -> tuple[dict[str, tuple[str, str]], dict[str, tuple[str, str]], dict[str, str]]:
+    """Assign one required hop per sender while balancing the person-side hop."""
     persons = list(person_side)
     random_generator.shuffle(persons)
     agent_1_person_side = set(persons[: len(persons) // 2])
-    agent_1_facts: list[tuple[str, str]] = []
-    agent_2_facts: list[tuple[str, str]] = []
+    agent_1_facts: dict[str, tuple[str, str]] = {}
+    agent_2_facts: dict[str, tuple[str, str]] = {}
     assignment: dict[str, str] = {}
     for person in persons:
         if person in agent_1_person_side:
-            agent_1_facts.append(person_side[person])
-            agent_2_facts.append(answer_side[person])
+            agent_1_facts[person] = person_side[person]
+            agent_2_facts[person] = answer_side[person]
             assignment[person] = "agent_1"
         else:
-            agent_1_facts.append(answer_side[person])
-            agent_2_facts.append(person_side[person])
+            agent_1_facts[person] = answer_side[person]
+            agent_2_facts[person] = person_side[person]
             assignment[person] = "agent_2"
-    random_generator.shuffle(agent_1_facts)
-    random_generator.shuffle(agent_2_facts)
-    agent_1_input = " ".join(text for text, _ in agent_1_facts)
-    agent_2_input = " ".join(text for text, _ in agent_2_facts)
-    return (
-        agent_1_input,
-        [template_id for _, template_id in agent_1_facts],
-        agent_2_input,
-        [template_id for _, template_id in agent_2_facts],
-        assignment,
-    )
+    return agent_1_facts, agent_2_facts, assignment
 
 
 def generate_world(
@@ -204,7 +194,7 @@ def generate_world(
     config: GenerationConfig,
     name_banks: Mapping[str, Mapping[str, Sequence[str]]] | None = None,
 ) -> dict[str, Any]:
-    """Generate one world containing two private inputs and all linked questions."""
+    """Generate one world whose questions each contain two single-hop inputs."""
     config.validate()
     if split not in SPLIT_SPECIFICATIONS:
         raise ValueError(f"unknown split: {split}")
@@ -247,7 +237,7 @@ def generate_world(
 
     person_side = _render_fact_sentences(facts_by_domain, "agent_1", wording_variant, random_generator)
     answer_side = _render_fact_sentences(facts_by_domain, "agent_2", wording_variant, random_generator)
-    agent_1_input, agent_1_template_ids, agent_2_input, agent_2_template_ids, person_side_agent = _mix_sender_facts(
+    agent_1_facts, agent_2_facts, person_side_agent = _assign_sender_facts(
         person_side, answer_side, random_generator
     )
 
@@ -270,14 +260,20 @@ def generate_world(
     for question_index, person in enumerate(question_persons):
         fact = chains[person]
         template_id, template = question_templates_by_person[person]
+        agent_1_input, agent_1_template_id = agent_1_facts[person]
+        agent_2_input, agent_2_template_id = agent_2_facts[person]
         answer = fact["answer"]
         questions.append(
             {
                 "question_id": f"{split}-{world_index:08d}-q{question_index:02d}",
                 "domain": fact["domain"],
+                "agent_1_input": agent_1_input,
+                "agent_2_input": agent_2_input,
                 "question": template.format(**DOMAINS_BY_ID[fact["domain"]].question_arguments(person)),
                 "answer": answer,
                 "answer_index": domain_answers[fact["domain"]].index(answer),
+                "agent_1_template_id": agent_1_template_id,
+                "agent_2_template_id": agent_2_template_id,
                 "template_id": template_id,
                 "reasoning_path": [person, fact["middle"], answer],
             }
@@ -299,16 +295,12 @@ def generate_world(
         "world_id": f"{split}-{world_index:08d}",
         "split": split,
         "generalization": {"names": names_variant, "wording": wording_variant},
-        "agent_1_input": agent_1_input,
-        "agent_2_input": agent_2_input,
         "questions": questions,
         "metadata": {
             "world_seed": world_seed,
             "entities": entities,
             "chains": chains,
             "domain_answers": domain_answers,
-            "agent_1_template_ids": agent_1_template_ids,
-            "agent_2_template_ids": agent_2_template_ids,
             "person_side_agent": person_side_agent,
         },
     }
@@ -322,24 +314,20 @@ def validate_world(world: Mapping[str, Any], expected_entities: int | None = Non
     assert isinstance(metadata, Mapping)
     chains = metadata["chains"]
     domain_answers = metadata["domain_answers"]
+    person_side_agent = metadata["person_side_agent"]
     questions = world["questions"]
-    agent_1_input = world["agent_1_input"]
-    agent_2_input = world["agent_2_input"]
     assert isinstance(chains, Mapping)
     assert isinstance(domain_answers, Mapping)
+    assert isinstance(person_side_agent, Mapping)
     assert isinstance(questions, Sequence)
-    assert isinstance(agent_1_input, str)
-    assert isinstance(agent_2_input, str)
     if expected_entities is not None and len(chains) != expected_entities:
         raise ValueError(f"expected {expected_entities} entities, found {len(chains)}")
     if len(questions) != len(chains):
         raise ValueError("each world must have one question per person")
-    template_ids = metadata["agent_1_template_ids"]
-    assert isinstance(template_ids, Sequence)
-    agent_2_template_ids = metadata["agent_2_template_ids"]
-    assert isinstance(agent_2_template_ids, Sequence)
-    if len(template_ids) != len(chains) or len(agent_2_template_ids) != len(chains):
-        raise ValueError("each person must contribute one fact to each sender")
+    if set(person_side_agent) != set(chains):
+        raise ValueError("each person must have one sender-side assignment")
+    if not set(person_side_agent.values()) <= {"agent_1", "agent_2"}:
+        raise ValueError("sender-side assignments must name agent_1 or agent_2")
 
     middles_by_domain: dict[str, set[str]] = {}
     answers_by_domain: dict[str, set[str]] = {}
@@ -355,23 +343,13 @@ def validate_world(world: Mapping[str, Any], expected_entities: int | None = Non
             raise ValueError(f"domain {domain.domain_id} answer mappings must be bijections")
         middles_by_domain[domain.domain_id].add(middle)
         answers_by_domain[domain.domain_id].add(answer)
-        person_in_agent_1 = person in agent_1_input
-        answer_in_agent_1 = answer in agent_1_input
-        if person_in_agent_1 == (person in agent_2_input) or answer_in_agent_1 == (answer in agent_2_input):
-            raise ValueError(f"each hop must reach exactly one sender for {person}")
-        if person_in_agent_1 == answer_in_agent_1:
-            raise ValueError(f"one sender holds both hops for {person}")
-        if middle not in agent_1_input or middle not in agent_2_input:
-            raise ValueError(f"middle missing from a sender for {person}")
         if bool(domain.kinds) != bool(kind):
             raise ValueError(f"kind does not match domain {domain.domain_id}")
-        if kind and (kind not in domain.kinds or kind not in agent_1_input or kind not in agent_2_input):
-            raise ValueError(f"group kind missing from inputs for {person}")
-    person_side_counts = Counter(
-        person in agent_1_input for person in chains
-    )
+        if kind and kind not in domain.kinds:
+            raise ValueError(f"invalid group kind for {person}")
+    person_side_counts = Counter(str(sender) for sender in person_side_agent.values())
     if max(person_side_counts.values()) - min(person_side_counts.values()) > 1:
-        raise ValueError("person-side facts must be mixed across the two senders")
+        raise ValueError("person-side facts must be balanced across the two senders")
     observed_domains = Counter(str(chain["domain"]) for chain in chains.values())
     domain_counts = [observed_domains[domain.domain_id] for domain in RELATION_DOMAINS]
     if max(domain_counts) - min(domain_counts) > 1:
@@ -383,6 +361,14 @@ def validate_world(world: Mapping[str, Any], expected_entities: int | None = Non
         reasoning_path = question["reasoning_path"]
         assert isinstance(reasoning_path, Sequence)
         person, middle, answer = reasoning_path
+        agent_1_input = question["agent_1_input"]
+        agent_2_input = question["agent_2_input"]
+        agent_1_template_id = question["agent_1_template_id"]
+        agent_2_template_id = question["agent_2_template_id"]
+        assert isinstance(agent_1_input, str)
+        assert isinstance(agent_2_input, str)
+        assert isinstance(agent_1_template_id, str)
+        assert isinstance(agent_2_template_id, str)
         chain = chains[person]
         assert isinstance(chain, Mapping)
         if chain["middle"] != middle or chain["answer"] != answer or chain["domain"] != question["domain"]:
@@ -391,6 +377,32 @@ def validate_world(world: Mapping[str, Any], expected_entities: int | None = Non
         assert isinstance(answers, Sequence)
         if question["answer"] != answer or question["answer_index"] != list(answers).index(answer):
             raise ValueError(f"invalid answer in {question['question_id']}")
+        person_text = str(person)
+        middle_text = str(middle)
+        answer_text = str(answer)
+        person_in_agent_1 = person_text in agent_1_input
+        answer_in_agent_1 = answer_text in agent_1_input
+        if person_in_agent_1 == (person_text in agent_2_input) or answer_in_agent_1 == (
+            answer_text in agent_2_input
+        ):
+            raise ValueError(f"each hop must reach exactly one sender for {person}")
+        if person_in_agent_1 == answer_in_agent_1:
+            raise ValueError(f"one sender holds both hops for {person}")
+        if middle_text not in agent_1_input or middle_text not in agent_2_input:
+            raise ValueError(f"middle missing from a sender for {person}")
+        if (person_side_agent[person] == "agent_1") != person_in_agent_1:
+            raise ValueError(f"sender-side assignment mismatch for {person}")
+        kind = str(chain["kind"])
+        if kind and (kind not in agent_1_input or kind not in agent_2_input):
+            raise ValueError(f"group kind missing from inputs for {person}")
+        combined_input = f"{agent_1_input} {agent_2_input}"
+        for other_person, other_chain in chains.items():
+            assert isinstance(other_chain, Mapping)
+            if other_person == person:
+                continue
+            unrelated_entities = (other_person, other_chain["middle"], other_chain["answer"])
+            if any(str(entity) in combined_input for entity in unrelated_entities):
+                raise ValueError(f"sender input contains an unrelated fact for {person}")
         observed_question_people.add(str(person))
     if observed_question_people != set(chains):
         raise ValueError("questions must cover every person exactly once")
@@ -464,8 +476,8 @@ def build_dataset(output_directory: Path, config: GenerationConfig) -> dict[str,
             for split, (names_variant, wording_variant) in SPLIT_SPECIFICATIONS.items()
         },
         "model_inputs": {
-            "shared_encoder_call_1": "agent_1_input",
-            "shared_encoder_call_2": "agent_2_input",
+            "shared_encoder_call_1": "questions[].agent_1_input",
+            "shared_encoder_call_2": "questions[].agent_2_input",
             "receiver_inputs": ["questions[].question", "message_1", "message_2"],
             "training_target": "questions[].answer",
             "optional_auxiliary_targets": [
@@ -477,6 +489,9 @@ def build_dataset(output_directory: Path, config: GenerationConfig) -> dict[str,
                 "questions[].domain",
                 "questions[].reasoning_path except bridge auxiliary label",
                 "questions[].answer_index",
+                "questions[].agent_1_template_id",
+                "questions[].agent_2_template_id",
+                "questions[].template_id",
             ],
         },
     }
@@ -570,8 +585,8 @@ def iter_question_examples(path: Path) -> Iterator[dict[str, Any]]:
             yield {
                 "world_id": world["world_id"],
                 "question_id": question["question_id"],
-                "agent_1_input": world["agent_1_input"],
-                "agent_2_input": world["agent_2_input"],
+                "agent_1_input": question["agent_1_input"],
+                "agent_2_input": question["agent_2_input"],
                 "question": question["question"],
                 "answer": question["answer"],
                 "bridge": bridge,

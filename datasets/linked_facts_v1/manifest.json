@@ -1,5 +1,5 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "dataset": "linked_facts_natural_language",
   "config": {
     "seed": 1729,
@@ -14,43 +14,43 @@
       "path": "train.jsonl.gz",
       "worlds": 12500,
       "questions": 100000,
-      "uncompressed_sha256": "cad5e5e63840557bfa0f3c7acb2ca893a375e2ca52655aafb273c6fa25fb7079",
-      "bytes_on_disk": 9267279
+      "uncompressed_sha256": "f61fce5ce0b2c295a15bd2d24c14ef0f4ba21b761bc4cecf6e86444d33f7e6c0",
+      "bytes_on_disk": 9553807
     },
     "validation": {
       "path": "validation.jsonl.gz",
       "worlds": 625,
       "questions": 5000,
-      "uncompressed_sha256": "cfe433f2cb42ba12689b2700d7f29bc4ee2cfae1c26c1934e7f580ee56ffb397",
-      "bytes_on_disk": 466048
+      "uncompressed_sha256": "0f5d1f150bb256ef037ec53fb149cb99fb77dab9b404ed5b4687dd23f1939825",
+      "bytes_on_disk": 480142
     },
     "test_familiar": {
       "path": "test_familiar.jsonl.gz",
       "worlds": 625,
       "questions": 5000,
-      "uncompressed_sha256": "9836fa2e6ac256e3817668258dd6abef12037285b46ab9b2f8653aefbb65b45d",
-      "bytes_on_disk": 466319
+      "uncompressed_sha256": "20ac68a046812a648f5e04dccbc0811e0a1e70cee6e2b602db5ef6151e4b3742",
+      "bytes_on_disk": 479873
     },
     "test_new_names": {
       "path": "test_new_names.jsonl.gz",
       "worlds": 625,
       "questions": 5000,
-      "uncompressed_sha256": "47f4332e67e24518150bc89a2e50d14027259771e979ab856b78d484a54af543",
-      "bytes_on_disk": 471536
+      "uncompressed_sha256": "3c067f54107a3e38313ca4e15a91efe242001d7d1757dc3c51d20c9e8d2ef99b",
+      "bytes_on_disk": 485327
     },
     "test_new_wording": {
       "path": "test_new_wording.jsonl.gz",
       "worlds": 625,
       "questions": 5000,
-      "uncompressed_sha256": "ad88123758ed64e06c5c8ef5420f5400852e6b7fa3465c9e44d214702c0ec3e2",
-      "bytes_on_disk": 480103
+      "uncompressed_sha256": "3c3f2d433d38528d2c7c40abcdc7ad58aa35aaa6e2f63562f1b5ac1b636e6e68",
+      "bytes_on_disk": 491162
     },
     "test_new_names_and_wording": {
       "path": "test_new_names_and_wording.jsonl.gz",
       "worlds": 625,
       "questions": 5000,
-      "uncompressed_sha256": "3145dd62ae512dfb01d075e3d26c6daebb49bc3639c9a09ee6bbbc8d55878a95",
-      "bytes_on_disk": 489093
+      "uncompressed_sha256": "47be84bab875d338e288fee38ef1a222a805294309b829bc1add3d1d9e132915",
+      "bytes_on_disk": 499394
     }
   },
   "total_worlds": 15625,
@@ -82,19 +82,26 @@
     }
   },
   "model_inputs": {
-    "shared_encoder_call_1": "agent_1_input",
-    "shared_encoder_call_2": "agent_2_input",
+    "shared_encoder_call_1": "questions[].agent_1_input",
+    "shared_encoder_call_2": "questions[].agent_2_input",
     "receiver_inputs": [
       "questions[].question",
       "message_1",
       "message_2"
     ],
     "training_target": "questions[].answer",
+    "optional_auxiliary_targets": [
+      "questions[].reasoning_path[1]",
+      "metadata.person_side_agent"
+    ],
     "excluded_metadata": [
-      "metadata",
+      "metadata except person_side_agent auxiliary label",
       "questions[].domain",
-      "questions[].reasoning_path",
-      "questions[].answer_index"
+      "questions[].reasoning_path except bridge auxiliary label",
+      "questions[].answer_index",
+      "questions[].agent_1_template_id",
+      "questions[].agent_2_template_id",
+      "questions[].template_id"
     ]
   }
 }
