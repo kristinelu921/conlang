@@ -10,7 +10,7 @@
 | Finished | not applicable |
 | Baseline | `20261014-conlang-jax-v5e8-b256-opt1` for operational throughput only; architecture and data contract differ |
 | Git revision | `117c839bbda5dffb992f7f75af21ca2cc01ab571` (exact configuration commit); source/data commit `b06656e5621729f762e10543703e32ea56aa12e7` |
-| Pull request | pending |
+| Pull request | `https://github.com/kristinelu921/conlang/pull/2` |
 | Primary configuration | `configs/conlang-jax-v5e8-b256-tiny32-single-link-gate1.yaml` |
 | Command | pending immutable staging and remote preflight |
 | Seed | `1729` |
@@ -132,6 +132,9 @@ questions and 25,000 validation/test questions across 15,625 worlds.
   parameters, 132,463 receiver parameters, and 228,271 parameters total.
 - Generator, loader, model-shape, and regional-path tests pass after rebuilding
   the committed dataset with schema version 4.
+- The final relevant regression run passed 84 tests. Two-pass pull-request
+  review found no correctness issue; its one documentation cleanup was fixed
+  before push.
 
 ## Interpretation
 
@@ -147,3 +150,6 @@ questions and 25,000 validation/test questions across 15,625 worlds.
 - `2026-10-19T02:17:21Z`: Created the planned report after deterministic data
   verification and exact CPU model initialization. Launch artifacts remain
   pending immutable staging, pull-request review, and remote preflight.
+- `2026-10-19T02:36:21Z`: Pushed the reviewed branch and opened pull request
+  `#2`. The final relevant regression suite passed 84 tests with two unchanged
+  third-party Pydantic warnings.
