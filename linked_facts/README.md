@@ -13,7 +13,7 @@ senders must mention. For each question, one sender receives only the
 person-to-middle sentence and the other receives only the middle-to-answer
 sentence. Which sender gets which hop is balanced across a world:
 
-| Relation | Agent 1 | Agent 2 | Answer |
+| Relation | Person-to-middle hop | Middle-to-answer hop | Answer |
 |---|---|---|---|
 | membership | person belongs to a group | that group is based in a place | place |
 | color | person has a color | that color is an animal's coat | animal |
