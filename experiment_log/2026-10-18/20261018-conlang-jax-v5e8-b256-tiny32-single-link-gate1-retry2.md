@@ -5,14 +5,14 @@
 | Field | Value |
 |---|---|
 | Run ID | `20261018-conlang-jax-v5e8-b256-tiny32-single-link-gate1-retry2` |
-| Status | `planned` |
+| Status | `staged` |
 | Started | not started |
 | Finished | not applicable |
 | Predecessor | retry 1 failed during source transfer before copying a file |
 | Git revision | `d2c3bc74df162b6545937935b8cf5c5ae24ea4d7` (exact configuration commit) |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/2` |
 | Primary configuration | `configs/conlang-jax-v5e8-b256-tiny32-single-link-gate1-retry2.yaml` |
-| Command | pending fresh archive staging and final remote gate |
+| Command | pending final occupancy gate; launch command will be recorded verbatim at start |
 | Seed | `1729` |
 | Hardware | selected `kmh-tpuvm-v5e-8-spot-kristine-02-08-02-17-N-us-west4-a`, `us-west4-a`, Spot `v5litepod-8`; READY/HEALTHY and idle at retry selection |
 
@@ -105,7 +105,10 @@ questions and 25,000 validation/test questions across 15,625 worlds.
 | Configuration | `configs/conlang-jax-v5e8-b256-tiny32-single-link-gate1-retry2.yaml` | parses and validates; SHA-256 `85973ed1985e439aa878f657b5c30af3d3bbe468b1c5be35176892c772f3c1f3` |
 | Dataset manifest | `datasets/linked_facts_v1/manifest.json` | full streaming verifier passed; SHA-256 `5f95f8f4f25a10d12704959c6f275f978548b3641a4db03338d76d4f8d654a13` |
 | Regional dataset | `gs://kmh-gcp-us-west4/kristine/datasets/conlangs-single-link-v1` | seven objects / 11,992,785 bytes; bucket location `US-WEST4` |
-| Immutable source | pending fresh snapshot and archive | no |
+| Immutable source | `/kmh-nfs-ssd-us-mount/staging/kristine/elf/20261018-conlang-jax-v5e8-b256-tiny32-single-link-gate1-retry2-20261019T024709.880205475Z` at source revision `d8859b3144c09cc77115d31c4c7aa4defee211b9` | 73 files / 529,936 bytes; content-manifest SHA-256 `f223e88e5569acddf763788e9317ceaadede790d5145549ca2a5fd640ea8a0b2` |
+| Transfer archive | `/tmp/20261018-conlang-jax-v5e8-b256-tiny32-single-link-gate1-retry2-20261019T024709.880205475Z.tar.gz` | 104,913 bytes; local and remote SHA-256 `919c10e0e8b57cbfb9e2a3682d845ff886aa9a081637a9b980a79f6763269ec8` |
+| TPU-local source | `/home/kristinelu/elf-runs/sources/20261018-conlang-jax-v5e8-b256-tiny32-single-link-gate1-retry2-20261019T024709.880205475Z` | extracted 73 files; no `.git`; content and config hashes match |
+| TPU-local dataset | `/home/kristinelu/elf-data/conlangs-single-link-v1` | streaming verification passed; 7 files / 11,996,881 filesystem bytes; all seven object hashes match the regional source |
 | Checkpoint | `/home/kristinelu/elf-runs/20261018-conlang-jax-v5e8-b256-tiny32-single-link-gate1-retry2/checkpoint.msgpack` | no |
 | Tracking run | pending | no |
 
@@ -125,6 +128,9 @@ questions and 25,000 validation/test questions across 15,625 worlds.
   dataset, sub-megabyte source, and small-model checkpoint/log budget.
 - The exact model has 228,271 parameters and emits message shape
   `(batch, 2, 32)`: one vector from each sender.
+- The TPU VM's CPU-only production-runtime preflight independently confirmed
+  the retry configuration, message shape, layer depths, parameter count, and
+  presence of W&B authentication without initializing the TPU backend.
 
 ## Interpretation
 
@@ -136,3 +142,12 @@ questions and 25,000 validation/test questions across 15,625 worlds.
 
 - `2026-10-19T02:46:31Z`: Selected retry 2 after preserving retry 1's empty
   remote target and repeated deterministic SCP error; exact config parsed.
+- `2026-10-19T02:51:45Z`: Copied the deterministic tar archive as a regular
+  file, matched its SHA-256 remotely, extracted it into the unique node-local
+  target, and matched all 73 source files plus the selected configuration.
+- `2026-10-19T02:51:45Z`: Localized the seven-object dataset from the
+  region-matched `US-WEST4` bucket. The full stream verifier reported 15,625
+  worlds and 125,000 questions, and every local object SHA-256 matched.
+- `2026-10-19T02:51:45Z`: CPU-only runtime preflight confirmed two 32-wide
+  sender vectors, two sender layers, two receiver layers, 228,271 parameters,
+  batch 256, 200 gate steps, and available W&B authentication.
