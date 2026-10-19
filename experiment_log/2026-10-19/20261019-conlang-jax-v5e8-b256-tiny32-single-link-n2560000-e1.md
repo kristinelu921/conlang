@@ -122,7 +122,16 @@ Regional source: `gs://kmh-gcp-us-west4/kristine/datasets/conlangs-single-link-n
 - Architecture assertions passed: message length 1, continuous width 32, sender depth 2, and receiver depth 2.
 - Full dataset streaming validation passed, including world structure, counts, byte sizes, and uncompressed content checksums.
 - Focused configuration/batching tests: 17 passed.
-- Broader generator and JAX training suite: in progress before launch.
+- Broader generator and JAX training suite: `77 passed` with `JAX_PLATFORMS=cpu` in 216.74 seconds.
+- TPU-local dataset verification passed with the same 323,125 worlds, 2,585,000 total questions, 8 questions per world, and all seven local SHA-256 hashes matching the generation host.
+
+## Review
+
+The required correctness pass reviewed the complete PR diff from base
+`051db79bc7092a3c5422f3ace9e7aaa42c32d53e` through head
+`c300d249ea614affd6478f595626e2582183a7d8` and returned
+`NO_CONFIRMED_FINDINGS`. Its focused generator, model-shape, and staging checks
+passed 12 tests. The cleanup pass is pending on the updated frozen head.
 
 ## Launch and Artifacts
 
