@@ -5,9 +5,9 @@
 | Field | Value |
 |---|---|
 | Run ID | `20261018-conlang-jax-v5e8-b256-tiny32-single-link-gate1-retry2` |
-| Status | `running` |
+| Status | `completed` |
 | Started | `2026-10-19T03:00:11Z` |
-| Finished | not applicable |
+| Finished | `2026-10-19T03:06:03Z` |
 | Predecessor | retry 1 failed during source transfer before copying a file |
 | Git revision | `d2c3bc74df162b6545937935b8cf5c5ae24ea4d7` (exact configuration commit) |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/2` |
@@ -106,8 +106,17 @@ material steady-state throughput regression.
 
 ## Results
 
-No training result yet. The deterministic dataset contains 100,000 training
-questions and 25,000 validation/test questions across 15,625 worlds.
+The gate completed all 200 finite steps. Training loss fell from `13.219337`
+at step 10 to `6.178020` at step 200. The 19 post-warmup measurements had
+median throughput `8,133.165` examples/s and minimum throughput `8,087.281`
+examples/s. The maximum logged pre-clipping gradient norm was `9.834501`.
+
+Scheduled evaluation at step 200 produced exact match `0.0` and mean joint
+log probability `-6.049064`. All message interventions also had zero exact
+match at this short gate. This is not a convergence result; the gate passes
+because the model initialized, trained with finite improving loss at high
+throughput, ran every scheduled intervention, saved a restorable checkpoint,
+and terminated cleanly.
 
 ## Artifacts
 
@@ -120,12 +129,15 @@ questions and 25,000 validation/test questions across 15,625 worlds.
 | Transfer archive | `/tmp/20261018-conlang-jax-v5e8-b256-tiny32-single-link-gate1-retry2-20261019T024709.880205475Z.tar.gz` | 104,913 bytes; local and remote SHA-256 `919c10e0e8b57cbfb9e2a3682d845ff886aa9a081637a9b980a79f6763269ec8` |
 | TPU-local source | `/home/kristinelu/elf-runs/sources/20261018-conlang-jax-v5e8-b256-tiny32-single-link-gate1-retry2-20261019T024709.880205475Z` | extracted 73 files; no `.git`; content and config hashes match |
 | TPU-local dataset | `/home/kristinelu/elf-data/conlangs-single-link-v1` | streaming verification passed; 7 files / 11,996,881 filesystem bytes; all seven object hashes match the regional source |
-| Checkpoint | `/home/kristinelu/elf-runs/20261018-conlang-jax-v5e8-b256-tiny32-single-link-gate1-retry2/checkpoint.msgpack` | no |
-| Tracking run | `https://wandb.ai/kaynelu921-massachusetts-institute-of-technology/conlangs/runs/aazp4xrd` | initialized as run `aazp4xrd`; training progress pending |
+| Checkpoint | `/home/kristinelu/elf-runs/20261018-conlang-jax-v5e8-b256-tiny32-single-link-gate1-retry2/checkpoint.msgpack` | 2,751,862 bytes; SHA-256 `4daedb62609842289f033e8ed0a1f7888f2df8a9af31813da090c2669d3c8c4a`; CPU restore verified step 200 |
+| Metrics | `/home/kristinelu/elf-runs/20261018-conlang-jax-v5e8-b256-tiny32-single-link-gate1-retry2/metrics.jsonl` | 36,744 bytes; SHA-256 `5a4fd8a008a91d47c245a376bc40566989c7b8a43514485ee63ec6abdbe9650d`; 20 training records and 1 evaluation record |
+| Outputs | `/home/kristinelu/elf-runs/20261018-conlang-jax-v5e8-b256-tiny32-single-link-gate1-retry2/outputs.jsonl` | 234,075 bytes; SHA-256 `9c3ef371f81bc1a9bfd98290810e6880f0d3a6c44190e5099484b11d98fd87ed` |
+| Launcher log | `/home/kristinelu/elf-runs/logs/20261018-conlang-jax-v5e8-b256-tiny32-single-link-gate1-retry2.launcher.log` | 4,952 bytes; SHA-256 `fb39bfb741368a42decd7ca80624928334a8257cf948fcab8eb6aa8a35b9895d`; canonical completion sentinel present |
+| Tracking run | `https://wandb.ai/kaynelu921-massachusetts-institute-of-technology/conlangs/runs/aazp4xrd` | API state `finished`, summary step 200, exact match `0.0`, five files synced |
 
 ## Failure Details
 
-- Last known step: not applicable.
+- Last known step: 200, completed.
 - Error summary: not applicable to retry 2; both predecessor staging failures
   have distinct immutable reports.
 - Detailed output: not recorded.
@@ -142,12 +154,23 @@ questions and 25,000 validation/test questions across 15,625 worlds.
 - The TPU VM's CPU-only production-runtime preflight independently confirmed
   the retry configuration, message shape, layer depths, parameter count, and
   presence of W&B authentication without initializing the TPU backend.
+- The repository has no `tpu_scripts/watch_elf_run.sh`. This six-minute gate
+  completed under its attached foreground session while the fallback recurring
+  monitor path was being prepared; direct process, VFIO, cloud-health,
+  checkpoint, log, and W&B checks covered terminal verification.
+- Terminal verification found no trainer or accelerator holder. The TPU
+  remained READY/HEALTHY and the W&B API independently reported `finished`.
 
 ## Interpretation
 
 - Retry 2 is scientifically identical to its predecessors. The fresh identity
   preserves both zero-step staging failures while using a transfer method with
   an explicit archive hash and extracted file-manifest verification.
+- The gate meets its promotion rule. The throughput margin is large relative
+  to the prior width-128 operational baseline, and there is no unexplained
+  regression or instability. A fresh 2,000-step full-run identity is the next
+  selected action; the gate checkpoint is retained as an immutable artifact
+  rather than reused as an implicit resume.
 
 ## Updates
 
@@ -168,3 +191,9 @@ questions and 25,000 validation/test questions across 15,625 worlds.
 - `2026-10-19T03:00:11Z`: Started the foreground trainer from the exact
   TPU-local snapshot. W&B initialized run `aazp4xrd` under the configured run
   name; backend compilation and the first training step are pending.
+- `2026-10-19T03:06:03Z`: Completed 200 finite steps and scheduled message
+  interventions, saved the checkpoint, emitted the exact completion sentinel,
+  and finished W&B synchronization.
+- `2026-10-19T03:08:11Z`: Restored the checkpoint on CPU at step 200, recorded
+  hashes and sizes for all artifacts, confirmed W&B state `finished`, found no
+  trainer or accelerator holder, and confirmed the TPU remained READY/HEALTHY.
