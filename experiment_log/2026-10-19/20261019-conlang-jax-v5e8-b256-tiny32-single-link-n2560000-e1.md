@@ -5,16 +5,16 @@
 | Field | Value |
 |---|---|
 | Run ID | `20261019-conlang-jax-v5e8-b256-tiny32-single-link-n2560000-e1` |
-| Status | `planned` |
-| Started | not recorded |
+| Status | `running` |
+| Started | `2026-10-19T03:58:33Z` |
 | Finished | not recorded |
 | Baseline | `20261018-conlang-jax-v5e8-b256-tiny32-single-link-full1` completed 2,000 steps on the 100,000-example dataset |
-| Git revision | `74c6486328e2f3e6a0514943da126ff2e9f63989` (exact configuration commit) |
+| Git revision | source snapshot from `1e2808fe3dcee9cc7cda039f023713164e4d6883`; exact configuration commit `74c6486328e2f3e6a0514943da126ff2e9f63989` |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/2` |
 | Primary configuration | `configs/conlang-jax-v5e8-b256-tiny32-single-link-n2560000-e1.yaml` |
-| Command | not recorded; launch has not started |
+| Command | exact foreground command in Launch Command below |
 | Seed | `1729` |
-| Hardware | intended `kmh-tpuvm-v5e-8-spot-kristine-02-08-02-17-N-us-west4-a`, `us-west4-a`, Spot `v5litepod-8` |
+| Hardware | `kmh-tpuvm-v5e-8-spot-kristine-02-08-02-17-N-us-west4-a`, `us-west4-a`, Spot `v5litepod-8`; READY/HEALTHY at launch |
 
 ## Configuration
 
@@ -148,7 +148,8 @@ issues, and both were applied before staging. No third review was performed.
 
 | Dataset / split | Metric | Value | Step / epoch | Direction | Source |
 |---|---|---:|---:|---|---|
-| training | run status | not recorded; launch pending | 0 | not applicable | no training process started |
+| training | loss | 5.4043 | 300 | min | launcher log |
+| training | examples / second | 7,807.42 | 300 | max | launcher log |
 
 ## Artifacts
 
@@ -157,15 +158,18 @@ issues, and both were applied before staging. No third review was performed.
 | Configuration | `configs/conlang-jax-v5e8-b256-tiny32-single-link-n2560000-e1.yaml` | parses; SHA-256 `a5bc2c80fcabfa7a2564cc4ff061fdb9caaaea76c7207eaff4c40e403aa32b66` |
 | Regional dataset | `gs://kmh-gcp-us-west4/kristine/datasets/conlangs-single-link-n2560000-v1` | seven objects / 247,017,941 bytes; full manifest and local hashes verified |
 | TPU-local dataset | `/home/kristinelu/elf-data/conlangs-single-link-n2560000-v1` | all seven SHA-256 hashes and full streaming verifier passed |
-| Checkpoint | `/home/kristinelu/elf-runs/20261019-conlang-jax-v5e8-b256-tiny32-single-link-n2560000-e1/checkpoint.msgpack` | no; launch pending |
-| Tracking run | not recorded | no; launch pending |
+| Immutable source | `/home/kristinelu/elf-runs/sources/20261019-conlang-jax-v5e8-b256-tiny32-single-link-n2560000-e1-20261019T035122.898087842Z` | 75 files; content hash `ea9f31967eecf44def18bda18f10a614c3c06378b9829427d68006f54a1e8d72` |
+| Transfer archive | `/home/kristinelu/elf-runs/source-archives/20261019-conlang-jax-v5e8-b256-tiny32-single-link-n2560000-e1-20261019T035122.898087842Z.tar.gz` | 106,990 bytes; SHA-256 `ed8c783f853d3c8819e41a68a71df4c32925319279dbdc2541004f88cc606973` |
+| Checkpoint | `/home/kristinelu/elf-runs/20261019-conlang-jax-v5e8-b256-tiny32-single-link-n2560000-e1/checkpoint.msgpack` | not yet created at step 300 |
+| Tracking run | `https://wandb.ai/kaynelu921-massachusetts-institute-of-technology/conlangs/runs/cebrgj40` | active |
+| Monitor | `conlang-monitor-tiny32-n2560000-e1.timer` and `/tmp/conlang_monitor_tiny32_n2560000_e1.log` | clean-environment check passed; five-minute trigger active |
 | Plots / report | this report | yes |
 
 ## Failure Details
 
-- Last known step: not applicable; launch has not started.
+- Last known step: 300 and advancing.
 - Error summary: not applicable.
-- Detailed output: not recorded.
+- Detailed output: `/home/kristinelu/elf-runs/logs/20261019-conlang-jax-v5e8-b256-tiny32-single-link-n2560000-e1.launcher.log`.
 
 ## Observations
 
@@ -177,12 +181,15 @@ issues, and both were applied before staging. No third review was performed.
 - Corrected TPU-VM CPU-only initialization with the production tokenizer
   confirmed message shape `(2, 2, 32)`, 228,271 parameters, sender depth 2,
   and receiver depth 2.
+- The live trainer reported all 8 TPU devices, exactly 2,560,000 training
+  examples, and finite metrics through step 300.
 
 ## Interpretation
 
 - The planned 10,000-step run is exactly one data epoch because the iterator
   will exhaust all 2,560,000 examples without an early reshuffle.
-- Training metrics remain unknown until the planned launch completes.
+- Early training is stable at approximately 7.8k examples/second; terminal
+  model quality remains unknown until step 10,000 and final evaluation.
 
 ## Updates
 
@@ -195,7 +202,18 @@ issues, and both were applied before staging. No third review was performed.
   `20261019-conlang-jax-v5e8-b256-tiny32-single-link-n2560000-e1-preflight-attempt1.md`.
   The production runtime intentionally lacks pytest; the direct replacement
   model assertion passed without changing the runtime or creating run output.
+- `2026-10-19T04:05:08Z`: Foreground training reached finite step 300 at
+  7,807.42 examples/second. W&B run `cebrgj40` is active, and the independent
+  five-minute monitor completed its first check and armed the next trigger.
 
-## Launch and Artifacts
+## Launch Command
 
-The exact immutable source path, launch command, W&B URL, checkpoints, metrics, outputs, and terminal status will be appended after staging and launch. No TPU process has been started for this run yet.
+```bash
+gcloud compute tpus tpu-vm ssh \
+  kmh-tpuvm-v5e-8-spot-kristine-02-08-02-17-N-us-west4-a \
+  --project=he-vision-group \
+  --zone=us-west4-a \
+  --worker=all \
+  --command='set -euo pipefail; trap "" HUP; source_path=/home/kristinelu/elf-runs/sources/20261019-conlang-jax-v5e8-b256-tiny32-single-link-n2560000-e1-20261019T035122.898087842Z; config_path="$source_path/configs/conlang-jax-v5e8-b256-tiny32-single-link-n2560000-e1.yaml"; launcher_log=/home/kristinelu/elf-runs/logs/20261019-conlang-jax-v5e8-b256-tiny32-single-link-n2560000-e1.launcher.log; mkdir -p /home/kristinelu/elf-runs/logs /home/kristinelu/elf-runs/wandb /home/kristinelu/elf-data/huggingface; cd "$source_path"; export JAX_PLATFORMS=tpu; export CUDA_VISIBLE_DEVICES=; export ELF_TPU_WORKER_INDEX=0; export PYTHONPATH="$PWD"; export HF_HOME=/home/kristinelu/elf-data/huggingface; export WANDB_DIR=/home/kristinelu/elf-runs/wandb; export PYTHONUNBUFFERED=1; export PYTHONDONTWRITEBYTECODE=1; ulimit -c 0; /home/kristinelu/elf-runs/runtime/venv/bin/python -u train.py --config "$config_path" 2>&1 | tee "$launcher_log"' \
+  --quiet
+```
