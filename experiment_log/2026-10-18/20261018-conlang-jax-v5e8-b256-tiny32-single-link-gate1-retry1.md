@@ -5,14 +5,14 @@
 | Field | Value |
 |---|---|
 | Run ID | `20261018-conlang-jax-v5e8-b256-tiny32-single-link-gate1-retry1` |
-| Status | `planned` |
-| Started | not started |
-| Finished | not applicable |
+| Status | `failed` |
+| Started | `2026-10-19T02:44:05Z` |
+| Finished | `2026-10-19T02:45:30Z` |
 | Predecessor | `20261018-conlang-jax-v5e8-b256-tiny32-single-link-gate1` source-staging attempt 1 |
 | Git revision | `af1a5aa0bb96f17ad51921e8e95d82e0cc44ab0c` (exact configuration commit); staging repair `b7c192c` |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/2` |
 | Primary configuration | `configs/conlang-jax-v5e8-b256-tiny32-single-link-gate1-retry1.yaml` |
-| Command | pending fresh immutable staging and final remote gate |
+| Command | Exact staging and transfer commands are preserved in `20261018-conlang-jax-v5e8-b256-tiny32-single-link-gate1-retry1-staging-attempt1.md` |
 | Seed | `1729` |
 | Hardware | selected `kmh-tpuvm-v5e-8-spot-kristine-02-08-02-17-N-us-west4-a`, `us-west4-a`, Spot `v5litepod-8`; READY/HEALTHY and idle at retry selection |
 
@@ -96,8 +96,10 @@ material steady-state throughput regression.
 
 ## Results
 
-No training result yet. The deterministic dataset contains 100,000 training
-questions and 25,000 validation/test questions across 15,625 worlds.
+No training result was produced. Source transfer failed before Python
+training, W&B initialization, metric step 1, or checkpoint creation. The
+deterministic dataset contains 100,000 training questions and 25,000
+validation/test questions across 15,625 worlds.
 
 ## Artifacts
 
@@ -106,17 +108,17 @@ questions and 25,000 validation/test questions across 15,625 worlds.
 | Configuration | `configs/conlang-jax-v5e8-b256-tiny32-single-link-gate1-retry1.yaml` | parses and validates; SHA-256 `c39c25e994f10617847cd8879b098aefe36fb2848311de603e40cdfc02e004bb` |
 | Dataset manifest | `datasets/linked_facts_v1/manifest.json` | full streaming verifier passed; SHA-256 `5f95f8f4f25a10d12704959c6f275f978548b3641a4db03338d76d4f8d654a13` |
 | Regional dataset | `gs://kmh-gcp-us-west4/kristine/datasets/conlangs-single-link-v1` | seven objects / 11,992,785 bytes; bucket location `US-WEST4` |
-| Immutable source | pending fresh snapshot under `/kmh-nfs-ssd-us-mount/staging/kristine/elf/` | no |
+| Immutable source | corrected local snapshot and empty remote target recorded in `20261018-conlang-jax-v5e8-b256-tiny32-single-link-gate1-retry1-staging-attempt1.md` | transfer failed |
 | Predecessor quarantine | `/home/kristinelu/elf-runs/sources-misplaced-20261018-conlang-jax-v5e8-b256-tiny32-single-link-gate1-attempt1` | preserved; not reused |
 | Checkpoint | `/home/kristinelu/elf-runs/20261018-conlang-jax-v5e8-b256-tiny32-single-link-gate1-retry1/checkpoint.msgpack` | no |
-| Tracking run | pending | no |
+| Tracking run | not recorded; launch was not reached | no |
 
 ## Failure Details
 
-- Last known step: not applicable.
-- Error summary: not applicable to retry 1; predecessor failure has a distinct
-  immutable report.
-- Detailed output: not recorded.
+- Last known step: none; Python training was never started.
+- Error summary: OpenSSH SCP rejected the literal recursive source basename
+  `.` before transferring any file.
+- Detailed output: `20261018-conlang-jax-v5e8-b256-tiny32-single-link-gate1-retry1-staging-attempt1.md`.
 
 ## Observations
 
@@ -139,3 +141,6 @@ questions and 25,000 validation/test questions across 15,625 worlds.
 - `2026-10-19T02:43:24Z`: Selected retry 1 immediately after preserving the
   predecessor staging failure; exact config parsed and the focused staging
   regression test passed.
+- `2026-10-19T03:49:35Z`: Reconciled the canonical status with the preserved
+  source-transfer attempt: terminal status `failed`, no training step,
+  tracking run, or checkpoint.

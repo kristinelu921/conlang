@@ -6,14 +6,19 @@
 |---|---|
 | Run ID | `20261019-conlang-jax-v5e8-b256-tiny32-single-link-n2560000-e1` |
 | Status | `planned` |
-| Predecessor | `20261018-conlang-jax-v5e8-b256-tiny32-single-link-full1` completed 2,000 steps on the 100,000-example dataset |
+| Started | not recorded |
+| Finished | not recorded |
+| Baseline | `20261018-conlang-jax-v5e8-b256-tiny32-single-link-full1` completed 2,000 steps on the 100,000-example dataset |
 | Git revision | `74c6486328e2f3e6a0514943da126ff2e9f63989` (exact configuration commit) |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/2` |
 | Primary configuration | `configs/conlang-jax-v5e8-b256-tiny32-single-link-n2560000-e1.yaml` |
+| Command | not recorded; launch has not started |
 | Seed | `1729` |
-| Intended hardware | `kmh-tpuvm-v5e-8-spot-kristine-02-08-02-17-N-us-west4-a`, Spot `v5litepod-8` |
+| Hardware | intended `kmh-tpuvm-v5e-8-spot-kristine-02-08-02-17-N-us-west4-a`, `us-west4-a`, Spot `v5litepod-8` |
 
 ## Configuration
+
+Source: `configs/conlang-jax-v5e8-b256-tiny32-single-link-n2560000-e1.yaml`
 
 ```yaml
 run_id: 20261019-conlang-jax-v5e8-b256-tiny32-single-link-n2560000-e1
@@ -69,15 +74,19 @@ relative_attention_num_buckets: 32
 relative_attention_max_distance: 128
 ```
 
-## Changes From Baseline
+## Changed Hyperparameters
 
-Relative to `20261018-conlang-jax-v5e8-b256-tiny32-single-link-full1`:
+| Parameter | Baseline | Current | Source |
+|---|---:|---:|---|
+| Training examples | 100,000 | 2,560,000 | verified dataset manifests |
+| Steps | 2,000 | 10,000 | primary configurations |
+| Epochs | 5.12 effective passes | 1 exact pass | steps × batch size / training examples |
+| Batch size | 256 | 256 | primary configurations |
+| Message vectors per sender | 1 | 1 | primary configurations |
+| Continuous message width | 32 | 32 | primary configurations |
+| Sender / receiver depth | 2 / 2 | 2 / 2 | primary configurations |
 
-- training data increases from 100,000 to exactly 2,560,000 examples;
-- steps increase from 2,000 to 10,000;
-- batch size remains 256, so `10,000 * 256 = 2,560,000` and the run is exactly one epoch;
-- the model remains one message token with a 32-dimensional continuous embedding, sender depth 2, and receiver depth 2;
-- all optimizer hyperparameters and seed remain unchanged.
+All optimizer hyperparameters and seed remain unchanged.
 
 ## Dataset Generation
 
@@ -131,7 +140,54 @@ The required correctness pass reviewed the complete PR diff from base
 `051db79bc7092a3c5422f3ace9e7aaa42c32d53e` through head
 `c300d249ea614affd6478f595626e2582183a7d8` and returned
 `NO_CONFIRMED_FINDINGS`. Its focused generator, model-shape, and staging checks
-passed 12 tests. The cleanup pass is pending on the updated frozen head.
+passed 12 tests. The cleanup pass reviewed updated head
+`59766e18101c1374572adb0735c7518af58da57c`, found two report-maintenance
+issues, and both were applied before staging. No third review was performed.
+
+## Results
+
+| Dataset / split | Metric | Value | Step / epoch | Direction | Source |
+|---|---|---:|---:|---|---|
+| training | run status | not recorded; launch pending | 0 | not applicable | no training process started |
+
+## Artifacts
+
+| Artifact | Path or URL | Verified |
+|---|---|---|
+| Configuration | `configs/conlang-jax-v5e8-b256-tiny32-single-link-n2560000-e1.yaml` | parses; SHA-256 `a5bc2c80fcabfa7a2564cc4ff061fdb9caaaea76c7207eaff4c40e403aa32b66` |
+| Regional dataset | `gs://kmh-gcp-us-west4/kristine/datasets/conlangs-single-link-n2560000-v1` | seven objects / 247,017,941 bytes; full manifest and local hashes verified |
+| TPU-local dataset | `/home/kristinelu/elf-data/conlangs-single-link-n2560000-v1` | all seven SHA-256 hashes and full streaming verifier passed |
+| Checkpoint | `/home/kristinelu/elf-runs/20261019-conlang-jax-v5e8-b256-tiny32-single-link-n2560000-e1/checkpoint.msgpack` | no; launch pending |
+| Tracking run | not recorded | no; launch pending |
+| Plots / report | this report | yes |
+
+## Failure Details
+
+- Last known step: not applicable; launch has not started.
+- Error summary: not applicable.
+- Detailed output: not recorded.
+
+## Observations
+
+- The training split has exactly 2,560,000 verified examples, equal to 10,000
+  full batches of 256 with no partial batch.
+- Each sender input contains exactly one necessary fact and produces one
+  continuous 32-dimensional message vector.
+- The selected TPU-local dataset matches the generation host byte-for-byte.
+
+## Interpretation
+
+- The planned 10,000-step run is exactly one data epoch because the iterator
+  will exhaust all 2,560,000 examples without an early reshuffle.
+- Training metrics remain unknown until the planned launch completes.
+
+## Updates
+
+- `2026-10-19T03:49:35Z`: Generated, uploaded, localized, and fully verified
+  the 2.56M-example training split; local CPU regression suite passed 77 tests.
+- `2026-10-19T03:49:35Z`: Correctness review returned no confirmed findings.
+  Cleanup review found report-schema issues; both findings were applied before
+  immutable staging. No third review was performed, per the two-pass policy.
 
 ## Launch and Artifacts
 

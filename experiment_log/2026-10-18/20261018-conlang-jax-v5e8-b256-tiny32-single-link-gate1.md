@@ -5,14 +5,14 @@
 | Field | Value |
 |---|---|
 | Run ID | `20261018-conlang-jax-v5e8-b256-tiny32-single-link-gate1` |
-| Status | `planned` |
-| Started | not started |
-| Finished | not applicable |
+| Status | `failed` |
+| Started | `2026-10-19T02:37:46Z` |
+| Finished | `2026-10-19T02:42:11Z` |
 | Baseline | `20261014-conlang-jax-v5e8-b256-opt1` for operational throughput only; architecture and data contract differ |
 | Git revision | `117c839bbda5dffb992f7f75af21ca2cc01ab571` (exact configuration commit); source/data commit `b06656e5621729f762e10543703e32ea56aa12e7` |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/2` |
 | Primary configuration | `configs/conlang-jax-v5e8-b256-tiny32-single-link-gate1.yaml` |
-| Command | pending immutable staging and remote preflight |
+| Command | Exact staging and transfer commands are preserved in `20261018-conlang-jax-v5e8-b256-tiny32-single-link-gate1-staging-attempt1.md` |
 | Seed | `1729` |
 | Hardware | selected candidate `kmh-tpuvm-v5e-8-spot-kristine-02-08-02-17-N-us-west4-a`, `us-west4-a`, `v5litepod-8`; READY/HEALTHY and idle at selection |
 
@@ -103,8 +103,10 @@ retroactively modify this gate.
 
 ## Results
 
-No training result yet. The deterministic dataset contains 100,000 training
-questions and 25,000 validation/test questions across 15,625 worlds.
+No training result was produced. Source staging failed before Python training,
+W&B initialization, metric step 1, or checkpoint creation. The deterministic
+dataset contains 100,000 training questions and 25,000 validation/test
+questions across 15,625 worlds.
 
 ## Artifacts
 
@@ -112,16 +114,17 @@ questions and 25,000 validation/test questions across 15,625 worlds.
 |---|---|---|
 | Configuration | `configs/conlang-jax-v5e8-b256-tiny32-single-link-gate1.yaml` | parses and validates; SHA-256 `2e5973eefe84fbfcb4fd512f4d32846b101eb3bfeb49a5dd43c163803589d7bc` |
 | Dataset manifest | `datasets/linked_facts_v1/manifest.json` | full streaming verifier passed; SHA-256 `5f95f8f4f25a10d12704959c6f275f978548b3641a4db03338d76d4f8d654a13` |
-| Regional dataset | `gs://kmh-gcp-us-west4/kristine/datasets/conlangs-single-link-v1` | pending upload and remote verification |
-| Immutable source | pending staging under `/kmh-nfs-ssd-us-mount/staging/kristine/elf/` | no |
+| Regional dataset | `gs://kmh-gcp-us-west4/kristine/datasets/conlangs-single-link-v1` | seven objects / 11,992,785 bytes verified during the preserved attempt |
+| Immutable source | exact failed snapshot and transfer evidence in `20261018-conlang-jax-v5e8-b256-tiny32-single-link-gate1-staging-attempt1.md` | failed before usable TPU-local staging |
 | Checkpoint | `/home/kristinelu/elf-runs/20261018-conlang-jax-v5e8-b256-tiny32-single-link-gate1/checkpoint.msgpack` | no |
-| Tracking run | pending | no |
+| Tracking run | not recorded; launch was not reached | no |
 
 ## Failure Details
 
-- Last known step: not applicable.
-- Error summary: not applicable.
-- Detailed output: not recorded.
+- Last known step: none; Python training was never started.
+- Error summary: recursive SCP copied snapshot contents into the source parent,
+  leaving the required timestamped source directory absent.
+- Detailed output: `20261018-conlang-jax-v5e8-b256-tiny32-single-link-gate1-staging-attempt1.md`.
 
 ## Observations
 
@@ -153,3 +156,6 @@ questions and 25,000 validation/test questions across 15,625 worlds.
 - `2026-10-19T02:36:21Z`: Pushed the reviewed branch and opened pull request
   `#2`. The final relevant regression suite passed 84 tests with two unchanged
   third-party Pydantic warnings.
+- `2026-10-19T03:49:35Z`: Reconciled the canonical status with the preserved
+  source-staging attempt: terminal status `failed`, no training step, tracking
+  run, or checkpoint.

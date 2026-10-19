@@ -6,7 +6,7 @@
 |---|---|
 | Run ID | `20261018-conlang-jax-v5e8-b256-tiny32-single-link-gate1-retry1` |
 | Attempt | source-staging attempt 1 |
-| Status | `failed` before launch |
+| Status | `failed` |
 | Started | `2026-10-19T02:44:05Z` |
 | Finished | `2026-10-19T02:45:30Z` |
 | Git revision | `887ac10` |
