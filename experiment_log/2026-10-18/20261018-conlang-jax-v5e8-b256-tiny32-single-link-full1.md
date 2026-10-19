@@ -5,14 +5,14 @@
 | Field | Value |
 |---|---|
 | Run ID | `20261018-conlang-jax-v5e8-b256-tiny32-single-link-full1` |
-| Status | `staged` |
-| Started | not started |
+| Status | `running` |
+| Started | `2026-10-19T03:13:55Z` |
 | Finished | not applicable |
 | Predecessor | gate retry 2 completed 200 finite steps and passed promotion checks |
 | Git revision | `ceeee265c01d6431edaaf6f6125a025e12fa0918` (exact configuration commit) |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/2` |
 | Primary configuration | `configs/conlang-jax-v5e8-b256-tiny32-single-link-full1.yaml` |
-| Command | pending immutable staging and final availability gate |
+| Command | exact command below |
 | Seed | `1729` |
 | Hardware | selected `kmh-tpuvm-v5e-8-spot-kristine-02-08-02-17-N-us-west4-a`, `us-west4-a`, Spot `v5litepod-8`; final revalidation pending |
 
@@ -74,6 +74,17 @@ relative_attention_num_buckets: 32
 relative_attention_max_distance: 128
 ```
 
+## Launch Command
+
+```bash
+gcloud compute tpus tpu-vm ssh kmh-tpuvm-v5e-8-spot-kristine-02-08-02-17-N-us-west4-a \
+  --project=he-vision-group \
+  --zone=us-west4-a \
+  --worker=all \
+  --command='set -euo pipefail; trap "" HUP; source_path=/home/kristinelu/elf-runs/sources/20261018-conlang-jax-v5e8-b256-tiny32-single-link-full1-20261019T031013.568489761Z; config_path="$source_path/configs/conlang-jax-v5e8-b256-tiny32-single-link-full1.yaml"; launcher_log=/home/kristinelu/elf-runs/logs/20261018-conlang-jax-v5e8-b256-tiny32-single-link-full1.launcher.log; mkdir -p /home/kristinelu/elf-runs/logs /home/kristinelu/elf-runs/wandb /home/kristinelu/elf-data/huggingface; cd "$source_path"; export JAX_PLATFORMS=tpu; export CUDA_VISIBLE_DEVICES=; export ELF_TPU_WORKER_INDEX=0; export PYTHONPATH="$PWD"; export HF_HOME=/home/kristinelu/elf-data/huggingface; export WANDB_DIR=/home/kristinelu/elf-runs/wandb; export PYTHONUNBUFFERED=1; export PYTHONDONTWRITEBYTECODE=1; ulimit -c 0; /home/kristinelu/elf-runs/runtime/venv/bin/python -u train.py --config "$config_path" 2>&1 | tee "$launcher_log"' \
+  --quiet
+```
+
 ## Changed Hyperparameters
 
 Relative to the passed gate, only the fresh run/output/W&B identities and
@@ -100,8 +111,8 @@ No full-run result yet. The promotion gate reduced training loss from
 | Transfer archive | `/tmp/20261018-conlang-jax-v5e8-b256-tiny32-single-link-full1-20261019T031013.568489761Z.tar.gz` | 106,696 bytes; local and remote SHA-256 `4f7e0021c39d65870c0380607ecc4c476a168179094956ecd81626ecf12ec6b9` |
 | TPU-local source | `/home/kristinelu/elf-runs/sources/20261018-conlang-jax-v5e8-b256-tiny32-single-link-full1-20261019T031013.568489761Z` | extracted 74 files / 531,437 bytes; no `.git`; content and config hashes match |
 | Checkpoint | `/home/kristinelu/elf-runs/20261018-conlang-jax-v5e8-b256-tiny32-single-link-full1/checkpoint.msgpack` | no |
-| Tracking run | pending | no |
-| Recurring monitor | pending first useful progress event | no |
+| Tracking run | `https://wandb.ai/kaynelu921-massachusetts-institute-of-technology/conlangs/runs/m41r83dd` | initialized as run `m41r83dd`; terminal state pending |
+| Recurring monitor | `conlang-monitor-tiny32-full1.timer`; run-scoped script `/tmp/conlang_monitor_tiny32_full1.sh`; append-only evidence `/tmp/conlang_monitor_tiny32_full1.log` | five-minute cadence active; clean-environment check observed the exact trainer at step 1,470 and READY/HEALTHY cloud state |
 
 ## Failure Details
 
@@ -115,8 +126,12 @@ No full-run result yet. The promotion gate reduced training loss from
   32-dimensional vector from each sender; sender and receiver depths are 2.
 - The full run starts fresh under a new identity. It does not silently resume
   the gate checkpoint, which remains an immutable promotion artifact.
-- A run-scoped recurring monitor will be installed after the first finite
-  progress event because the repository has no generic watch script.
+- A run-scoped recurring monitor was installed after the first finite progress
+  event because the repository has no generic watch script.
+- The installed monitor pins the exact TPU, cloud project, zone, run identity,
+  gcloud executable, launcher log, and checkpoint path. Its first verified
+  check found trainer PID `219859` as the sole holder of every VFIO device and
+  the libtpu lock, with finite progress through step 1,470.
 
 ## Interpretation
 
@@ -132,3 +147,10 @@ No full-run result yet. The promotion gate reduced training loss from
 - `2026-10-19T03:11:10Z`: Created the immutable source snapshot, transferred it
   as a regular-file deterministic archive, matched the archive SHA-256 on the
   TPU, and matched all 74 extracted files plus the selected configuration.
+- `2026-10-19T03:13:55Z`: The required final audit listed the selected v5e in
+  its `AVAILABLE` table. A final direct gate confirmed fresh output/log paths,
+  exact config and dataset hashes, and no process or accelerator holder; the
+  foreground trainer then initialized W&B run `m41r83dd`.
+- `2026-10-19T03:17:55Z`: Activated and validated the five-minute recurring
+  monitor. Its clean-environment check found READY/HEALTHY cloud state, the
+  exact trainer as the only accelerator holder, finite loss, and step 1,470.
