@@ -174,6 +174,9 @@ issues, and both were applied before staging. No third review was performed.
 - Each sender input contains exactly one necessary fact and produces one
   continuous 32-dimensional message vector.
 - The selected TPU-local dataset matches the generation host byte-for-byte.
+- Corrected TPU-VM CPU-only initialization with the production tokenizer
+  confirmed message shape `(2, 2, 32)`, 228,271 parameters, sender depth 2,
+  and receiver depth 2.
 
 ## Interpretation
 
@@ -188,6 +191,10 @@ issues, and both were applied before staging. No third review was performed.
 - `2026-10-19T03:49:35Z`: Correctness review returned no confirmed findings.
   Cleanup review found report-schema issues; both findings were applied before
   immutable staging. No third review was performed, per the two-pass policy.
+- `2026-10-19T03:55:33Z`: Preserved a failed optional pytest-based preflight in
+  `20261019-conlang-jax-v5e8-b256-tiny32-single-link-n2560000-e1-preflight-attempt1.md`.
+  The production runtime intentionally lacks pytest; the direct replacement
+  model assertion passed without changing the runtime or creating run output.
 
 ## Launch and Artifacts
 
