@@ -52,7 +52,7 @@ rsync -rl \
     --no-group \
     --no-perms \
     --omit-dir-times \
-    --exclude='.git/' \
+    --exclude='.git' \
     --exclude='.agents/' \
     --exclude='.codex/' \
     --exclude='.netrc' \

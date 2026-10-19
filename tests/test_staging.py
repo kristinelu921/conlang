@@ -18,6 +18,7 @@ def test_staging_keeps_source_and_excludes_data_and_secrets(tmp_path: Path) -> N
     (source / "configs" / "conlang-jax-v5e8-gate1.yaml").write_text("steps: 1\n", encoding="utf-8")
     (source / "datasets" / "train.jsonl").write_text("private data\n", encoding="utf-8")
     (source / "wandb" / "debug.log").write_text("runtime log\n", encoding="utf-8")
+    (source / ".git").write_text("gitdir: /outside/worktree\n", encoding="utf-8")
     (source / ".netrc").write_text("machine example.invalid\n", encoding="utf-8")
     environment = {
         **os.environ,
@@ -39,4 +40,5 @@ def test_staging_keeps_source_and_excludes_data_and_secrets(tmp_path: Path) -> N
     assert (snapshot / "configs" / "conlang-jax-v5e8-gate1.yaml").is_file()
     assert not (snapshot / "datasets").exists()
     assert not (snapshot / "wandb").exists()
+    assert not (snapshot / ".git").exists()
     assert not (snapshot / ".netrc").exists()
