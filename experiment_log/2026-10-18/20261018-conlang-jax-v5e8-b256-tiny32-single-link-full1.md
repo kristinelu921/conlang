@@ -5,16 +5,16 @@
 | Field | Value |
 |---|---|
 | Run ID | `20261018-conlang-jax-v5e8-b256-tiny32-single-link-full1` |
-| Status | `running` |
+| Status | `completed` |
 | Started | `2026-10-19T03:13:55Z` |
-| Finished | not applicable |
+| Finished | `2026-10-19T03:18:11Z` |
 | Predecessor | gate retry 2 completed 200 finite steps and passed promotion checks |
 | Git revision | `ceeee265c01d6431edaaf6f6125a025e12fa0918` (exact configuration commit) |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/2` |
 | Primary configuration | `configs/conlang-jax-v5e8-b256-tiny32-single-link-full1.yaml` |
 | Command | exact command below |
 | Seed | `1729` |
-| Hardware | selected `kmh-tpuvm-v5e-8-spot-kristine-02-08-02-17-N-us-west4-a`, `us-west4-a`, Spot `v5litepod-8`; final revalidation pending |
+| Hardware | `kmh-tpuvm-v5e-8-spot-kristine-02-08-02-17-N-us-west4-a`, `us-west4-a`, Spot `v5litepod-8`; terminal state READY/HEALTHY and idle |
 
 ## Configuration
 
@@ -74,6 +74,64 @@ relative_attention_num_buckets: 32
 relative_attention_max_distance: 128
 ```
 
+## Canonical Effective Configuration
+
+TPU-written `output/config.yml`, copied verbatim:
+
+```yaml
+batch_size: 256
+bridge_supervision_weight: 0.0
+communication_rounds: 1
+dataset_cache_dir: /home/kristinelu/elf-data/conlangs-single-link-v1
+dataset_dir: null
+dataset_prefix: kristine/datasets/conlangs-single-link-v1
+device: tpu
+dropout: 0.1
+eval_every: 200
+eval_examples: 256
+evaluation_message_interventions: true
+hidden_size: 32
+learning_rate: 0.0003
+limit_examples: null
+log_every: 10
+max_answer_length: 4
+max_gradient_norm: 1.0
+max_question_length: 128
+max_text_length: 512
+message_length: 1
+num_heads: 4
+num_layers: 2
+output_hidden_size: null
+output_path: /home/kristinelu/elf-runs/20261018-conlang-jax-v5e8-b256-tiny32-single-link-full1/checkpoint.msgpack
+precision: bfloat16
+pretrained_checkpoint_sha256: null
+pretrained_initialization: null
+pretrained_model_dir: null
+pretrained_tokenizer_sha256: null
+receiver_question_input: true
+receiver_question_query_only: false
+relative_attention_max_distance: 128
+relative_attention_num_buckets: 32
+repeat_training_examples_to_batch_size: false
+role_gate_channels: null
+run_id: 20261018-conlang-jax-v5e8-b256-tiny32-single-link-full1
+seed: 1729
+sender_average_residual: false
+sender_feedforward_size: 128
+sender_hidden_size: 32
+sender_learning_rate_multiplier: 1.0
+sender_num_heads: 4
+sender_num_layers: 2
+sender_question_conditioning: false
+steps: 2000
+throughput_warmup_steps: 10
+tie_sender_receiver_encoder: false
+wandb_enabled: true
+wandb_project: conlangs
+wandb_run_name: 20261018-conlang-jax-v5e8-b256-tiny32-single-link-full1
+weight_decay: 0.01
+```
+
 ## Launch Command
 
 ```bash
@@ -95,9 +153,23 @@ remain fixed.
 
 ## Results
 
-No full-run result yet. The promotion gate reduced training loss from
-`13.219337` to `6.178020` and sustained median post-warmup throughput
-`8,133.165` examples/s with a restorable checkpoint and clean termination.
+The full run completed all 2,000 finite steps. Training loss fell from
+`13.219337` at step 10 to `3.478937` at step 2,000. Across 199 post-warmup
+measurements, median throughput was `8,319.639` examples/s; the minimum was
+`6,758.739` examples/s at an evaluation boundary. The maximum logged
+pre-clipping gradient norm was `9.834501`.
+
+Validation exact match rose monotonically in broad trend across the scheduled
+checks: `0.0000`, `0.0117`, `0.0234`, `0.0586`, `0.0781`, `0.1562`, `0.1562`,
+`0.1875`, `0.1914`, and `0.2812` at steps 200 through 2,000. Final mean joint
+log probability was `-3.366223`.
+
+At step 2,000, full communication scored `0.28125` exact match. Agent-1-only
+and agent-2-only were each `0.183594`; swapping sender messages scored
+`0.292969`; wrong-world messages scored `0.035156`; zero messages scored
+`0.027344`. The model therefore uses information from both messages and is
+strongly sensitive to their content, while the sender ordering itself is not
+important in this configuration.
 
 ## Artifacts
 
@@ -110,13 +182,17 @@ No full-run result yet. The promotion gate reduced training loss from
 | Immutable source | `/kmh-nfs-ssd-us-mount/staging/kristine/elf/20261018-conlang-jax-v5e8-b256-tiny32-single-link-full1-20261019T031013.568489761Z` at source revision `e3569ae7b232c7741a0fe4cf4fbe0ef44316b986` | 74 files / 531,437 bytes; content-manifest SHA-256 `b8615b6d4929fb345a0010c08925b516c4e0ec43695cc245b4f7481f57ab0663` |
 | Transfer archive | `/tmp/20261018-conlang-jax-v5e8-b256-tiny32-single-link-full1-20261019T031013.568489761Z.tar.gz` | 106,696 bytes; local and remote SHA-256 `4f7e0021c39d65870c0380607ecc4c476a168179094956ecd81626ecf12ec6b9` |
 | TPU-local source | `/home/kristinelu/elf-runs/sources/20261018-conlang-jax-v5e8-b256-tiny32-single-link-full1-20261019T031013.568489761Z` | extracted 74 files / 531,437 bytes; no `.git`; content and config hashes match |
-| Checkpoint | `/home/kristinelu/elf-runs/20261018-conlang-jax-v5e8-b256-tiny32-single-link-full1/checkpoint.msgpack` | no |
-| Tracking run | `https://wandb.ai/kaynelu921-massachusetts-institute-of-technology/conlangs/runs/m41r83dd` | initialized as run `m41r83dd`; terminal state pending |
-| Recurring monitor | `conlang-monitor-tiny32-full1.timer`; run-scoped script `/tmp/conlang_monitor_tiny32_full1.sh`; append-only evidence `/tmp/conlang_monitor_tiny32_full1.log` | five-minute cadence active; clean-environment check observed the exact trainer at step 1,470 and READY/HEALTHY cloud state |
+| Effective configuration | `/kmh-nfs-ssd-us-mount/code/kristine/conlang/experiment_log/2026-10-18/artifacts/20261018-conlang-jax-v5e8-b256-tiny32-single-link-full1/config.yml` | 1,501 bytes; SHA-256 `1ca9d676236a9f33e6f632a27432c1c8786da753d53ed503faf6dd2361d5ec8c`; copied verbatim below |
+| Checkpoint | shared-mount artifact directory above and TPU-local `/home/kristinelu/elf-runs/20261018-conlang-jax-v5e8-b256-tiny32-single-link-full1/checkpoint.msgpack` | 2,751,863 bytes; SHA-256 `a7d760f01d2e983cfef0587b2cda12d372c905a6561659c0de01f58b7bab5bdf`; CPU restore verified step 2,000 |
+| Metrics | shared-mount `metrics.jsonl` | 448,799 bytes; SHA-256 `618136e93ade46453eef0c354c5a9da24c507a8066484c030a2e25dd9f6beb46`; 210 records: 200 training and 10 evaluation |
+| Outputs | shared-mount `outputs.jsonl` | 2,749,662 bytes; SHA-256 `b0c6b79c032978548f0094d4bdef028f1befdb146a905107a48191f16c53af8b`; 200 records; local-only because it contains dataset-derived text |
+| Launcher log | shared-mount `20261018-conlang-jax-v5e8-b256-tiny32-single-link-full1.launcher.log` | 19,475 bytes; SHA-256 `5295b800f2fd18e42f5b2e1009ad080340c733334629aa9a370fd1d139354b97`; completion sentinel present |
+| Tracking run | `https://wandb.ai/kaynelu921-massachusetts-institute-of-technology/conlangs/runs/m41r83dd` | API state `finished`, summary step 2,000, exact match `0.28125`, five files synced |
+| Recurring monitor | preserved shared-mount `monitor.sh` and `monitor.log` | clean-environment checks observed the exact trainer at step 1,470 and terminal no-trainer/checkpoint state; log 1,624 bytes, SHA-256 `feee53970862ba90e76e8e0952526c32b376fabd3385837244aa04dbfc024388`; timer retired after independent verification |
 
 ## Failure Details
 
-- Last known step: not applicable.
+- Last known step: 2,000, completed.
 - Error summary: not applicable.
 - Detailed output: not recorded.
 
@@ -132,12 +208,29 @@ No full-run result yet. The promotion gate reduced training loss from
   gcloud executable, launcher log, and checkpoint path. Its first verified
   check found trainer PID `219859` as the sole holder of every VFIO device and
   the libtpu lock, with finite progress through step 1,470.
+- Its terminal check then found no trainer, the step-2,000 completion sentinel,
+  and the 2,751,863-byte checkpoint. Independent checks restored that
+  checkpoint on CPU, found no VFIO or lockfile holder, confirmed W&B
+  `finished`, and found the TPU READY/HEALTHY.
+- The checkpoint, effective config, metrics, generated outputs, launcher log,
+  monitor script, and monitor evidence were copied to the unique shared-mount
+  artifact directory and rehashed against the TPU-local originals.
 
 ## Interpretation
 
-- The gate established mechanical correctness and ample throughput but was too
-  short for a quality conclusion. The 2,000-step run is the first meaningful
-  convergence test for this tiny single-link architecture.
+- The 32-dimensional, one-vector-per-sender model learns the task measurably:
+  exact match reaches `28.125%` after 5.12 training passes and loss continues
+  downward. This is substantially above both wrong-world and zero-message
+  controls, so the receiver is using communicated content rather than solving
+  from the question alone.
+- Either single sender retains useful partial information (`18.359%` each),
+  while both together add about 9.77 percentage points. Swapping the two
+  messages does not hurt, which is consistent with the two sender channels
+  being treated symmetrically rather than encoding a fragile fixed role order.
+- This run establishes learning but not convergence: the final validation
+  curve is still improving. A longer follow-up could test the attainable
+  ceiling without changing the architecture, but no additional run is implied
+  by this completed request.
 
 ## Updates
 
@@ -154,3 +247,10 @@ No full-run result yet. The promotion gate reduced training loss from
 - `2026-10-19T03:17:55Z`: Activated and validated the five-minute recurring
   monitor. Its clean-environment check found READY/HEALTHY cloud state, the
   exact trainer as the only accelerator holder, finite loss, and step 1,470.
+- `2026-10-19T03:18:11Z`: Completed 2,000 finite steps and all ten scheduled
+  intervention evaluations, saved the final checkpoint, emitted the completion
+  sentinel, and finished W&B synchronization.
+- `2026-10-19T03:19:48Z`: The monitor and independent terminal checks found no
+  trainer or accelerator holder, restored the checkpoint at step 2,000,
+  confirmed W&B `finished` and TPU READY/HEALTHY, copied and rehashed all key
+  artifacts on the shared mount, and retired the run-scoped monitor.
