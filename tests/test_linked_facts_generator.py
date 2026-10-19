@@ -34,12 +34,43 @@ def test_world_answers_follow_both_private_mappings() -> None:
         assert chains[person]["middle"] == middle
         assert chains[person]["answer"] == answer
         assert question["answer"] == answer
-        assert (person in world["agent_1_input"]) != (person in world["agent_2_input"])
-        assert (answer in world["agent_1_input"]) != (answer in world["agent_2_input"])
-        assert (person in world["agent_1_input"]) != (answer in world["agent_1_input"])
-    agent_1_people = [person for person in chains if person in world["agent_1_input"]]
+        assert (person in question["agent_1_input"]) != (person in question["agent_2_input"])
+        assert (answer in question["agent_1_input"]) != (answer in question["agent_2_input"])
+        assert (person in question["agent_1_input"]) != (answer in question["agent_1_input"])
+    agent_1_people = [
+        person
+        for person, sender in world["metadata"]["person_side_agent"].items()
+        if sender == "agent_1"
+    ]
     assert len(agent_1_people) == 3
     assert len({question["answer"] for question in world["questions"]}) == 6
+
+
+def test_each_question_contains_only_its_two_required_hops() -> None:
+    """Each sender input should contain one required fact and no distractors."""
+    config = GenerationConfig(
+        entities_per_world=8,
+        train_worlds=1,
+        validation_worlds=1,
+        test_worlds_per_split=1,
+    )
+    world = generate_world("train", 0, config)
+    chains = world["metadata"]["chains"]
+
+    for question in world["questions"]:
+        person, middle, answer = question["reasoning_path"]
+        agent_1_input = question["agent_1_input"]
+        agent_2_input = question["agent_2_input"]
+        combined_input = f"{agent_1_input} {agent_2_input}"
+        assert (person in agent_1_input) != (person in agent_2_input)
+        assert (answer in agent_1_input) != (answer in agent_2_input)
+        assert middle in agent_1_input and middle in agent_2_input
+        for other_person, other_chain in chains.items():
+            if other_person == person:
+                continue
+            assert other_person not in combined_input
+            assert other_chain["middle"] not in combined_input
+            assert other_chain["answer"] not in combined_input
 
 
 def test_world_generation_is_deterministic_and_split_stable() -> None:
@@ -82,8 +113,8 @@ def test_name_and_wording_generalization_axes_are_disjoint() -> None:
     assert lexicon_words(new_name_world) <= held_out_lexicon
     assert lexicon_words(new_wording_world) <= familiar_lexicon
     held_out_template_ids = [
-        *new_wording_world["metadata"]["agent_1_template_ids"],
-        *new_wording_world["metadata"]["agent_2_template_ids"],
+        *[question["agent_1_template_id"] for question in new_wording_world["questions"]],
+        *[question["agent_2_template_id"] for question in new_wording_world["questions"]],
         *[question["template_id"] for question in new_wording_world["questions"]],
     ]
     assert held_out_template_ids
@@ -160,8 +191,8 @@ def test_worlds_cycle_through_sentence_frames_before_repeating() -> None:
     """A world should spread its facts across every frame before reusing one."""
     config = GenerationConfig(entities_per_world=8, train_worlds=1, validation_worlds=1, test_worlds_per_split=1)
     world = generate_world("train", 3, config)
-    assert len(set(world["metadata"]["agent_1_template_ids"])) == 8
-    assert len(set(world["metadata"]["agent_2_template_ids"])) == 8
+    assert len({question["agent_1_template_id"] for question in world["questions"]}) == 8
+    assert len({question["agent_2_template_id"] for question in world["questions"]}) == 8
     assert len({question["template_id"] for question in world["questions"]}) == 8
 
     wide_config = GenerationConfig(entities_per_world=32, train_worlds=1, validation_worlds=1, test_worlds_per_split=1)
@@ -170,8 +201,8 @@ def test_worlds_cycle_through_sentence_frames_before_repeating() -> None:
         domain_counts = Counter(chain["domain"] for chain in wide_world["metadata"]["chains"].values())
         question_ids = [question["template_id"] for question in wide_world["questions"]]
         sender_template_ids = [
-            *wide_world["metadata"]["agent_1_template_ids"],
-            *wide_world["metadata"]["agent_2_template_ids"],
+            *[question["agent_1_template_id"] for question in wide_world["questions"]],
+            *[question["agent_2_template_id"] for question in wide_world["questions"]],
         ]
         for domain in RELATION_DOMAINS:
             fact_count = domain_counts[domain.domain_id]

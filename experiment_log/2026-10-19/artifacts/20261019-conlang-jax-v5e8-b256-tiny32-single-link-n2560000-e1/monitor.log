@@ -1,0 +1,66 @@
+MONITOR_TIME=2026-10-19T04:04:32Z
+READY	HEALTHY
+SSH key found in project metadata; not updating instance.
+Using ssh batch size of 1. Attempting to SSH into 1 nodes with a total of 1 workers.
+SSH: Attempting to connect to worker 0...
+worker=t1v-n-2b62443a-w-0
+trainer_pid=236231
+active_trainers=1
+step=180 train_loss=6.4710 gradient_norm=1.4932 examples_per_second=7782.85
+step=190 train_loss=6.3794 gradient_norm=1.3009 examples_per_second=7820.43
+step=200 train_loss=6.1512 gradient_norm=1.2243 examples_per_second=7812.37
+checkpoint=absent
+holder_resource=/dev/vfio/0 holder_pids= 236231
+holder_resource=/dev/vfio/1 holder_pids= 236231
+holder_resource=/dev/vfio/2 holder_pids= 236231
+holder_resource=/dev/vfio/3 holder_pids= 236231
+holder_resource=/dev/vfio/4 holder_pids= 236231
+holder_resource=/dev/vfio/5 holder_pids= 236231
+holder_resource=/dev/vfio/6 holder_pids= 236231
+holder_resource=/dev/vfio/7 holder_pids= 236231
+holder_resource=/dev/vfio/vfio holder_pids= 236231
+holder_resource=/tmp/libtpu_lockfile holder_pids= 236231
+MONITOR_TIME=2026-10-19T04:04:45Z
+READY	HEALTHY
+SSH key found in project metadata; not updating instance.
+Using ssh batch size of 1. Attempting to SSH into 1 nodes with a total of 1 workers.
+SSH: Attempting to connect to worker 0...
+worker=t1v-n-2b62443a-w-0
+trainer_pid=236231
+active_trainers=1
+step=280 train_loss=5.4815 gradient_norm=0.8678 examples_per_second=7794.20
+step=290 train_loss=5.3961 gradient_norm=1.0704 examples_per_second=7792.51
+step=300 train_loss=5.4043 gradient_norm=0.8673 examples_per_second=7807.42
+checkpoint=absent
+holder_resource=/dev/vfio/0 holder_pids= 236231
+holder_resource=/dev/vfio/1 holder_pids= 236231
+holder_resource=/dev/vfio/2 holder_pids= 236231
+holder_resource=/dev/vfio/3 holder_pids= 236231
+holder_resource=/dev/vfio/4 holder_pids= 236231
+holder_resource=/dev/vfio/5 holder_pids= 236231
+holder_resource=/dev/vfio/6 holder_pids= 236231
+holder_resource=/dev/vfio/7 holder_pids= 236231
+holder_resource=/dev/vfio/vfio holder_pids= 236231
+holder_resource=/tmp/libtpu_lockfile holder_pids= 236231
+MONITOR_TIME=2026-10-19T04:09:46Z
+READY	HEALTHY
+SSH key found in project metadata; not updating instance.
+Using ssh batch size of 1. Attempting to SSH into 1 nodes with a total of 1 workers.
+SSH: Attempting to connect to worker 0...
+worker=t1v-n-2b62443a-w-0
+trainer_pid=236231
+active_trainers=1
+step=9550 train_loss=2.2561 gradient_norm=1.0016 examples_per_second=7992.11
+step=9560 train_loss=2.2083 gradient_norm=1.8769 examples_per_second=7978.57
+step=9570 train_loss=2.4911 gradient_norm=1.0002 examples_per_second=7980.31
+checkpoint=absent
+holder_resource=/dev/vfio/0 holder_pids= 236231
+holder_resource=/dev/vfio/1 holder_pids= 236231
+holder_resource=/dev/vfio/2 holder_pids= 236231
+holder_resource=/dev/vfio/3 holder_pids= 236231
+holder_resource=/dev/vfio/4 holder_pids= 236231
+holder_resource=/dev/vfio/5 holder_pids= 236231
+holder_resource=/dev/vfio/6 holder_pids= 236231
+holder_resource=/dev/vfio/7 holder_pids= 236231
+holder_resource=/dev/vfio/vfio holder_pids= 236231
+holder_resource=/tmp/libtpu_lockfile holder_pids= 236231

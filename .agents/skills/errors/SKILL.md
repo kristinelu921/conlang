@@ -269,6 +269,26 @@ Never collapse a failed zero-step attempt into a later successful retry. Use a n
 - Recovery: pass the options exactly as `--scp-flag=-F --scp-flag=/dev/null --scp-flag=-O`. Preserve a nonzero staging attempt, then verify exit status plus the expected file size or hash on every worker before continuing.
 - Prevention: keep all three values as separate repeated `--scp-flag` arguments in reusable staging commands and tests; never use `--scp-flag="-F /dev/null"`.
 
+### Recursive SCP rejects a dot source basename
+
+- Symptom: `gcloud compute tpus tpu-vm scp --recurse <snapshot>/. ...`
+  repeatedly exits with `scp: error: unexpected filename: .`, and the fresh
+  remote target remains empty.
+- Cause: current SCP treats the literal recursive source basename `.` as an
+  unsafe unexpected filename instead of copying the directory contents.
+- Recovery: stop the bounded local retry loop, preserve the empty remote target
+  and zero-step attempt, and use a fresh run identity. Create a task-local
+  archive from the immutable snapshot, record its SHA-256, transfer that regular
+  file, require the same remote SHA-256, extract into a new fresh timestamped
+  directory, and compare the complete relative file-manifest hash before launch.
+- Prevention: do not use `<snapshot>/.` as a gcloud SCP source. Transfer a
+  hashed archive, or use another method whose exact existing-destination
+  semantics are covered by a focused check.
+- Observed: the tiny 32-dimensional single-link gate retry 1 produced the same
+  SCP error on every bounded retry before transferring any source file. Its
+  timestamped remote target remained empty and no trainer, output, W&B run, or
+  checkpoint existed.
+
 ### Inline remote awk field expands under `set -u`
 
 - Symptom: every worker exits before staging with an error such as `bash: $1: unbound variable`, even though `$1` was intended to be an awk field reference.

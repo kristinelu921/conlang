@@ -3,17 +3,17 @@
 This component generates a controlled communication problem for three agents:
 
 ```text
-agent 1 input (a mix of both hops) -- shared encoder -- message 1 --\
-                                                                     receiver + question -> answer
-agent 2 input (the other hop)      -- shared encoder -- message 2 --/
+agent 1 input (one required hop) -- shared encoder -- message 1 --\
+                                                                   receiver + question -> answer
+agent 2 input (the other hop)    -- shared encoder -- message 2 --/
 ```
 
 Each world mixes five relations. The middle is the private key that both
-senders must mention. For each person, one sender receives the person-to-middle
-sentence and the other receives the middle-to-answer sentence. Which sender
-gets which hop is balanced, so each passage contains both kinds of fact:
+senders must mention. For each question, one sender receives only the
+person-to-middle sentence and the other receives only the middle-to-answer
+sentence. Which sender gets which hop is balanced across a world:
 
-| Relation | Agent 1 | Agent 2 | Answer |
+| Relation | Person-to-middle hop | Middle-to-answer hop | Answer |
 |---|---|---|---|
 | membership | person belongs to a group | that group is based in a place | place |
 | color | person has a color | that color is an animal's coat | animal |
@@ -21,32 +21,33 @@ gets which hop is balanced, so each passage contains both kinds of fact:
 | furniture | person owns a piece of furniture | that piece stands in a room | room |
 | pledged group | person is pledged to a house, order, clan, or similar group | that group gathers in a place | place |
 
-The two sender agents use the same weights. Neither sees the question. Each
-message is 4 continuous vectors of size 128. The receiver sees only the
-question and the two messages. This forces the shared sender to preserve
-reusable information rather than extract just one requested fact. The model
-choices are written up in `MODEL_DESIGN.md`.
+The two sender agents use the same weights. Neither sees the question. The
+receiver sees only the question and the two messages. Each sender therefore
+communicates exactly one necessary link, with no unrelated facts in its input.
+The model choices are written up in `MODEL_DESIGN.md`.
 
-## Why worlds, not duplicated examples
+## World and question structure
 
-Each JSONL row is one world. It stores each private natural-language input once
-and contains one question per person. A training loader can flatten the row into
-examples, or encode each sender input once and answer every question in the
-world. The latter makes large experiments much cheaper.
+Each JSONL row is one world containing one question per person. Every question
+stores its own two single-fact sender inputs. The world-level metadata keeps the
+complete set of latent chains for auditing without exposing unrelated chains to
+the model.
 
 ```json
 {
   "world_id": "train-00000000",
   "split": "train",
-  "agent_1_input": "...a mix of person-to-middle facts and middle-to-answer facts...",
-  "agent_2_input": "...the other hop of each chain...",
   "questions": [
     {
       "question_id": "train-00000000-q00",
       "domain": "color",
+      "agent_1_input": "Rina's color is amber.",
+      "agent_2_input": "The animal with an amber coat is the pelican.",
       "question": "Which animal has Rina's color?",
       "answer": "pelican",
       "answer_index": 0,
+      "agent_1_template_id": "col-a1-f-00",
+      "agent_2_template_id": "col-a2-f-00",
       "template_id": "col-q-f-00",
       "reasoning_path": ["Rina", "amber", "pelican"]
     }
@@ -55,17 +56,17 @@ world. The latter makes large experiments much cheaper.
     "entities": {},
     "chains": {},
     "domain_answers": {},
-    "agent_1_template_ids": [],
-    "agent_2_template_ids": []
+    "person_side_agent": {}
   }
 }
 ```
 
-Only `agent_1_input`, `agent_2_input`, and `questions[].question` are model
-inputs. `questions[].answer` is the target. Everything else is audit metadata
-and must be excluded from model inputs. An optional training-only auxiliary
-objective may use the middle entry of `questions[].reasoning_path` as a bridge
-label and `metadata.person_side_agent` to identify which sender holds that
+Only `questions[].agent_1_input`, `questions[].agent_2_input`, and
+`questions[].question` are model inputs. `questions[].answer` is the target.
+Everything else is audit metadata and must be excluded from model inputs. An
+optional training-only auxiliary objective may use the middle entry of
+`questions[].reasoning_path` as a bridge label and
+`metadata.person_side_agent` to identify which sender holds that
 person-to-bridge fact. Neither label is passed to the sender or receiver as an
 input.
 
@@ -87,9 +88,9 @@ uses every frame in its bank before repeating one, so the eight facts in a
 default world use eight different sentence structures. Sentence order still
 varies independently of the underlying mappings.
 
-Every world balances those relations and gives each one a random bijection.
-Competing facts remain in both inputs. The correct answer is computed by
-following:
+Every world balances those relations and gives each one a random bijection. A
+question exposes only the two facts on its own reasoning path. The correct
+answer is computed by following:
 
 ```text
 person -> middle -> answer
@@ -154,13 +155,14 @@ for example in iter_question_examples(Path("datasets/linked_facts_v1/train.jsonl
     person_side_agent = example["person_side_agent"]
 ```
 
-The model in `jax_models.py` is specified in `MODEL_DESIGN.md`. It uses one small Transformer for both senders. Each
-sender pass returns 4 vectors of hidden size 128. The receiver is a second
-small Transformer. It reads the 8 message vectors plus the character-tokenized
-question and scores up to 4 answer tokens. Passages are characters, so a
-held-out spelling is visible to the sender. Each answer word is one vocabulary
-item followed by an end token. The vocabulary includes every name and lexicon
-string the generator can emit.
+The model in `jax_models.py` is specified in `MODEL_DESIGN.md`. It uses one
+Transformer for both senders and a second Transformer as receiver. The tiny
+configuration uses one 32-dimensional continuous vector per sender and two
+layers for both sender and receiver. The receiver reads both vectors plus the
+character-tokenized question and scores up to 4 answer tokens. Passages are
+characters, so a held-out spelling is visible to the sender. Each answer word
+is one vocabulary item followed by an end token. The vocabulary includes every
+name and lexicon string the generator can emit.
 
 Training maximizes the joint log probability of those answer tokens:
 

@@ -470,6 +470,56 @@ def test_config_rejects_invalid_relative_attention_buckets() -> None:
         ).validate()
 
 
+def test_tiny_single_link_gate_uses_one_32_dimensional_message_and_two_layers() -> None:
+    """The launch config should make both model sides two-layer and 32-wide."""
+    config = parse_arguments(
+        [
+            "--config",
+            "configs/conlang-jax-v5e8-b256-tiny32-single-link-gate1.yaml",
+            "--disable-wandb",
+        ]
+    )
+    assert config.hidden_size == 32
+    assert config.sender_hidden_size == 32
+    assert config.message_length == 1
+    assert config.num_layers == 2
+    assert config.sender_num_layers == 2
+
+    tokenizer = _example_tokenizer()
+    model_config = replace(
+        config,
+        device="cpu",
+        precision="float32",
+        max_text_length=40,
+        max_question_length=16,
+        dropout=0.0,
+    )
+    batch = tokenize_examples(_examples(), tokenizer, model_config)
+    model = JaxCommunicationModel(_model_config(model_config, tokenizer))
+    variables = model.init(
+        {"params": jax.random.PRNGKey(0)},
+        jnp.asarray(batch.agent_1_token_ids),
+        jnp.asarray(batch.agent_2_token_ids),
+        jnp.asarray(batch.question_token_ids),
+        jnp.asarray(batch.answer_token_ids),
+        deterministic=True,
+    )
+    messages = model.apply(
+        variables,
+        jnp.asarray(batch.agent_1_token_ids),
+        jnp.asarray(batch.agent_2_token_ids),
+        deterministic=True,
+        method=model.encode_messages,
+    )
+
+    parameter_names = {"/".join(path) for path in flatten_dict(variables["params"])}
+    assert messages.shape == (2, 2, 32)
+    assert any("sender/layer_1" in name for name in parameter_names)
+    assert any("receiver/encoder_layer_1" in name for name in parameter_names)
+    assert any("receiver/decoder_layer_1" in name for name in parameter_names)
+    assert not any("layer_2" in name for name in parameter_names)
+
+
 def test_config_rejects_nonpositive_output_hidden_size() -> None:
     """An enabled output hidden layer should have a positive width."""
     with pytest.raises(ValueError, match="output hidden size must be positive"):
