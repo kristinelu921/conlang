@@ -5,7 +5,7 @@
 | Field | Value |
 |---|---|
 | Run ID | `20261018-conlang-jax-v5e8-b256-tiny32-single-link-full1` |
-| Status | `planned` |
+| Status | `staged` |
 | Started | not started |
 | Finished | not applicable |
 | Predecessor | gate retry 2 completed 200 finite steps and passed promotion checks |
@@ -96,7 +96,9 @@ No full-run result yet. The promotion gate reduced training loss from
 | Dataset manifest | `datasets/linked_facts_v1/manifest.json` | full streaming verifier passed; SHA-256 `5f95f8f4f25a10d12704959c6f275f978548b3641a4db03338d76d4f8d654a13` |
 | Regional dataset | `gs://kmh-gcp-us-west4/kristine/datasets/conlangs-single-link-v1` | seven objects / 11,992,785 bytes; bucket location `US-WEST4` |
 | TPU-local dataset | `/home/kristinelu/elf-data/conlangs-single-link-v1` | gate localization passed streaming verification and all seven object hashes matched |
-| Immutable source | pending fresh snapshot and archive | no |
+| Immutable source | `/kmh-nfs-ssd-us-mount/staging/kristine/elf/20261018-conlang-jax-v5e8-b256-tiny32-single-link-full1-20261019T031013.568489761Z` at source revision `e3569ae7b232c7741a0fe4cf4fbe0ef44316b986` | 74 files / 531,437 bytes; content-manifest SHA-256 `b8615b6d4929fb345a0010c08925b516c4e0ec43695cc245b4f7481f57ab0663` |
+| Transfer archive | `/tmp/20261018-conlang-jax-v5e8-b256-tiny32-single-link-full1-20261019T031013.568489761Z.tar.gz` | 106,696 bytes; local and remote SHA-256 `4f7e0021c39d65870c0380607ecc4c476a168179094956ecd81626ecf12ec6b9` |
+| TPU-local source | `/home/kristinelu/elf-runs/sources/20261018-conlang-jax-v5e8-b256-tiny32-single-link-full1-20261019T031013.568489761Z` | extracted 74 files / 531,437 bytes; no `.git`; content and config hashes match |
 | Checkpoint | `/home/kristinelu/elf-runs/20261018-conlang-jax-v5e8-b256-tiny32-single-link-full1/checkpoint.msgpack` | no |
 | Tracking run | pending | no |
 | Recurring monitor | pending first useful progress event | no |
@@ -127,3 +129,6 @@ No full-run result yet. The promotion gate reduced training loss from
 - `2026-10-19T03:08:11Z`: Selected the fresh full-run identity after the gate
   passed every promotion check. The exact primary YAML was committed alone at
   `ceeee265c01d6431edaaf6f6125a025e12fa0918` and pushed to PR #2.
+- `2026-10-19T03:11:10Z`: Created the immutable source snapshot, transferred it
+  as a regular-file deterministic archive, matched the archive SHA-256 on the
+  TPU, and matched all 74 extracted files plus the selected configuration.
