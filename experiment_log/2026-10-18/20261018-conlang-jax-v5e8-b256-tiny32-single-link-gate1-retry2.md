@@ -5,14 +5,14 @@
 | Field | Value |
 |---|---|
 | Run ID | `20261018-conlang-jax-v5e8-b256-tiny32-single-link-gate1-retry2` |
-| Status | `staged` |
-| Started | not started |
+| Status | `running` |
+| Started | `2026-10-19T03:00:11Z` |
 | Finished | not applicable |
 | Predecessor | retry 1 failed during source transfer before copying a file |
 | Git revision | `d2c3bc74df162b6545937935b8cf5c5ae24ea4d7` (exact configuration commit) |
 | Pull request | `https://github.com/kristinelu921/conlang/pull/2` |
 | Primary configuration | `configs/conlang-jax-v5e8-b256-tiny32-single-link-gate1-retry2.yaml` |
-| Command | pending final occupancy gate; launch command will be recorded verbatim at start |
+| Command | exact command below |
 | Seed | `1729` |
 | Hardware | selected `kmh-tpuvm-v5e-8-spot-kristine-02-08-02-17-N-us-west4-a`, `us-west4-a`, Spot `v5litepod-8`; READY/HEALTHY and idle at retry selection |
 
@@ -74,6 +74,17 @@ relative_attention_num_buckets: 32
 relative_attention_max_distance: 128
 ```
 
+## Launch Command
+
+```bash
+gcloud compute tpus tpu-vm ssh kmh-tpuvm-v5e-8-spot-kristine-02-08-02-17-N-us-west4-a \
+  --project=he-vision-group \
+  --zone=us-west4-a \
+  --worker=all \
+  --command='set -euo pipefail; trap "" HUP; source_path=/home/kristinelu/elf-runs/sources/20261018-conlang-jax-v5e8-b256-tiny32-single-link-gate1-retry2-20261019T024709.880205475Z; config_path="$source_path/configs/conlang-jax-v5e8-b256-tiny32-single-link-gate1-retry2.yaml"; launcher_log=/home/kristinelu/elf-runs/logs/20261018-conlang-jax-v5e8-b256-tiny32-single-link-gate1-retry2.launcher.log; mkdir -p /home/kristinelu/elf-runs/logs /home/kristinelu/elf-runs/wandb /home/kristinelu/elf-data/huggingface; cd "$source_path"; export JAX_PLATFORMS=tpu; export CUDA_VISIBLE_DEVICES=; export ELF_TPU_WORKER_INDEX=0; export PYTHONPATH="$PWD"; export HF_HOME=/home/kristinelu/elf-data/huggingface; export WANDB_DIR=/home/kristinelu/elf-runs/wandb; export PYTHONUNBUFFERED=1; export PYTHONDONTWRITEBYTECODE=1; ulimit -c 0; /home/kristinelu/elf-runs/runtime/venv/bin/python -u train.py --config "$config_path" 2>&1 | tee "$launcher_log"' \
+  --quiet
+```
+
 ## Changed Hyperparameters
 
 No scientific hyperparameter changed from retry 1. Only run, output, W&B, and
@@ -110,7 +121,7 @@ questions and 25,000 validation/test questions across 15,625 worlds.
 | TPU-local source | `/home/kristinelu/elf-runs/sources/20261018-conlang-jax-v5e8-b256-tiny32-single-link-gate1-retry2-20261019T024709.880205475Z` | extracted 73 files; no `.git`; content and config hashes match |
 | TPU-local dataset | `/home/kristinelu/elf-data/conlangs-single-link-v1` | streaming verification passed; 7 files / 11,996,881 filesystem bytes; all seven object hashes match the regional source |
 | Checkpoint | `/home/kristinelu/elf-runs/20261018-conlang-jax-v5e8-b256-tiny32-single-link-gate1-retry2/checkpoint.msgpack` | no |
-| Tracking run | pending | no |
+| Tracking run | `https://wandb.ai/kaynelu921-massachusetts-institute-of-technology/conlangs/runs/aazp4xrd` | initialized as run `aazp4xrd`; training progress pending |
 
 ## Failure Details
 
@@ -151,3 +162,9 @@ questions and 25,000 validation/test questions across 15,625 worlds.
 - `2026-10-19T02:51:45Z`: CPU-only runtime preflight confirmed two 32-wide
   sender vectors, two sender layers, two receiver layers, 228,271 parameters,
   batch 256, 200 gate steps, and available W&B authentication.
+- `2026-10-19T03:00:11Z`: The required final audit listed the selected v5e in
+  its `AVAILABLE` table. A final direct check found no VFIO, lockfile, or
+  `train.py` holder and confirmed fresh output and launcher-log paths.
+- `2026-10-19T03:00:11Z`: Started the foreground trainer from the exact
+  TPU-local snapshot. W&B initialized run `aazp4xrd` under the configured run
+  name; backend compilation and the first training step are pending.
