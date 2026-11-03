@@ -1,6 +1,6 @@
 # Two-peer tree RL pilot
 
-Status: implementation under remote validation. Sixteen initial protocol and
+Status: implementation under remote validation. Twenty protocol, lifecycle, and
 independent numerical tests passed on the authorized TPU VM's CPUs. Full-size
 model checks, training, and evaluation have not started.
 
@@ -59,7 +59,7 @@ absence of contamination in the pretrained model.
 Before/after evaluation uses the same 30 held-out AIME 2024 problems, seeds,
 prompts, and limits, without any test-based checkpoint selection. Preserve raw
 questions, outputs, token IDs, sampled token log probabilities, tree ancestry,
-terminal rewards, and assigned credit in local artifacts. Report pass@1 for one
+terminal rewards, and assigned credit in node-local artifacts and checksummed regional checkpoint evidence. Report pass@1 for one
 unbranched conversation per problem, with exact counts; do not present training
 tree success as pass@1. Also evaluate a single-agent baseline with the same
 maximum generated-token budget and report actual tokens used. The 24-hour cap
@@ -76,5 +76,8 @@ ready. The runtime is implemented; full-size remote verification is still pendin
 
 Publish configurations, scalar metrics, execution status, and artifact manifests
 to W&B. Save both adapters and optimizer states atomically, with checksums and
-regional durable copies. Monitor the exact run through completion; never mutate
+regional durable copies. Resume inputs verify every state/evidence hash, restore both
+optimizer states and the next tree index, and preserve the original allocation deadline.
+Completed evaluation phases are retained; an interrupted tree is repeated from its
+last complete checkpoint using the same sampling seeds. Monitor the exact run through completion; never mutate
 unrelated resources, jobs, or files.

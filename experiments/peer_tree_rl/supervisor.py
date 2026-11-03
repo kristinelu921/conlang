@@ -18,6 +18,7 @@ def main() -> None:
     parser.add_argument("--receipt", type=Path, required=True)
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--resume", type=Path)
     arguments = parser.parse_args()
     receipt = json.loads(arguments.receipt.read_text())
     from run import require_remote
@@ -27,6 +28,8 @@ def main() -> None:
     attempt.mkdir(parents=True, exist_ok=False)
     command = [sys.executable, "-u", str(Path(__file__).with_name("run.py")), "--config", str(arguments.config),
                "--receipt", str(arguments.receipt), "--output", str(arguments.output)]
+    if arguments.resume is not None:
+        command.extend(["--resume", str(arguments.resume)])
     with (attempt / "console.log").open("x") as log:
         process = subprocess.Popen(command, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
         (attempt / "identity.json").write_text(json.dumps({"pid": process.pid, "command": command,

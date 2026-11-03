@@ -109,6 +109,10 @@ class ProtocolTests(unittest.TestCase):
         self.assertEqual(len(prefix), 1)
         self.assertEqual(prefix[0].weight, 0)
         self.assertEqual(report["branch_turn"], 1)
+        identifiers = {item.identifier for item in items}
+        self.assertTrue(all(item.parent is None or item.parent in identifiers for item in items))
+        candidates = [item for item in items if item.identifier.startswith("candidate-") and "/" not in item.identifier]
+        self.assertTrue(all(item.parent == "prefix-0" for item in candidates))
 
     def test_overlap_hash_normalizes_whitespace_and_case(self) -> None:
         self.assertEqual(question_fingerprint("What is 2 + 2?"), question_fingerprint("what\n is 2+2?"))

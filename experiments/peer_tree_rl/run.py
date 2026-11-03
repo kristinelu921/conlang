@@ -45,9 +45,28 @@ def require_remote(receipt: dict, source: Path) -> None:
         raise PermissionError("This program requires the exact authorized remote single-host Spot TPU.")
     if time.time() >= receipt["deadline_unix_seconds"]:
         raise TimeoutError("The persisted 24-hour allocation budget has expired.")
+    if not 0 < receipt["deadline_unix_seconds"] - receipt["allocation_created_unix_seconds"] <= 86400:
+        raise ValueError("The allocation deadline must be within the authorized 24 hours.")
     for relative_path, expected in receipt["source_sha256"].items():
         if file_record(source / relative_path)["sha256"] != expected:
             raise ValueError(f"Immutable source verification failed: {relative_path}")
+
+
+def verify_checkpoint(directory: Path, settings: dict, receipt: dict) -> dict:
+    """Reject incomplete, corrupted, incompatible, or budget-resetting resume inputs."""
+    manifest = json.loads((directory / "complete.json").read_text())
+    if (manifest["status"] != "complete" or manifest["model_revision"] != settings["model_revision"]
+            or manifest["deadline_unix_seconds"] != receipt["deadline_unix_seconds"]
+            or json.loads((directory / "configuration.json").read_text()) != settings):
+        raise ValueError("Resume must preserve the completed checkpoint, configuration, and original deadline.")
+    for record in manifest["files"]:
+        path = directory / record["name"]
+        if not path.resolve().is_relative_to(directory.resolve()):
+            raise ValueError("Checkpoint manifest path escapes its directory.")
+        actual = file_record(path)
+        if actual["bytes"] != record["bytes"] or actual["sha256"] != record["sha256"]:
+            raise ValueError(f"Checkpoint integrity failed: {record['name']}")
+    return manifest
 
 
 def prepare_data(settings: dict, output: Path, cache: Path) -> dict:
@@ -107,7 +126,7 @@ def prepare_data(settings: dict, output: Path, cache: Path) -> dict:
 class Study:
     """Own the fixed deadline, append-only artifacts, W&B metrics, and one training lineage."""
 
-    def __init__(self, settings: dict, receipt: dict, output: Path) -> None:
+    def __init__(self, settings: dict, receipt: dict, output: Path, resume: Path | None = None) -> None:
         self.settings = settings
         self.receipt = receipt
         self.output = output
@@ -115,6 +134,8 @@ class Study:
         self.wandb_run = None
         self.backend = None
         self.event_index = 0
+        self.resume = resume
+        self.completed_trees = 0
 
     def check_time(self, reserve: int = 0) -> None:
         """Stop before starting work that consumes the finalization reserve."""
@@ -138,22 +159,39 @@ class Study:
         """Verify a checksummed adapter checkpoint and its same-region durable copy."""
         directory = self.output / "checkpoints" / identity
         self.backend.checkpoint(directory)
+        evidence = directory / "evidence"
+        evidence.mkdir()
+        for path in sorted(self.output.iterdir()):
+            if path.is_file() and path.suffix in (".json", ".jsonl"):
+                shutil.copyfile(path, evidence / path.name)
+        files = [{**file_record(path), "name": str(path.relative_to(directory))}
+                 for path in sorted(directory.rglob("*")) if path.is_file()]
         manifest = {"status": "complete", "identity": identity,
                     "model_revision": self.settings["model_revision"],
-                    "files": [file_record(path) for path in sorted(directory.iterdir())]}
+                    "completed_trees": self.completed_trees,
+                    "training_finished": identity in ("final", "completed"),
+                    "deadline_unix_seconds": self.receipt["deadline_unix_seconds"],
+                    "source_commit": self.receipt["source_commit"], "files": files}
         write_json(directory / "complete.json", manifest)
-        destination = self.receipt["gcs_prefix"] + "/checkpoints/" + identity
+        verify_checkpoint(directory, self.settings, self.receipt)
+        parent = self.receipt["gcs_prefix"] + "/attempts/" + self.output.name + "/checkpoints/"
+        destination = parent + identity
         subprocess.run(["gcloud", "storage", "cp", "--recursive", str(directory),
-                        self.receipt["gcs_prefix"] + "/checkpoints/"], check=True)
+                        parent], check=True)
         remote_manifest = json.loads(subprocess.check_output(["gcloud", "storage", "cat", destination + "/complete.json"]))
         if remote_manifest != manifest:
             raise ValueError("Durable checkpoint manifest differs from node-local checkpoint.")
         for record in manifest["files"]:
+            if record["name"].startswith("evidence/"):
+                continue  # gcloud cp verifies transport checksums; resume verifies every evidence SHA-256.
             size = int(subprocess.check_output(["gcloud", "storage", "objects", "describe",
                 destination + "/" + record["name"], "--format=value(size)"]))
             if size != record["bytes"]:
                 raise ValueError("Durable checkpoint size mismatch.")
         self.emit("checkpoint", {"identity": identity, "gcs": destination, "verified": True})
+        if self.wandb_run is not None:
+            self.wandb_run.summary["latest_checkpoint"] = destination
+            self.wandb_run.summary["artifact_manifest"] = destination + "/complete.json"
         return manifest
 
     def evaluate(self, rows: list[Problem], label: str) -> dict:
@@ -287,25 +325,46 @@ class Study:
         try:
             self.phase = "data_preparation"
             cache = self.output.parent / "cache"
-            audit = prepare_data(self.settings, self.output, cache)
-            self.emit("data_audit", audit)
+            resume_manifest = None
+            if self.resume is None:
+                audit = prepare_data(self.settings, self.output, cache)
+                self.emit("data_audit", audit)
+            else:
+                resume_manifest = verify_checkpoint(self.resume, self.settings, self.receipt)
+                self.completed_trees = resume_manifest["completed_trees"]
+                for path in (self.resume / "evidence").iterdir():
+                    if path.name not in ("execution-receipt.json", "effective-configuration.json", "wandb-run.json",
+                                          "events.jsonl", "status.json", "terminal.json"):
+                        shutil.copyfile(path, self.output / path.name)
+                write_json(self.output / "resume-lineage.json", {"checkpoint": str(self.resume),
+                    "manifest": resume_manifest, "previous_events": "preserved in source checkpoint evidence"})
+                self.emit("resume", {"next_tree": self.completed_trees, "checkpoint": str(self.resume)})
             from qwen_backend import QwenBackend
             self.phase = "model_loading"
             self.backend = QwenBackend(self.settings, cache)
             self.emit("model_loaded", {"devices": len(self.backend.devices)})
             self.phase = "numerical_preflight"
             self.numerical_preflight()
+            if self.resume is not None:
+                self.backend.restore(self.resume)
             training = [Problem(**row) for row in json.loads((self.output / "train.json").read_text())]
             validation = [Problem(**row) for row in json.loads((self.output / "validation.json").read_text())]
             test = [Problem(**row) for row in json.loads((self.output / "test.json").read_text())]
-            self.evaluate(validation, "before_validation")
-            self.evaluate(test, "before_aime2024")
-            self.single_agent_baseline(test)
-            self.save_checkpoint("initial")
+            if self.resume is None:
+                self.save_checkpoint("prepared")
+            for rows, label in ((validation, "before_validation"), (test, "before_aime2024")):
+                if not (self.output / f"{label}-metrics.json").exists():
+                    self.evaluate(rows, label)
+                    self.save_checkpoint(label)
+            if not (self.output / "single-agent-aime2024-metrics.json").exists():
+                self.single_agent_baseline(test)
+            if self.resume is None or self.completed_trees == 0:
+                self.save_checkpoint("initial")
             started = time.monotonic()
-            completed_trees = 0
             stop_reason = "tree_limit"
-            for tree_index in range(self.settings["maximum_training_trees"]):
+            next_tree = self.completed_trees
+            tree_limit = next_tree if resume_manifest and resume_manifest["training_finished"] else self.settings["maximum_training_trees"]
+            for tree_index in range(next_tree, tree_limit):
                 try:
                     self.check_time(self.settings["finalization_reserve_seconds"])
                     self.phase = "training_tree"
@@ -317,28 +376,46 @@ class Study:
                         "terminal_success_rate": sum(tree["leaf_rewards"]) / len(tree["leaf_rewards"]),
                         "rollout_seconds": time.monotonic() - beginning,
                         "generated_tokens": sum(len(item.generation.token_ids) for item in items)})
-                    if tree_index == 0:
+                    if tree_index == next_tree:
                         self.emit("replay_gate", self.backend.verify_replay(items))
                     self.phase = "training_update"
-                    for metrics in self.backend.update(items, lambda: self.check_time(self.settings["finalization_reserve_seconds"])):
+                    # Finish the entire tree update atomically relative to its checkpoint; the hard supervisor still bounds it.
+                    for metrics in self.backend.update(items, lambda: self.check_time(60)):
                         self.emit("update", {"tree": tree_index, **metrics})
+                    self.completed_trees = tree_index + 1
                     self.save_checkpoint(f"tree-{tree_index:04d}")
-                    if tree_index == 0:
+                    if tree_index == next_tree:
+                        memory = [device.memory_stats() for device in self.backend.devices]
+                        peak = max(value["peak_bytes_in_use"] / value["bytes_limit"] for value in memory)
+                        seconds = time.monotonic() - beginning
+                        projected = seconds * (tree_limit - self.completed_trees)
                         self.emit("first_tree_gate", {"seconds": time.monotonic() - beginning,
                             "messages": len(items), "optimizer_updates_finite": True,
-                            "checkpoint_verified": True})
-                    completed_trees += 1
+                            "checkpoint_verified": True, "maximum_peak_memory_fraction": peak,
+                            "remaining_seconds_upper_projection": projected})
+                        if peak > 0.9 or projected + time.time() + self.settings["finalization_reserve_seconds"] >= self.receipt["deadline_unix_seconds"]:
+                            stop_reason = "memory_or_throughput_gate"
+                            break
                 except TimeoutError:
                     stop_reason = "finalization_reserve"
+                    # Roll back any partial update rather than treating an incomplete tree as a completed policy step.
+                    identity = "initial" if self.completed_trees == 0 else f"tree-{self.completed_trees - 1:04d}"
+                    previous = self.output / "checkpoints" / identity
+                    if not previous.exists():
+                        previous = self.resume
+                    if previous is not None:
+                        self.backend.restore(previous)
                     break
             self.emit("training_finished", {"elapsed_seconds": time.monotonic() - started,
-                                            "trees": completed_trees, "stop_reason": stop_reason})
+                                            "trees": self.completed_trees, "stop_reason": stop_reason})
             self.save_checkpoint("final")
-            self.evaluate(validation, "after_validation")
-            self.evaluate(test, "after_aime2024")
+            for rows, label in ((validation, "after_validation"), (test, "after_aime2024")):
+                if not (self.output / f"{label}-metrics.json").exists():
+                    self.evaluate(rows, label)
             self.phase = "completed"
             self.emit("completed", {"completed": True})
             write_json(self.output / "terminal.json", {"status": "completed", "time": time.time()})
+            self.save_checkpoint("completed")
             self.wandb_run.finish()
         except BaseException as error:
             write_json(self.output / "terminal.json", {"status": "interrupted" if isinstance(error, TimeoutError) else "failed",
@@ -353,6 +430,7 @@ def main() -> None:
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--receipt", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--resume", type=Path)
     arguments = parser.parse_args()
     source = Path(__file__).resolve().parent
     receipt = json.loads(arguments.receipt.read_text())
@@ -364,7 +442,7 @@ def main() -> None:
     arguments.output.mkdir(parents=True, exist_ok=False)
     write_json(arguments.output / "effective-configuration.json", settings)
     write_json(arguments.output / "execution-receipt.json", receipt)
-    Study(settings, receipt, arguments.output).run()
+    Study(settings, receipt, arguments.output, arguments.resume).run()
 
 
 if __name__ == "__main__":

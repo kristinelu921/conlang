@@ -384,3 +384,14 @@ class QwenBackend:
             host_state = jax.tree.map(lambda array: np.asarray(array.addressable_shards[0].data).squeeze(0), state)
             (directory / f"agent-{agent}.msgpack").write_bytes(serialization.to_bytes(host_state))
         (directory / "configuration.json").write_text(json.dumps(self.settings, indent=2) + "\n")
+
+    def restore(self, directory: Path) -> None:
+        """Restore both peers including Adam moments and step counters from a verified checkpoint."""
+        if json.loads((directory / "configuration.json").read_text()) != self.settings:
+            raise ValueError("Resume configuration differs from the frozen pilot.")
+        restored = []
+        for agent, state in enumerate(self.states):
+            template = jax.tree.map(lambda array: np.asarray(array.addressable_shards[0].data).squeeze(0), state)
+            value = serialization.from_bytes(template, (directory / f"agent-{agent}.msgpack").read_bytes())
+            restored.append(jax.device_put_replicated(value, self.devices))
+        self.states = restored

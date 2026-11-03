@@ -9,10 +9,15 @@ if not Path(__file__).resolve().is_relative_to("/home/kristinelu/peer-tree"):
 import jax
 import jax.numpy as jnp
 import numpy as np
+import optax
+import tempfile
+from flax.training.train_state import TrainState
+from types import SimpleNamespace
 import torch
 from transformers import Qwen3Config, Qwen3ForCausalLM
 
-from qwen_backend import QwenForward, policy_loss
+from qwen_backend import QwenForward, QwenBackend, policy_loss
+from protocol import Generation, State, TrainingItem
 
 
 class NumericalTests(unittest.TestCase):
@@ -94,6 +99,40 @@ class NumericalTests(unittest.TestCase):
         gradient = jax.grad(lambda value: policy_loss(value, old, old, jnp.ones((1, 1)),
                             jnp.array([1.]), .2, 0)[0])(current)
         np.testing.assert_allclose(gradient, 0)
+
+    def test_checkpoint_restore_preserves_optimizer_and_next_update(self) -> None:
+        backend = object.__new__(QwenBackend)
+        backend.settings = {"fixture": True}
+        backend.devices = jax.devices("cpu")[:1]
+        initial = [TrainState.create(apply_fn=lambda: None, params={"x": jnp.array([float(agent), 1.])},
+                    tx=optax.adam(0.01)) for agent in range(2)]
+        updated = [state.apply_gradients(grads={"x": jnp.array([0.3, -0.2])}) for state in initial]
+        backend.states = [jax.device_put_replicated(state, backend.devices) for state in updated]
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary) / "checkpoint"
+            backend.checkpoint(directory)
+            backend.states = [jax.device_put_replicated(state, backend.devices) for state in initial]
+            backend.restore(directory)
+            for agent, replicated in enumerate(backend.states):
+                restored = jax.tree.map(lambda value: value[0], replicated)
+                self.assertEqual(int(restored.step), 1)
+                expected = updated[agent].apply_gradients(grads={"x": jnp.array([-0.1, 0.4])})
+                actual = restored.apply_gradients(grads={"x": jnp.array([-0.1, 0.4])})
+                for left, right in zip(jax.tree.leaves(expected), jax.tree.leaves(actual), strict=True):
+                    np.testing.assert_array_equal(np.asarray(left), np.asarray(right))
+
+    def test_real_training_batch_aligns_prompt_response_eos_and_padding(self) -> None:
+        backend = object.__new__(QwenBackend)
+        backend.batch_size, backend.prompt_width, backend.output_width, backend.total_width = 8, 5, 4, 9
+        backend.tokenizer = SimpleNamespace(pad_token_id=0)
+        backend.encode_messages = lambda messages: [11, 12]
+        item = TrainingItem("candidate-0", None, 0, State("fixture"),
+                            Generation((11, 12), (21, 22, 23), (-.1, -.2, -.3), "fixture", True), 1, 1, 1)
+        batch = backend.training_batch([item])
+        np.testing.assert_array_equal(batch["tokens"][0, 0], [0, 0, 0, 11, 12, 21, 22, 23, 0])
+        np.testing.assert_array_equal(batch["attention_mask"][0, 0], [0, 0, 0, 1, 1, 1, 1, 1, 0])
+        np.testing.assert_array_equal(batch["completion_mask"][0, 0], [1, 1, 1, 0])
+        self.assertEqual(float(batch["completion_mask"][1:].sum()), 0)
 
 
 if __name__ == "__main__":

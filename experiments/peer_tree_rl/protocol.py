@@ -225,7 +225,7 @@ def collect_tree(generator: Generator, problem: Problem, settings: dict, tree_in
 
     for candidate_index, generation in enumerate(candidates):
         rewards = candidate_rewards[candidate_index]
-        records.append(TrainingItem(f"candidate-{candidate_index}", "prefix" if prefix else None,
+        records.append(TrainingItem(f"candidate-{candidate_index}", f"prefix-{len(prefix) - 1}" if prefix else None,
             root.agent, root, generation, sum(rewards), len(rewards),
             outcome_weight(sum(rewards), len(rewards), settings["reward_baseline"], settings["reward_scale"])))
     # Equal candidate weighting avoids overweighting nonterminal actions merely because they have more leaves.
