@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, replace
+from dataclasses import asdict, dataclass
 import hashlib
 import json
 import math
@@ -239,17 +239,13 @@ def collect_tree(generator: Generator, problem: Problem, settings: dict, tree_in
                      "candidate_mean_success": prefix_value, "events": events}
 
 
-def completion_mask(prompt_length: int, completion_length: int, width: int) -> list[float]:
-    """Mark generated targets including EOS while excluding every prompt and padding token."""
-    if prompt_length < 1 or completion_length < 1 or prompt_length + completion_length > width:
-        raise ValueError("The complete prompt and response must fit without truncation.")
-    return [float(prompt_length <= index < prompt_length + completion_length) for index in range(width)]
-
-
 def validate_settings(settings: dict) -> None:
     """Reject changes that violate the frozen pilot's execution or scientific assumptions."""
     if settings["model"] != "Qwen/Qwen3-1.7B" or settings["agents"] != 2:
         raise ValueError("This pilot supports the agreed two Qwen3-1.7B peers only.")
+    if (not settings["independent_lora_adapters"] or settings["lora_targets"] != ["q_proj", "v_proj"]
+            or settings["update_epochs_per_tree"] != 1):
+        raise ValueError("The pilot requires independent q/v adapters and exactly one update epoch per tree.")
     if settings["enable_thinking"] or settings["shared_scratchpad"] or settings["top_p"] != 1.0:
         raise ValueError("Thinking, scratchpad, and sampling truncation are disabled.")
     if settings["branch_turns"] != [0, 1] or settings["maximum_messages"] != 8:

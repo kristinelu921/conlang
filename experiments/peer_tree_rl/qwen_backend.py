@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from functools import partial
 import json
 from pathlib import Path
 import time

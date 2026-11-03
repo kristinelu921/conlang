@@ -16,7 +16,7 @@ import subprocess
 import time
 from typing import Any
 
-from protocol import (Problem, State, TrainingItem, boxed_integer, collect_tree,
+from protocol import (Problem, State, boxed_integer, collect_tree,
                       question_fingerprint, sample_seed, transition, validate_settings)
 
 

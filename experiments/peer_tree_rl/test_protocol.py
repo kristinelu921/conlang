@@ -8,7 +8,7 @@ if not Path(__file__).resolve().is_relative_to("/home/kristinelu/peer-tree"):
     raise unittest.SkipTest("Pilot tests execute only from the authorized remote source snapshot.")
 
 from protocol import (Generation, Problem, State, boxed_integer, collect_tree,
-                      completion_mask, outcome_weight, question_fingerprint, transition)
+                      outcome_weight, question_fingerprint, transition, validate_settings)
 
 
 def generated(action: dict, ended: bool = True) -> Generation:
@@ -78,10 +78,12 @@ class ProtocolTests(unittest.TestCase):
         self.assertEqual(outcome_weight(7, 8, 0.5, 2), 0.75)
         self.assertEqual(outcome_weight(4, 8, 0.5, 2), 0)
 
-    def test_prompt_and_padding_mask_excludes_non_actions(self) -> None:
-        self.assertEqual(completion_mask(3, 2, 7), [0, 0, 0, 1, 1, 0, 0])
-        with self.assertRaises(ValueError):
-            completion_mask(5, 3, 7)
+    def test_configuration_rejects_unimplemented_algorithm_changes(self) -> None:
+        validate_settings(self.settings)
+        for changes in ({"independent_lora_adapters": False}, {"lora_targets": ["o_proj"]},
+                        {"update_epochs_per_tree": 2}):
+            with self.assertRaises(ValueError):
+                validate_settings({**self.settings, **changes})
 
     def test_tree_has_independent_continuations_and_no_repeated_candidate(self) -> None:
         policy = ScriptedPolicy()

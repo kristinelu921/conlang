@@ -133,6 +133,12 @@ class NumericalTests(unittest.TestCase):
         np.testing.assert_array_equal(batch["attention_mask"][0, 0], [0, 0, 0, 1, 1, 1, 1, 1, 0])
         np.testing.assert_array_equal(batch["completion_mask"][0, 0], [1, 1, 1, 0])
         self.assertEqual(float(batch["completion_mask"][1:].sum()), 0)
+        backend.prompt_width = 1
+        with self.assertRaises(ValueError):
+            backend.training_batch([item])
+        backend.prompt_width, backend.total_width = 5, 7
+        with self.assertRaises(ValueError):
+            backend.training_batch([item])
 
 
 if __name__ == "__main__":
