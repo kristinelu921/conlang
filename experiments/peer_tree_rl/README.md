@@ -1,9 +1,11 @@
 # Two-peer tree RL pilot
 
-Status: implementation under remote validation. Twenty-two protocol, lifecycle, and
-independent numerical tests passed on the authorized TPU VM's CPUs. The first full-size attempt passed independent pretrained logits but failed the
-cached/replay probability gate before any update. The selected retry uses float32
-throughout and reruns all baselines; full-size replay/backward gates remain pending.
+Status: completed. Twenty-two remote tests and the full-size numerical, replay,
+backward, memory and checkpoint gates passed after a float32 retry. Across 32
+training trees, MATH validation fell from 1/16 to 0/16 and AIME stayed at 0/30.
+The pretrained single-agent AIME baseline scored 2/30. This pilot did not show
+a collaborative gain. See the [experiment report](../../experiment_log/2026-11-03/qwen3-peer-tree-pilot-e225874.md)
+and [verified result summary](../../experiment_log/2026-11-03/qwen3-peer-tree-pilot-e225874-results.json).
 
 The first pilot asks whether downstream success can train useful questions and
 responses between two symmetric Qwen3-1.7B peers. This is a feasibility study,
@@ -73,7 +75,7 @@ all protocol and reward tests; independent loss/gradient checks; pretrained
 generation and prompt-mask checks; first backward pass; HBM and measured
 throughput gates. Stop before training if the measured work cannot fit the
 remaining budget and finalization reserve. No untested TPU backend is assumed
-ready. The runtime is implemented; full-size remote verification is still pending.
+ready. The selected float32 runtime passed these gates; see the report for measured values.
 
 Publish configurations, scalar metrics, execution status, and artifact manifests
 to W&B. Save both adapters and optimizer states atomically, with checksums and

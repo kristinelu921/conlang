@@ -1,0 +1,157 @@
+{
+  "status": "completed",
+  "source_commit": "e225874c4f019b38947c91737d942834abaf45ae",
+  "deadline_unix_seconds": 1793831733.659878,
+  "durable_checkpoint": "gs://kmh-gcp-us-west4/kristine/qwen3-peer-tree-pilot-20261103-2235/attempts/pilot-e225874-attempt-02/checkpoints/completed",
+  "verified_file_count": 57,
+  "checkpoint_manifest": {
+    "name": "complete.json",
+    "bytes": 9484,
+    "sha256": "3bd08f94711b5dad850c169cd1a3ff0d83082b219ec1f857e96616820f1a6a00"
+  },
+  "metrics": {
+    "before_validation": {
+      "correct": 1,
+      "total": 16,
+      "pass_at_1": 0.0625,
+      "generated_tokens": 2955,
+      "terminal_reasons": {
+        "token_limit": 5,
+        "invalid_json": 1,
+        "submitted": 8,
+        "invalid_answer": 1,
+        "invalid_schema": 1
+      }
+    },
+    "after_validation": {
+      "correct": 0,
+      "total": 16,
+      "pass_at_1": 0.0,
+      "generated_tokens": 3654,
+      "terminal_reasons": {
+        "token_limit": 9,
+        "invalid_json": 4,
+        "submitted": 1,
+        "invalid_answer": 1,
+        "turn_limit": 1
+      }
+    },
+    "before_aime2024": {
+      "correct": 0,
+      "total": 30,
+      "pass_at_1": 0.0,
+      "generated_tokens": 6577,
+      "terminal_reasons": {
+        "token_limit": 13,
+        "invalid_json": 3,
+        "submitted": 8,
+        "invalid_schema": 4,
+        "turn_limit": 2
+      }
+    },
+    "after_aime2024": {
+      "correct": 0,
+      "total": 30,
+      "pass_at_1": 0.0,
+      "generated_tokens": 6917,
+      "terminal_reasons": {
+        "invalid_schema": 3,
+        "token_limit": 23,
+        "invalid_json": 4
+      }
+    },
+    "single-agent-aime2024": {
+      "correct": 2,
+      "total": 30,
+      "pass_at_1": 0.06666666666666667,
+      "generated_tokens": 50131,
+      "maximum_generated_tokens_per_problem": 2048,
+      "comparison": "equal maximum generated-token budget, actual compute may differ"
+    }
+  },
+  "training": {
+    "trees": 32,
+    "distinct_messages": 117,
+    "messages_by_agent": {
+      "1": 24,
+      "0": 93
+    },
+    "leaf_successes": 4.0,
+    "leaf_count": 93,
+    "positive_credit_messages": 5,
+    "positive_credit_message_actions": 1,
+    "negative_credit_messages": 112,
+    "zero_credit_messages": 0,
+    "transition_reasons": {
+      "message": 24,
+      "token_limit": 43,
+      "submitted": 18,
+      "invalid_json": 28,
+      "invalid_schema": 4
+    },
+    "optimizer_steps": {
+      "0": 33,
+      "1": 4
+    },
+    "generated_tokens": 17641,
+    "training_finished": {
+      "event": "training_finished",
+      "timestamp": "2026-11-03T23:28:44.871290+00:00",
+      "elapsed_seconds": 589.0615630800003,
+      "trees": 32,
+      "stop_reason": "tree_limit"
+    }
+  },
+  "positive_message_examples": [
+    {
+      "identifier": "prefix-0",
+      "agent": 0,
+      "weight": 1.0,
+      "successes": 1.0,
+      "observations": 1,
+      "problem": "John is 24 years younger than his dad. The sum of their ages is 68 years. How many years old is John?",
+      "incoming_message": "",
+      "text": "{\"action\":\"message\",\"message\":\"What is the age of John?\",\"context\":\"John is 24 years younger than his dad. The sum of their ages is 68 years.\"}"
+    }
+  ],
+  "gates": {
+    "numerical_preflight": {
+      "event": "numerical_preflight",
+      "timestamp": "2026-11-03T23:14:44.506540+00:00",
+      "maximum_logit_difference": 2.288818359375e-05,
+      "tolerance": 0.02,
+      "greedy_next_token_matches": true,
+      "reference_device": "remote_cpu"
+    },
+    "replay_gate": {
+      "event": "replay_gate",
+      "timestamp": "2026-11-03T23:19:17.579161+00:00",
+      "maximum_log_probability_difference": 4.57763671875e-05,
+      "mean_log_probability_difference": 6.175504361557586e-07,
+      "compared_tokens": 1081
+    },
+    "first_tree_gate": {
+      "event": "first_tree_gate",
+      "timestamp": "2026-11-03T23:20:27.488977+00:00",
+      "seconds": 91.679213979,
+      "messages": 10,
+      "optimizer_updates_finite": true,
+      "checkpoint_verified": true,
+      "maximum_peak_memory_fraction": 0.821671020806612,
+      "remaining_seconds_upper_projection": 2842.0555815789976
+    }
+  },
+  "console": {
+    "name": "console.log",
+    "bytes": 426246,
+    "sha256": "7a846b38368635e421bcb7ee24200d02b30c9ceed2f0217c329bf3f3d39efdd9"
+  },
+  "verified_at_unix_seconds": 1793748692.4369166,
+  "wandb": {
+    "url": "https://wandb.ai/kaynelu921-massachusetts-institute-of-technology/conlangs/runs/voqv99rt",
+    "state": "finished",
+    "group": "qwen3-1p7b-peer-tree-pilot-20261103",
+    "last_step": 134,
+    "checkpoint": "gs://kmh-gcp-us-west4/kristine/qwen3-peer-tree-pilot-20261103-2235/attempts/pilot-e225874-attempt-02/checkpoints/completed"
+  }
+}
