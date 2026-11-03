@@ -121,6 +121,23 @@ class NumericalTests(unittest.TestCase):
                 for left, right in zip(jax.tree.leaves(expected), jax.tree.leaves(actual), strict=True):
                     np.testing.assert_array_equal(np.asarray(left), np.asarray(right))
 
+    def test_sampled_probabilities_match_full_message_replay(self) -> None:
+        backend = object.__new__(QwenBackend)
+        backend.configuration, backend.forward = self.configuration.to_dict(), self.forward
+        backend.settings = {"temperature": 0.7}
+        backend.prompt_width, backend.output_width, backend.total_width = 5, 4, 9
+        backend.tokenizer = SimpleNamespace(pad_token_id=0, eos_token_id=63)
+        prompt = jnp.array([[0, 0, 11, 12, 13]], jnp.int32)
+        mask = jnp.array([[0, 0, 1, 1, 1]], jnp.int32)
+        generated, probabilities, ended = jax.jit(backend.generate_device)(self.weights, self.adapters,
+            prompt, mask, jnp.array([123], jnp.uint32))
+        tokens = np.asarray(generated)[0].tolist()
+        length = tokens.index(63) + 1 if 63 in tokens else 4
+        full_mask = jnp.concatenate((mask, jnp.array([[int(index < length) for index in range(4)]])), axis=1)
+        replayed = jax.jit(backend.score_device)(self.weights, self.adapters,
+            jnp.concatenate((prompt, generated), axis=1), full_mask)
+        np.testing.assert_allclose(np.asarray(replayed)[0, :length], np.asarray(probabilities)[0, :length], atol=2e-5)
+
     def test_real_training_batch_aligns_prompt_response_eos_and_padding(self) -> None:
         backend = object.__new__(QwenBackend)
         backend.batch_size, backend.prompt_width, backend.output_width, backend.total_width = 8, 5, 4, 9

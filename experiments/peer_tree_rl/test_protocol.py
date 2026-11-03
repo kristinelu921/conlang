@@ -81,7 +81,7 @@ class ProtocolTests(unittest.TestCase):
     def test_configuration_rejects_unimplemented_algorithm_changes(self) -> None:
         validate_settings(self.settings)
         for changes in ({"independent_lora_adapters": False}, {"lora_targets": ["o_proj"]},
-                        {"update_epochs_per_tree": 2}):
+                        {"update_epochs_per_tree": 2}, {"compute_dtype": "bfloat16"}):
             with self.assertRaises(ValueError):
                 validate_settings({**self.settings, **changes})
 

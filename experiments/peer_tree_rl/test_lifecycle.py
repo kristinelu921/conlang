@@ -10,6 +10,7 @@ import json
 import shutil
 import tempfile
 from unittest.mock import patch
+from types import SimpleNamespace
 
 from run import Study, verify_checkpoint, write_json, require_remote
 from protocol import sample_seed
@@ -25,6 +26,29 @@ class FixtureBackend:
 
 
 class LifecycleTests(unittest.TestCase):
+    def test_failure_archive_contains_evidence_without_an_optimizer_checkpoint(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            output = root / "attempt"
+            output.mkdir()
+            study = Study({}, {"source_commit": "source", "gcs_prefix": "gs://fixture/run"}, output)
+            study.wandb_run = SimpleNamespace(summary={})
+            write_json(output / "terminal.json", {"status": "failed"})
+            write_json(output / "tree-0000.json", {"tokens": [17], "reward": 0})
+            destination = root / "cloud"
+            destination.mkdir()
+
+            def copy_command(command: list[str], **kwargs: object) -> None:
+                for name in command[3:-1]:
+                    shutil.copyfile(name, destination / Path(name).name)
+
+            with patch("run.subprocess.run", side_effect=copy_command), patch("run.subprocess.check_output",
+                    side_effect=lambda command: (destination / "failure-manifest.json").read_bytes()):
+                study.archive_failure()
+            self.assertEqual(json.loads((destination / "terminal.json").read_text())["status"], "failed")
+            self.assertTrue((destination / "tree-0000.json").exists())
+            self.assertFalse((destination / "agent-0.msgpack").exists())
+
     def test_durable_copy_restores_complete_evidence_and_detects_corruption(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

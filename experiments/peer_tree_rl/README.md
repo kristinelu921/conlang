@@ -1,8 +1,9 @@
 # Two-peer tree RL pilot
 
-Status: implementation under remote validation. Twenty protocol, lifecycle, and
-independent numerical tests passed on the authorized TPU VM's CPUs. Full-size
-model checks, training, and evaluation have not started.
+Status: implementation under remote validation. Twenty-two protocol, lifecycle, and
+independent numerical tests passed on the authorized TPU VM's CPUs. The first full-size attempt passed independent pretrained logits but failed the
+cached/replay probability gate before any update. The selected retry uses float32
+throughout and reruns all baselines; full-size replay/backward gates remain pending.
 
 The first pilot asks whether downstream success can train useful questions and
 responses between two symmetric Qwen3-1.7B peers. This is a feasibility study,
@@ -81,3 +82,9 @@ optimizer states and the next tree index, and preserve the original allocation d
 Completed evaluation phases are retained; an interrupted tree is repeated from its
 last complete checkpoint using the same sampling seeds. Monitor the exact run through completion; never mutate
 unrelated resources, jobs, or files.
+
+The initial bfloat16 attempt had a maximum cached/replay log-probability discrepancy
+of 1.284767 (mean 0.013022) on its first sampled tree. Its results are retained as a
+failed attempt. The float32 retry keeps the same scientific settings, tests the
+original gate without relaxing its threshold, and uses a private TPU diagnostic-log
+directory. No other owner's log directory is modified.

@@ -4,6 +4,7 @@
   "model": "Qwen/Qwen3-1.7B",
   "model_revision": "70d244cc86ccca08cf5af4e1e306ecf908b1ad5e",
   "enable_thinking": false,
+  "compute_dtype": "float32",
   "agents": 2,
   "independent_lora_adapters": true,
   "lora_rank": 16,

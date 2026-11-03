@@ -248,6 +248,8 @@ def validate_settings(settings: dict) -> None:
         raise ValueError("The pilot requires independent q/v adapters and exactly one update epoch per tree.")
     if settings["enable_thinking"] or settings["shared_scratchpad"] or settings["top_p"] != 1.0:
         raise ValueError("Thinking, scratchpad, and sampling truncation are disabled.")
+    if settings["compute_dtype"] != "float32":
+        raise ValueError("This pilot uses float32 to keep cached sampling and teacher-forced replay consistent.")
     if settings["branch_turns"] != [0, 1] or settings["maximum_messages"] != 8:
         raise ValueError("The pilot fixes branch positions and conversation length.")
     if settings["candidate_actions"] != 4 or settings["continuations_per_candidate"] < 1:

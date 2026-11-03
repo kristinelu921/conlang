@@ -237,6 +237,19 @@ class Study:
         self.emit(label, metrics)
         return metrics
 
+    def archive_failure(self) -> None:
+        """Preserve failed-attempt evidence without accepting potentially partial optimizer state."""
+        files = sorted(path for path in self.output.iterdir() if path.is_file() and path.suffix in (".json", ".jsonl"))
+        manifest = {"source_commit": self.receipt["source_commit"], "files": [file_record(path) for path in files]}
+        manifest_path = self.output / "failure-manifest.json"
+        write_json(manifest_path, manifest)
+        destination = self.receipt["gcs_prefix"] + "/attempts/" + self.output.name + "/failure-evidence/"
+        subprocess.run(["gcloud", "storage", "cp", *map(str, files), str(manifest_path), destination], check=True)
+        uploaded = json.loads(subprocess.check_output(["gcloud", "storage", "cat", destination + "failure-manifest.json"]))
+        if uploaded != manifest:
+            raise ValueError("Failed-attempt evidence manifest differs after upload.")
+        self.wandb_run.summary["failure_evidence"] = destination
+
     def numerical_preflight(self) -> dict:
         """Compare the loaded TPU model with independent Hugging Face CPU logits on the remote VM."""
         import jax
@@ -253,8 +266,8 @@ class Study:
         tensor = torch.tensor([tokens], dtype=torch.long)
         with torch.no_grad():
             expected = reference(tensor).logits.float().numpy()
-        weights = jax.tree.map(lambda array: array[0].astype(jnp.float32), backend.weights)
-        adapters = jax.tree.map(lambda array: array[0], backend.states[0].params)
+        weights = jax.tree.map(lambda array: array.addressable_shards[0].data.squeeze(0), backend.weights)
+        adapters = jax.tree.map(lambda array: array.addressable_shards[0].data.squeeze(0), backend.states[0].params)
 
         @jax.jit
         def actual_forward(parameters: dict, adapter: tuple, input_ids: Any) -> Any:
@@ -316,6 +329,9 @@ class Study:
         os.environ["JAX_PLATFORMS"] = "cpu"
         os.environ["WANDB_DISABLE_CODE"] = "true"
         os.environ["WANDB_DISABLE_GIT"] = "true"
+        log_directory = self.output / "tpu-driver-logs"
+        log_directory.mkdir()
+        os.environ["TPU_LOG_DIR"] = str(log_directory)
         import wandb
         self.wandb_run = wandb.init(project=self.settings["wandb_project"], entity=self.settings["wandb_entity"],
             group=self.settings["wandb_group"], name=self.output.name, config={**self.settings, "execution_receipt": self.receipt},
@@ -420,6 +436,10 @@ class Study:
         except BaseException as error:
             write_json(self.output / "terminal.json", {"status": "interrupted" if isinstance(error, TimeoutError) else "failed",
                 "phase": self.phase, "error": repr(error), "time": time.time()})
+            try:
+                self.archive_failure()
+            except Exception as archive_error:
+                print(json.dumps({"failure_archive_error": repr(archive_error)}), flush=True)
             self.wandb_run.finish(exit_code=1)
             raise
 

@@ -153,7 +153,7 @@ class QwenBackend:
             cache_dir=str(cache_directory), allow_patterns=["*.safetensors", "*.json", "*.txt"]))
         host_weights = self.load_weights()
         with jax.default_device(jax.devices("cpu")[0]):
-            host_weights = jax.tree.map(lambda value: jnp.asarray(value, dtype=jnp.bfloat16), host_weights)
+            host_weights = jax.tree.map(lambda value: jnp.asarray(value, dtype=jnp.float32), host_weights)
         self.weights = jax.device_put_replicated(host_weights, self.devices)
         self.states = []
         optimizer = optax.chain(optax.clip_by_global_norm(settings["gradient_clip_norm"]),
@@ -217,7 +217,7 @@ class QwenBackend:
         """Decode a fixed-width batch with cached keys/values and stored behavior log probabilities."""
         configuration = self.configuration
         shape = (tokens.shape[0], self.total_width, configuration["num_key_value_heads"], configuration["head_dim"])
-        cache = tuple((jnp.zeros(shape, jnp.bfloat16), jnp.zeros(shape, jnp.bfloat16))
+        cache = tuple((jnp.zeros(shape, weights["embedding"].dtype), jnp.zeros(shape, weights["embedding"].dtype))
                       for _ in range(configuration["num_hidden_layers"]))
         extended_mask = jnp.concatenate((mask, jnp.ones((tokens.shape[0], self.output_width), jnp.int32)), axis=1)
         positions = jnp.maximum(mask.cumsum(axis=-1) - 1, 0)
