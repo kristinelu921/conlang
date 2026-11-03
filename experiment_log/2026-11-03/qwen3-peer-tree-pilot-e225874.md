@@ -221,3 +221,20 @@ proposed follow-ups, not experiments run or improvements established here.
 2.288818359375e-05; cached/replay maximum error was 4.57763671875e-05; first-tree
 peak memory fraction was 0.821671020806612. The predecessor’s bfloat16 failure
 remains separately documented. No development-host model job was run.
+
+## Cleanup — 2026-11-03T23:38:26.003458+00:00
+
+After verifying the complete regional checkpoint/evidence copy, the trainer and
+supervisor were absent and every VFIO resource was idle. Direct cloud describe
+confirmed the exact same creation timestamp (2026-11-03T22:35:33.659878064Z).
+The single TPU created for this pilot was then deleted successfully; the delete
+command exited 0 and confirmed its exact resource name. No other TPU was deleted.
+
+```sh
+gcloud compute tpus tpu-vm delete kmh-tpuvm-v5e-8-spot-kristine-03-22-35-29-776996979-0-us-west4-a --project=he-vision-group --zone=us-west4-a --quiet
+```
+
+Both attempt monitors terminated after their respective supervisor sentinels.
+Regional checkpoints, raw conversation evidence, logs, analysis and immutable
+source records are retained. Total allocation lifetime was about 62 minutes,
+within the user-authorized 24-hour maximum.
