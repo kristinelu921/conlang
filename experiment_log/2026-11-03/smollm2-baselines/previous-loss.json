@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "status": "completed",
+  "model": "HuggingFaceTB/SmolLM2-135M",
+  "model_revision": "93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
+  "dataset": "openai/gsm8k",
+  "dataset_revision": "740312add88f781978c0658806c59bc2815b9866",
+  "split_seed": 20261102,
+  "selection_train_examples": 6726,
+  "validation_examples": 747,
+  "refit_train_examples": 7473,
+  "test_examples": 1319,
+  "test_used_for_selection": false,
+  "precision": "float32",
+  "hardware": "single dedicated Spot v5e-8",
+  "evaluation": {
+    "accuracy": "strict exact match",
+    "loss": "unweighted query-answer-token NLL including rationale and EOS",
+    "loss_units": "nats per answer token",
+    "decoding": "greedy",
+    "max_generated_tokens": 256,
+    "conditions_num_fewshot": [
+      0,
+      5
+    ],
+    "fewshot_seed": 1234
+  },
+  "optimizer": {
+    "name": "AdamW",
+    "beta1": 0.9,
+    "beta2": 0.999,
+    "epsilon": 1e-08,
+    "gradient_clip_norm": 1.0
+  },
+  "id": "previous-loss",
+  "configuration": {
+    "trial_id": "loss-final-fit",
+    "learning_rate": 0.0001,
+    "batch_size": 32,
+    "epochs": 3,
+    "schedule_epochs": 12,
+    "minimum_epochs": 3,
+    "patience": 3,
+    "seed": 1234,
+    "warmup_fraction": 0.03,
+    "final_learning_rate_ratio": 0.1,
+    "weight_decay": 0.01,
+    "final_answer_weight": 1.0,
+    "final_fit": true
+  },
+  "five_shot_training_fraction": 0.0,
+  "gradient_accumulation": 1,
+  "selection": {
+    "criterion": "minimum unweighted validation answer-token NLL",
+    "trial_id": "trial-04",
+    "epoch": 3,
+    "locked_unix_seconds": 1793668447.9535708,
+    "lock_sha256": "f9f7654ceabbcab4a8a1a361b1a25b93617ef0e139a20b452aa7fb0799a213d5"
+  },
+  "metrics": {
+    "train_nll": 0.35753009805707014,
+    "test_nll": 0.6010654320418056,
+    "zero_shot_correct": 96,
+    "zero_shot_accuracy": 0.07278241091736164,
+    "five_shot_correct": 64,
+    "five_shot_accuracy": 0.04852160727824109
+  },
+  "optimizer_updates": 702,
+  "wandb_training_url": "https://wandb.ai/kaynelu921-massachusetts-institute-of-technology/conlangs/runs/d8ml8ua1",
+  "model_gcs_directory": "gs://kmh-gcp-us-west4/kristine/smollm2-gsm8k-research-20261102/loss-final-model-fp32/",
+  "model_manifest": {
+    "status": "complete",
+    "source_checkpoint": "/home/kristinelu/smollm2-gsm8k/research-20261102/output/loss-final-fit-checkpoint",
+    "source_checkpoint_sha256": "a09d3212c618ec32aea84845fcbd1642334e64dbf3266e5ab98d443a4be17eda",
+    "step": 702,
+    "dtype": "float32",
+    "files": [
+      {
+        "name": "config.json",
+        "bytes": 736,
+        "sha256": "19bdca71fb88864db2e8fcebb66c29d59eba10ccd3c09d195728aa57dee902db"
+      },
+      {
+        "name": "generation_config.json",
+        "bytes": 111,
+        "sha256": "43d1f83d871a388f486b86713426772920fbe4bd59e2d16013b65ebc91760b4c"
+      },
+      {
+        "name": "merges.txt",
+        "bytes": 466391,
+        "sha256": "0b54e8aa4e53d5383e2e4bc635a56b43f9647f7b13832d5d9ecd8f82dac4f510"
+      },
+      {
+        "name": "model.safetensors",
+        "bytes": 538090408,
+        "sha256": "c0b75beba2a7c1d6b8ed358be78a44350c64757189fbf966809c51a59f998569"
+      },
+      {
+        "name": "special_tokens_map.json",
+        "bytes": 831,
+        "sha256": "e786b595b9a23148bf1630df78d9037a048ea671e48bfd3549a1e3c233742bb3"
+      },
+      {
+        "name": "tokenizer.json",
+        "bytes": 3522656,
+        "sha256": "7d27c493c729a66ecefc837280b05d948b1ed50d130eebdbf911b1b36cf38ed7"
+      },
+      {
+        "name": "tokenizer_config.json",
+        "bytes": 3688,
+        "sha256": "dc56f9ca2dd808c574d331a145e4e78b911eb1b53e2f7d95be284f2107ab8f70"
+      },
+      {
+        "name": "vocab.json",
+        "bytes": 800662,
+        "sha256": "82b84012e3add4d01d12ba14442026e49b8cbbaead1f79ecf3d919784f82dc79"
+      }
+    ]
+  },
+  "provenance": {
+    "source_digest": "2a7b3c6decfeeabbaf435fcb4b6655f9b0c3a06e7b14229238a1212174396057",
+    "preserved_archive_sha256": "a9daea616ac169fde4f139a919dc6cad85bd22cfec04302d15eb966577e60824"
+  }
+}

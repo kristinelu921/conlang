@@ -1,0 +1,110 @@
+{"gradient_norm": 4.209177017211914, "step": 10.0, "train_loss": 8.559798240661621}
+{"examples_per_second": 8097.703798416145, "gradient_norm": 2.035615921020508, "step": 20.0, "train_loss": 6.988410949707031}
+{"examples_per_second": 8085.528426853897, "gradient_norm": 1.7895457744598389, "step": 30.0, "train_loss": 6.489086627960205}
+{"examples_per_second": 8081.387083165305, "gradient_norm": 1.5340793132781982, "step": 40.0, "train_loss": 6.2258758544921875}
+{"examples_per_second": 8085.703323093615, "gradient_norm": 1.4843378067016602, "step": 50.0, "train_loss": 5.772445201873779}
+{"examples_per_second": 8089.620080642955, "gradient_norm": 1.3982023000717163, "step": 60.0, "train_loss": 5.694339275360107}
+{"examples_per_second": 8085.869081337512, "gradient_norm": 1.465809941291809, "step": 70.0, "train_loss": 5.374602317810059}
+{"examples_per_second": 8121.3089264790515, "gradient_norm": 1.4960559606552124, "step": 80.0, "train_loss": 5.344357967376709}
+{"examples_per_second": 8101.01940084109, "gradient_norm": 1.3795467615127563, "step": 90.0, "train_loss": 5.003056526184082}
+{"examples_per_second": 8078.729954965234, "gradient_norm": 1.611222743988037, "step": 100.0, "train_loss": 4.856420040130615}
+{"exact_match": 0.04296875, "mean_joint_log_probability": -4.687188148498535, "step": 100.0}
+{"examples_per_second": 8041.714833500933, "gradient_norm": 1.4396218061447144, "step": 110.0, "train_loss": 4.755868434906006}
+{"examples_per_second": 8075.606554310664, "gradient_norm": 1.1997203826904297, "step": 120.0, "train_loss": 4.503924369812012}
+{"examples_per_second": 8080.034222709376, "gradient_norm": 1.157383918762207, "step": 130.0, "train_loss": 4.4669575691223145}
+{"examples_per_second": 8086.153340792568, "gradient_norm": 1.0907233953475952, "step": 140.0, "train_loss": 4.356770992279053}
+{"examples_per_second": 8077.669266349785, "gradient_norm": 1.1262829303741455, "step": 150.0, "train_loss": 4.214897632598877}
+{"examples_per_second": 8083.175062170538, "gradient_norm": 1.0683867931365967, "step": 160.0, "train_loss": 4.290464401245117}
+{"examples_per_second": 8086.058858967099, "gradient_norm": 1.2940975427627563, "step": 170.0, "train_loss": 4.363394260406494}
+{"examples_per_second": 8078.753152517305, "gradient_norm": 1.1647939682006836, "step": 180.0, "train_loss": 4.230114936828613}
+{"examples_per_second": 8075.066521106962, "gradient_norm": 0.9881018996238708, "step": 190.0, "train_loss": 4.218886375427246}
+{"examples_per_second": 8083.104870785874, "gradient_norm": 1.1448405981063843, "step": 200.0, "train_loss": 4.110203742980957}
+{"exact_match": 0.0234375, "mean_joint_log_probability": -4.181802749633789, "step": 200.0}
+{"examples_per_second": 8070.682231520228, "gradient_norm": 1.0441113710403442, "step": 210.0, "train_loss": 4.227380752563477}
+{"examples_per_second": 8078.995096442041, "gradient_norm": 1.2717220783233643, "step": 220.0, "train_loss": 4.15090274810791}
+{"examples_per_second": 8083.179400147447, "gradient_norm": 1.0908260345458984, "step": 230.0, "train_loss": 4.064536094665527}
+{"examples_per_second": 8076.792835933632, "gradient_norm": 1.0372874736785889, "step": 240.0, "train_loss": 4.147589683532715}
+{"examples_per_second": 8091.81445487136, "gradient_norm": 1.0122346878051758, "step": 250.0, "train_loss": 4.17622709274292}
+{"examples_per_second": 8087.2622995120655, "gradient_norm": 1.2930500507354736, "step": 260.0, "train_loss": 4.011926651000977}
+{"examples_per_second": 8083.820556791673, "gradient_norm": 1.007887840270996, "step": 270.0, "train_loss": 4.1233344078063965}
+{"examples_per_second": 8067.515977023635, "gradient_norm": 0.9518100619316101, "step": 280.0, "train_loss": 3.99954891204834}
+{"examples_per_second": 8083.966338646628, "gradient_norm": 1.0703604221343994, "step": 290.0, "train_loss": 4.09494161605835}
+{"examples_per_second": 8077.439376622866, "gradient_norm": 1.0399302244186401, "step": 300.0, "train_loss": 4.0603766441345215}
+{"exact_match": 0.02734375, "mean_joint_log_probability": -4.122232437133789, "step": 300.0}
+{"examples_per_second": 8074.86938374832, "gradient_norm": 0.9992574453353882, "step": 310.0, "train_loss": 4.048100471496582}
+{"examples_per_second": 8071.373073533193, "gradient_norm": 1.0660942792892456, "step": 320.0, "train_loss": 4.075115203857422}
+{"examples_per_second": 8076.149459703235, "gradient_norm": 1.1256277561187744, "step": 330.0, "train_loss": 4.146022319793701}
+{"examples_per_second": 8081.61618783569, "gradient_norm": 1.0040559768676758, "step": 340.0, "train_loss": 4.202486038208008}
+{"examples_per_second": 8079.91692883852, "gradient_norm": 1.0179270505905151, "step": 350.0, "train_loss": 4.034934997558594}
+{"examples_per_second": 8065.134465098982, "gradient_norm": 0.9564864039421082, "step": 360.0, "train_loss": 4.092532157897949}
+{"examples_per_second": 8063.875159184676, "gradient_norm": 0.9686111807823181, "step": 370.0, "train_loss": 3.999095916748047}
+{"examples_per_second": 8066.614548665951, "gradient_norm": 0.9896257519721985, "step": 380.0, "train_loss": 4.09044075012207}
+{"examples_per_second": 8065.097892954246, "gradient_norm": 0.9533357620239258, "step": 390.0, "train_loss": 4.020698070526123}
+{"examples_per_second": 6935.542681406886, "gradient_norm": 0.9071839451789856, "step": 400.0, "train_loss": 4.147921085357666}
+{"exact_match": 0.02734375, "mean_joint_log_probability": -4.089789390563965, "step": 400.0}
+{"examples_per_second": 8088.731046186705, "gradient_norm": 0.9918214082717896, "step": 410.0, "train_loss": 4.201726913452148}
+{"examples_per_second": 8087.639888548367, "gradient_norm": 0.9510225653648376, "step": 420.0, "train_loss": 4.1277971267700195}
+{"examples_per_second": 8080.474143656465, "gradient_norm": 0.8719949126243591, "step": 430.0, "train_loss": 3.97878098487854}
+{"examples_per_second": 8079.0998851328, "gradient_norm": 1.0425639152526855, "step": 440.0, "train_loss": 4.030119895935059}
+{"examples_per_second": 8065.5702564221965, "gradient_norm": 0.9741859436035156, "step": 450.0, "train_loss": 4.080439567565918}
+{"examples_per_second": 8050.944795553372, "gradient_norm": 0.9497403502464294, "step": 460.0, "train_loss": 4.100715160369873}
+{"examples_per_second": 8044.794656333233, "gradient_norm": 1.0272910594940186, "step": 470.0, "train_loss": 3.9793667793273926}
+{"examples_per_second": 8075.442212972866, "gradient_norm": 0.9705168008804321, "step": 480.0, "train_loss": 3.9191701412200928}
+{"examples_per_second": 8075.136312007781, "gradient_norm": 1.0879511833190918, "step": 490.0, "train_loss": 3.9349703788757324}
+{"examples_per_second": 8079.94443208709, "gradient_norm": 1.0115256309509277, "step": 500.0, "train_loss": 4.039186954498291}
+{"exact_match": 0.04296875, "mean_joint_log_probability": -4.082969665527344, "step": 500.0}
+{"examples_per_second": 8076.46869078407, "gradient_norm": 0.8590341806411743, "step": 510.0, "train_loss": 3.8461170196533203}
+{"examples_per_second": 8081.367707576587, "gradient_norm": 0.9616947174072266, "step": 520.0, "train_loss": 4.006921768188477}
+{"examples_per_second": 8058.873265860406, "gradient_norm": 0.9820572137832642, "step": 530.0, "train_loss": 4.110124588012695}
+{"examples_per_second": 8069.316891779268, "gradient_norm": 0.9617875218391418, "step": 540.0, "train_loss": 4.086688041687012}
+{"examples_per_second": 8037.632399100775, "gradient_norm": 1.035935401916504, "step": 550.0, "train_loss": 4.145994663238525}
+{"examples_per_second": 8058.437477362223, "gradient_norm": 0.9314523935317993, "step": 560.0, "train_loss": 3.9482381343841553}
+{"examples_per_second": 8072.30814934228, "gradient_norm": 0.8573806285858154, "step": 570.0, "train_loss": 3.938743829727173}
+{"examples_per_second": 8075.548475360357, "gradient_norm": 0.9951492547988892, "step": 580.0, "train_loss": 4.036909103393555}
+{"examples_per_second": 8013.869211332079, "gradient_norm": 0.9558367729187012, "step": 590.0, "train_loss": 4.102999687194824}
+{"examples_per_second": 8067.499485527168, "gradient_norm": 0.8647972941398621, "step": 600.0, "train_loss": 4.126728057861328}
+{"exact_match": 0.04296875, "mean_joint_log_probability": -4.076608657836914, "step": 600.0}
+{"examples_per_second": 8076.321945287447, "gradient_norm": 0.8628537654876709, "step": 610.0, "train_loss": 4.153785228729248}
+{"examples_per_second": 8074.775402633273, "gradient_norm": 1.0294781923294067, "step": 620.0, "train_loss": 4.088588714599609}
+{"examples_per_second": 8063.749179255426, "gradient_norm": 0.9269375801086426, "step": 630.0, "train_loss": 4.0568695068359375}
+{"examples_per_second": 8054.5154002134295, "gradient_norm": 1.059955358505249, "step": 640.0, "train_loss": 4.124151229858398}
+{"examples_per_second": 8073.222315078594, "gradient_norm": 0.8837823271751404, "step": 650.0, "train_loss": 4.003049850463867}
+{"examples_per_second": 8052.306448650606, "gradient_norm": 0.9388113021850586, "step": 660.0, "train_loss": 3.874922513961792}
+{"examples_per_second": 8063.9272626344855, "gradient_norm": 0.9785998463630676, "step": 670.0, "train_loss": 4.009033203125}
+{"examples_per_second": 8061.0147610978765, "gradient_norm": 0.9390225410461426, "step": 680.0, "train_loss": 4.031230449676514}
+{"examples_per_second": 8068.995146568727, "gradient_norm": 0.8461921811103821, "step": 690.0, "train_loss": 4.081411838531494}
+{"examples_per_second": 8070.451210991831, "gradient_norm": 0.9383990168571472, "step": 700.0, "train_loss": 4.005686283111572}
+{"exact_match": 0.03515625, "mean_joint_log_probability": -4.062223434448242, "step": 700.0}
+{"examples_per_second": 8084.85502747176, "gradient_norm": 0.968351423740387, "step": 710.0, "train_loss": 3.9040539264678955}
+{"examples_per_second": 8077.637149838041, "gradient_norm": 0.9697085022926331, "step": 720.0, "train_loss": 4.022493839263916}
+{"examples_per_second": 8110.91647493103, "gradient_norm": 0.9443166255950928, "step": 730.0, "train_loss": 4.142967224121094}
+{"examples_per_second": 8112.487703926545, "gradient_norm": 1.0262792110443115, "step": 740.0, "train_loss": 4.023981094360352}
+{"examples_per_second": 8084.330614188358, "gradient_norm": 1.253356695175171, "step": 750.0, "train_loss": 3.961954116821289}
+{"examples_per_second": 8102.598321385766, "gradient_norm": 0.9452753663063049, "step": 760.0, "train_loss": 4.023656368255615}
+{"examples_per_second": 8077.786483102861, "gradient_norm": 1.0464801788330078, "step": 770.0, "train_loss": 4.092184543609619}
+{"examples_per_second": 8107.098516877939, "gradient_norm": 0.9559555053710938, "step": 780.0, "train_loss": 3.910815715789795}
+{"examples_per_second": 6925.859394227797, "gradient_norm": 0.8708928823471069, "step": 790.0, "train_loss": 4.063141345977783}
+{"examples_per_second": 8091.740052031303, "gradient_norm": 1.0695853233337402, "step": 800.0, "train_loss": 3.945902109146118}
+{"exact_match": 0.0390625, "mean_joint_log_probability": -4.062455177307129, "step": 800.0}
+{"examples_per_second": 8084.488410145573, "gradient_norm": 0.9504485130310059, "step": 810.0, "train_loss": 3.9829797744750977}
+{"examples_per_second": 8091.123193589935, "gradient_norm": 0.8873445987701416, "step": 820.0, "train_loss": 4.025816917419434}
+{"examples_per_second": 8112.132940479568, "gradient_norm": 0.8964754343032837, "step": 830.0, "train_loss": 3.978956699371338}
+{"examples_per_second": 8079.448452345733, "gradient_norm": 0.8799576759338379, "step": 840.0, "train_loss": 3.944410800933838}
+{"examples_per_second": 8090.09552342363, "gradient_norm": 1.0186402797698975, "step": 850.0, "train_loss": 4.018143653869629}
+{"examples_per_second": 8080.663917553188, "gradient_norm": 1.023115873336792, "step": 860.0, "train_loss": 4.018593788146973}
+{"examples_per_second": 8099.347567775957, "gradient_norm": 0.8488630056381226, "step": 870.0, "train_loss": 3.982725143432617}
+{"examples_per_second": 8094.066410335926, "gradient_norm": 0.9888275265693665, "step": 880.0, "train_loss": 3.918328046798706}
+{"examples_per_second": 8090.8176038158035, "gradient_norm": 0.9326682686805725, "step": 890.0, "train_loss": 4.094402313232422}
+{"examples_per_second": 8113.497637634221, "gradient_norm": 0.9434563517570496, "step": 900.0, "train_loss": 4.2450852394104}
+{"exact_match": 0.046875, "mean_joint_log_probability": -4.062705039978027, "step": 900.0}
+{"examples_per_second": 8089.143824864335, "gradient_norm": 0.9281421899795532, "step": 910.0, "train_loss": 4.0764617919921875}
+{"examples_per_second": 8082.050946243501, "gradient_norm": 1.0146942138671875, "step": 920.0, "train_loss": 4.097121238708496}
+{"examples_per_second": 8091.198347228282, "gradient_norm": 1.0319576263427734, "step": 930.0, "train_loss": 4.093981742858887}
+{"examples_per_second": 8080.976390466298, "gradient_norm": 1.067404866218567, "step": 940.0, "train_loss": 4.189633846282959}
+{"examples_per_second": 8085.890012693882, "gradient_norm": 0.853198230266571, "step": 950.0, "train_loss": 4.02834415435791}
+{"examples_per_second": 8098.011709811739, "gradient_norm": 1.0930861234664917, "step": 960.0, "train_loss": 3.9763598442077637}
+{"examples_per_second": 8083.187565064561, "gradient_norm": 0.9065614938735962, "step": 970.0, "train_loss": 4.002830505371094}
+{"examples_per_second": 8080.940933606112, "gradient_norm": 0.9022027850151062, "step": 980.0, "train_loss": 4.046202182769775}
+{"examples_per_second": 8086.938836173875, "gradient_norm": 0.9598244428634644, "step": 990.0, "train_loss": 4.005270004272461}
+{"examples_per_second": 8093.730629548165, "gradient_norm": 0.9231626987457275, "step": 1000.0, "train_loss": 3.9922327995300293}
+{"exact_match": 0.03125, "mean_joint_log_probability": -4.050580978393555, "step": 1000.0}

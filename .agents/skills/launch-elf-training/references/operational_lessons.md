@@ -78,7 +78,11 @@ authoritative when a rule overlaps.
    resource idle, and no stale `/tmp/libtpu_lockfile`. A prior check does not
    satisfy this final gate. Make this a dedicated read-only occupancy check;
    never reuse a setup preflight that can initialize, delete, move, or repair
-   state in the final launch race window.
+   state in the final launch race window. Do not add a fuzzy full-command-line
+   `pgrep` to the launch wrapper itself: the same remote shell can contain the
+   later trainer command text and match itself before Python starts. Trust the
+   completed occupancy helper, or enumerate `/proc` and match exact argv tokens
+   in a separate read-only command that does not contain the launch argv.
 9. Keep the foreground staging/launch session until it returns. Then require
    checkpoint restoration, W&B initialization, JAX distributed initialization,
    and the first useful progress event before calling the run launched.
@@ -217,6 +221,16 @@ prefer `rsync`, then use `gcloud storage cp --recursive '<prefix>/*' '<local>/'`
 when only `cp` is available. Require dataset metadata, exact bytes, and zero
 temporary files on every worker. Check exact local reuse before invoking any
 broken `gsutil` fallback.
+
+Cloud SDK `384.0.1` predates the entire `gcloud storage` surface, including
+bucket-location queries that can run before an already verified node-local
+dataset is reused. Probe the application resolver's exact bucket-location path
+before opening W&B or TPU execution so incompatibility cannot create a tracked
+run that fails before step 1. When and only when stderr proves that
+`gcloud storage` is unavailable, fall back to `gsutil ls -Lb` for the location
+and parse `Location constraint`; retain the normal region equality gate. Use
+the analogous `gsutil cp` fallback only for an actual regional copy. Do not mask authentication,
+permissions, missing-bucket, or network failures.
 
 ### CPU control-host tests import Torch-XLA and segfault
 

@@ -1,0 +1,48 @@
+wandb: [wandb.login()] Loaded credentials for https://api.wandb.ai from /home/kristinelu/.netrc.
+wandb: Currently logged in as: kaynelu921 (kaynelu921-massachusetts-institute-of-technology) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: setting up run 1lr5w1l8
+wandb: Tracking run with wandb version 0.28.1
+wandb: Run data is saved locally in /home/kristinelu/elf-runs/source/20261015-conlang-jax-v4-8-n1024-s20-h128-out256-tied-g64-smoke-20261016T035317.800843722Z/wandb/run-20261016_035534-1lr5w1l8
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run 20261015-conlang-jax-v4-8-n1024-s20-h128-out256-tied-g64-smoke
+wandb: ⭐️ View project at https://wandb.ai/kaynelu921-massachusetts-institute-of-technology/conlangs
+wandb: 🚀 View run at https://wandb.ai/kaynelu921-massachusetts-institute-of-technology/conlangs/runs/1lr5w1l8
+run_id=20261015-conlang-jax-v4-8-n1024-s20-h128-out256-tied-g64-smoke backend=tpu devices=4 dataset=/home/kristinelu/elf-data/conlangs-v1 verified_questions=125000 train_examples=1024 validation_examples=256 batch_size=256 precision=bfloat16
+step=10 train_loss=9.3619 gradient_norm=9.6664 throughput=warmup
+step=10 exact_match=0.0000 mean_joint_log_probability=-9.0123
+step=20 train_loss=7.7371 gradient_norm=4.2357 examples_per_second=5853.00
+step=20 exact_match=0.0000 mean_joint_log_probability=-7.7169
+TRAINING_COMPLETE run_id=20261015-conlang-jax-v4-8-n1024-s20-h128-out256-tied-g64-smoke step=20
+wandb: updating run metadata
+wandb: uploading history steps 0-1, summary, console lines 2-5
+wandb: 
+wandb: Run history:
+wandb:        activation_rms_message_1 ▁█
+wandb:        activation_rms_message_2 ▁█
+wandb:         activation_rms_receiver ▁█
+wandb:                eval/exact_match ▁▁
+wandb: eval/mean_joint_log_probability ▁█
+wandb:                     exact_match ▁
+wandb:             examples_per_second ▁
+wandb:                   gradient_norm █▁
+wandb:           gradient_norm_agent_1 █▁
+wandb:           gradient_norm_agent_2 █▁
+wandb:                             +16 ...
+wandb: 
+wandb: Run summary:
+wandb:        activation_rms_message_1 1.00635
+wandb:        activation_rms_message_2 1.00634
+wandb:         activation_rms_receiver 1.08671
+wandb:                eval/exact_match 0
+wandb: eval/mean_joint_log_probability -7.71692
+wandb:                     exact_match 0
+wandb:             examples_per_second 5853.00387
+wandb:                   gradient_norm 4.23573
+wandb:           gradient_norm_agent_1 0.04466
+wandb:           gradient_norm_agent_2 0.06032
+wandb:                             +16 ...
+wandb: 
+wandb: 🚀 View run 20261015-conlang-jax-v4-8-n1024-s20-h128-out256-tied-g64-smoke at: https://wandb.ai/kaynelu921-massachusetts-institute-of-technology/conlangs/runs/1lr5w1l8
+wandb: ⭐️ View project at: https://wandb.ai/kaynelu921-massachusetts-institute-of-technology/conlangs
+wandb: Synced 5 W&B file(s), 0 media file(s), 0 artifact file(s) and 0 other file(s)
+wandb: Find logs at: ./wandb/run-20261016_035534-1lr5w1l8/logs

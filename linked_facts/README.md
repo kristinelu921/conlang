@@ -63,7 +63,11 @@ world. The latter makes large experiments much cheaper.
 
 Only `agent_1_input`, `agent_2_input`, and `questions[].question` are model
 inputs. `questions[].answer` is the target. Everything else is audit metadata
-and must be excluded from model inputs.
+and must be excluded from model inputs. An optional training-only auxiliary
+objective may use the middle entry of `questions[].reasoning_path` as a bridge
+label and `metadata.person_side_agent` to identify which sender holds that
+person-to-bridge fact. Neither label is passed to the sender or receiver as an
+input.
 
 ## Evaluation splits
 
@@ -146,9 +150,11 @@ for example in iter_question_examples(Path("datasets/linked_facts_v1/train.jsonl
     agent_2_text = example["agent_2_input"]
     question = example["question"]
     target = example["answer"]
+    bridge_target = example["bridge"]
+    person_side_agent = example["person_side_agent"]
 ```
 
-The model in `models.py` is specified in `MODEL_DESIGN.md`. It uses one small Transformer for both senders. Each
+The model in `jax_models.py` is specified in `MODEL_DESIGN.md`. It uses one small Transformer for both senders. Each
 sender pass returns 4 vectors of hidden size 128. The receiver is a second
 small Transformer. It reads the 8 message vectors plus the character-tokenized
 question and scores up to 4 answer tokens. Passages are characters, so a
@@ -162,9 +168,6 @@ Training maximizes the joint log probability of those answer tokens:
 log p(answer | messages, question) = sum_t log p(answer_t | answer_<t, messages, question)
 ```
 
-`CommunicationModel.forward` returns that sum for each example. Its `loss` is
+`JaxCommunicationModel` returns that sum for each example. Its `loss` is
 the negative batch mean, for a standard minimizer. The same sender encodes both
 private texts, so the answer objective trains both messages together.
-`ControlModel` in `control_model.py` scores the same objective from both
-passages and the question in one sequence. `train.py` trains the communication
-model, and `control_train.py` trains the control model.

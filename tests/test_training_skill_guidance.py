@@ -201,6 +201,18 @@ def test_launch_guidance_keeps_the_final_occupancy_gate_read_only() -> None:
         assert "never reuse a setup preflight" in guidance
 
 
+def test_launch_guidance_prevents_self_matching_trainer_probes() -> None:
+    """Keep a launch shell from matching its own future trainer argv."""
+    error_guidance = ERRORS_SKILL_PATH.read_text(encoding="utf-8")
+    operational_lessons = OPERATIONAL_LESSONS_PATH.read_text(encoding="utf-8")
+
+    assert "### Launch wrapper matches its own future trainer command" in error_guidance
+    for guidance in (error_guidance, operational_lessons):
+        assert "fuzzy full-command-line" in guidance
+        assert "separate" in guidance
+        assert "exact" in guidance
+
+
 def test_runtime_signature_guidance_normalizes_only_transport_whitespace() -> None:
     """Keep SSH formatting from creating a false mismatch without weakening payloads."""
     error_guidance = ERRORS_SKILL_PATH.read_text(encoding="utf-8")
@@ -228,6 +240,19 @@ def test_skills_separate_training_and_cloud_sdk_python_compatibility() -> None:
         assert "ELF Python 3.11" in guidance
         assert "bundled SDK default" in guidance
         assert "fail closed" in guidance.lower()
+
+
+def test_skills_probe_legacy_bucket_location_before_wandb() -> None:
+    """Keep an old v4 Cloud SDK from failing only after W&B initializes."""
+    error_guidance = ERRORS_SKILL_PATH.read_text(encoding="utf-8")
+    operational_lessons = OPERATIONAL_LESSONS_PATH.read_text(encoding="utf-8")
+
+    for guidance in (error_guidance, operational_lessons):
+        assert "bucket-location" in guidance
+        assert "Location constraint" in guidance
+        assert "step 1" in guidance
+    assert "pcutw300" in error_guidance
+    assert "do not mask authentication" in operational_lessons.lower()
 
 
 def test_skills_bound_fresh_checkpoint_mirror_grace() -> None:

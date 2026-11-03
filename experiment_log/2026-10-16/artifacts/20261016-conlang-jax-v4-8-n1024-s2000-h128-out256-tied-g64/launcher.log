@@ -1,0 +1,263 @@
+wandb: [wandb.login()] Loaded credentials for https://api.wandb.ai from /home/kristinelu/.netrc.
+wandb: Currently logged in as: kaynelu921 (kaynelu921-massachusetts-institute-of-technology) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: Tracking run with wandb version 0.28.1
+wandb: Run data is saved locally in /home/kristinelu/elf-runs/source/20261016-conlang-jax-v4-8-n1024-s2000-h128-out256-tied-g64/wandb/run-20261016_042115-ypiscnxz
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run 20261016-conlang-jax-v4-8-n1024-s2000-h128-out256-tied-g64
+wandb: ⭐️ View project at https://wandb.ai/kaynelu921-massachusetts-institute-of-technology/conlangs
+wandb: 🚀 View run at https://wandb.ai/kaynelu921-massachusetts-institute-of-technology/conlangs/runs/ypiscnxz
+run_id=20261016-conlang-jax-v4-8-n1024-s2000-h128-out256-tied-g64 backend=tpu devices=4 dataset=/home/kristinelu/elf-data/conlangs-v1 verified_questions=125000 train_examples=1024 validation_examples=256 batch_size=256 precision=bfloat16
+step=10 train_loss=9.3619 gradient_norm=9.6664 throughput=warmup
+step=20 train_loss=7.7371 gradient_norm=4.2357 examples_per_second=5788.42
+step=30 train_loss=6.0590 gradient_norm=1.9354 examples_per_second=5770.43
+step=40 train_loss=5.3841 gradient_norm=1.7348 examples_per_second=5813.76
+step=50 train_loss=5.2081 gradient_norm=1.5865 examples_per_second=5771.33
+step=60 train_loss=5.1161 gradient_norm=1.6867 examples_per_second=5789.70
+step=70 train_loss=4.7071 gradient_norm=1.7277 examples_per_second=5760.43
+step=80 train_loss=4.5929 gradient_norm=1.7597 examples_per_second=5754.80
+step=90 train_loss=4.0904 gradient_norm=1.6059 examples_per_second=5737.65
+step=100 train_loss=4.2624 gradient_norm=1.8482 examples_per_second=5758.73
+step=100 exact_match=0.0391 mean_joint_log_probability=-4.8915
+step=110 train_loss=3.8574 gradient_norm=1.9581 examples_per_second=5769.68
+step=120 train_loss=3.7744 gradient_norm=1.6565 examples_per_second=5768.70
+step=130 train_loss=3.7442 gradient_norm=1.5743 examples_per_second=5772.57
+step=140 train_loss=3.7191 gradient_norm=1.9399 examples_per_second=5763.35
+step=150 train_loss=3.5596 gradient_norm=1.9394 examples_per_second=5777.70
+step=160 train_loss=3.6229 gradient_norm=1.8207 examples_per_second=5752.14
+step=170 train_loss=3.5262 gradient_norm=2.3264 examples_per_second=5744.70
+step=180 train_loss=3.3796 gradient_norm=1.8520 examples_per_second=5742.50
+step=190 train_loss=3.3374 gradient_norm=1.9745 examples_per_second=5740.25
+step=200 train_loss=3.2751 gradient_norm=2.0794 examples_per_second=5757.09
+step=200 exact_match=0.0312 mean_joint_log_probability=-5.1797
+step=210 train_loss=3.1606 gradient_norm=2.2936 examples_per_second=5783.35
+step=220 train_loss=3.1482 gradient_norm=2.4260 examples_per_second=5764.02
+step=230 train_loss=3.0821 gradient_norm=2.2745 examples_per_second=5787.13
+step=240 train_loss=3.1090 gradient_norm=2.6259 examples_per_second=5767.00
+step=250 train_loss=3.0393 gradient_norm=2.4829 examples_per_second=5777.97
+step=260 train_loss=2.9958 gradient_norm=2.9964 examples_per_second=5783.54
+step=270 train_loss=2.7897 gradient_norm=2.2828 examples_per_second=5790.88
+step=280 train_loss=2.7856 gradient_norm=2.5068 examples_per_second=5761.80
+step=290 train_loss=2.7735 gradient_norm=2.8951 examples_per_second=5775.78
+step=300 train_loss=2.7897 gradient_norm=2.8656 examples_per_second=5789.52
+step=300 exact_match=0.0352 mean_joint_log_probability=-5.8253
+step=310 train_loss=2.6400 gradient_norm=2.4531 examples_per_second=5791.67
+step=320 train_loss=2.6166 gradient_norm=3.0880 examples_per_second=5790.30
+step=330 train_loss=2.4376 gradient_norm=3.5311 examples_per_second=5767.26
+step=340 train_loss=2.4063 gradient_norm=2.7930 examples_per_second=5767.81
+step=350 train_loss=2.3967 gradient_norm=3.0330 examples_per_second=5752.72
+step=360 train_loss=2.4078 gradient_norm=2.9873 examples_per_second=5817.34
+step=370 train_loss=2.3478 gradient_norm=3.4061 examples_per_second=5800.63
+step=380 train_loss=2.2853 gradient_norm=2.6927 examples_per_second=5782.04
+step=390 train_loss=2.1275 gradient_norm=2.9562 examples_per_second=5749.65
+step=400 train_loss=2.1628 gradient_norm=3.2429 examples_per_second=5822.95
+step=400 exact_match=0.0195 mean_joint_log_probability=-6.5500
+step=410 train_loss=2.1208 gradient_norm=3.5336 examples_per_second=5782.73
+step=420 train_loss=2.1528 gradient_norm=4.4217 examples_per_second=5799.02
+step=430 train_loss=2.0218 gradient_norm=3.8767 examples_per_second=5795.14
+step=440 train_loss=2.0301 gradient_norm=3.6025 examples_per_second=5805.42
+step=450 train_loss=1.8989 gradient_norm=3.1871 examples_per_second=5771.00
+step=460 train_loss=1.9278 gradient_norm=3.1836 examples_per_second=5799.41
+step=470 train_loss=1.9465 gradient_norm=4.4417 examples_per_second=5841.36
+step=480 train_loss=1.7883 gradient_norm=3.3600 examples_per_second=5843.43
+step=490 train_loss=1.7040 gradient_norm=3.2077 examples_per_second=5825.58
+step=500 train_loss=1.9146 gradient_norm=4.4318 examples_per_second=5839.27
+step=500 exact_match=0.0391 mean_joint_log_probability=-7.2616
+step=510 train_loss=1.7007 gradient_norm=3.7731 examples_per_second=5829.44
+step=520 train_loss=1.6872 gradient_norm=3.6833 examples_per_second=5830.57
+step=530 train_loss=1.6122 gradient_norm=2.9739 examples_per_second=5818.23
+step=540 train_loss=1.5224 gradient_norm=4.3537 examples_per_second=5785.33
+step=550 train_loss=1.4515 gradient_norm=3.2562 examples_per_second=5833.15
+step=560 train_loss=1.5243 gradient_norm=4.0278 examples_per_second=5805.30
+step=570 train_loss=1.3993 gradient_norm=4.0227 examples_per_second=5783.28
+step=580 train_loss=1.4344 gradient_norm=4.5420 examples_per_second=5830.60
+step=590 train_loss=1.3595 gradient_norm=3.8714 examples_per_second=5799.82
+step=600 train_loss=1.2128 gradient_norm=3.2964 examples_per_second=5826.32
+step=600 exact_match=0.0312 mean_joint_log_probability=-7.8948
+step=610 train_loss=1.2282 gradient_norm=3.7744 examples_per_second=5795.25
+step=620 train_loss=1.1761 gradient_norm=4.7302 examples_per_second=5783.54
+step=630 train_loss=1.3076 gradient_norm=3.9632 examples_per_second=5825.37
+step=640 train_loss=1.1878 gradient_norm=4.3126 examples_per_second=5817.25
+step=650 train_loss=1.0871 gradient_norm=3.4797 examples_per_second=5845.74
+step=660 train_loss=1.1612 gradient_norm=4.7582 examples_per_second=5839.32
+step=670 train_loss=0.9416 gradient_norm=3.5677 examples_per_second=5846.45
+step=680 train_loss=1.0008 gradient_norm=3.7979 examples_per_second=5845.99
+step=690 train_loss=0.8263 gradient_norm=3.5537 examples_per_second=5798.34
+step=700 train_loss=0.9211 gradient_norm=3.8645 examples_per_second=5784.85
+step=700 exact_match=0.0156 mean_joint_log_probability=-8.5737
+step=710 train_loss=0.8663 gradient_norm=5.1143 examples_per_second=4276.75
+step=720 train_loss=0.9105 gradient_norm=4.4402 examples_per_second=5787.08
+step=730 train_loss=0.8618 gradient_norm=4.0956 examples_per_second=5786.11
+step=740 train_loss=0.8014 gradient_norm=4.2406 examples_per_second=5788.58
+step=750 train_loss=0.7624 gradient_norm=3.6137 examples_per_second=5795.22
+step=760 train_loss=0.7269 gradient_norm=3.5780 examples_per_second=5781.53
+step=770 train_loss=0.7057 gradient_norm=3.9423 examples_per_second=5783.65
+step=780 train_loss=0.6820 gradient_norm=4.6747 examples_per_second=5798.78
+step=790 train_loss=0.6586 gradient_norm=4.8179 examples_per_second=5785.60
+step=800 train_loss=0.7748 gradient_norm=4.9764 examples_per_second=5813.33
+step=800 exact_match=0.0430 mean_joint_log_probability=-9.3473
+step=810 train_loss=0.5993 gradient_norm=4.6589 examples_per_second=5797.98
+step=820 train_loss=0.6242 gradient_norm=4.2671 examples_per_second=5816.73
+step=830 train_loss=0.5270 gradient_norm=3.8745 examples_per_second=5809.43
+step=840 train_loss=0.5619 gradient_norm=3.6762 examples_per_second=5772.10
+step=850 train_loss=0.5336 gradient_norm=3.6392 examples_per_second=5812.75
+step=860 train_loss=0.5780 gradient_norm=5.2467 examples_per_second=5800.95
+step=870 train_loss=0.5278 gradient_norm=4.6005 examples_per_second=5809.59
+step=880 train_loss=0.5045 gradient_norm=3.5270 examples_per_second=5791.79
+step=890 train_loss=0.4722 gradient_norm=4.2728 examples_per_second=5821.56
+step=900 train_loss=0.4681 gradient_norm=3.7423 examples_per_second=5773.89
+step=900 exact_match=0.0352 mean_joint_log_probability=-9.8136
+step=910 train_loss=0.4406 gradient_norm=3.8855 examples_per_second=5799.63
+step=920 train_loss=0.4857 gradient_norm=3.8686 examples_per_second=5830.36
+step=930 train_loss=0.3988 gradient_norm=4.5772 examples_per_second=5810.49
+step=940 train_loss=0.3779 gradient_norm=4.7624 examples_per_second=5803.83
+step=950 train_loss=0.4099 gradient_norm=4.8439 examples_per_second=5797.61
+step=960 train_loss=0.3860 gradient_norm=3.2676 examples_per_second=5746.62
+step=970 train_loss=0.3506 gradient_norm=3.7043 examples_per_second=5808.12
+step=980 train_loss=0.3383 gradient_norm=4.4308 examples_per_second=5817.70
+step=990 train_loss=0.3722 gradient_norm=3.9331 examples_per_second=5816.94
+step=1000 train_loss=0.3744 gradient_norm=3.3072 examples_per_second=5818.57
+step=1000 exact_match=0.0352 mean_joint_log_probability=-10.5419
+step=1010 train_loss=0.3547 gradient_norm=4.4292 examples_per_second=5808.78
+step=1020 train_loss=0.3376 gradient_norm=3.6183 examples_per_second=5821.87
+step=1030 train_loss=0.2710 gradient_norm=2.8095 examples_per_second=5814.32
+step=1040 train_loss=0.3074 gradient_norm=3.2567 examples_per_second=5798.50
+step=1050 train_loss=0.2565 gradient_norm=2.7890 examples_per_second=5785.40
+step=1060 train_loss=0.3310 gradient_norm=3.6721 examples_per_second=5800.92
+step=1070 train_loss=0.2795 gradient_norm=3.3830 examples_per_second=5815.76
+step=1080 train_loss=0.2769 gradient_norm=2.8743 examples_per_second=5805.06
+step=1090 train_loss=0.2525 gradient_norm=3.7155 examples_per_second=5801.07
+step=1100 train_loss=0.2478 gradient_norm=3.9787 examples_per_second=5798.00
+step=1100 exact_match=0.0391 mean_joint_log_probability=-11.0793
+step=1110 train_loss=0.2947 gradient_norm=3.5128 examples_per_second=5798.08
+step=1120 train_loss=0.2406 gradient_norm=3.6540 examples_per_second=5827.62
+step=1130 train_loss=0.2031 gradient_norm=2.8667 examples_per_second=5790.33
+step=1140 train_loss=0.2494 gradient_norm=3.1929 examples_per_second=5785.14
+step=1150 train_loss=0.1929 gradient_norm=2.8100 examples_per_second=5753.35
+step=1160 train_loss=0.2757 gradient_norm=3.9086 examples_per_second=5790.73
+step=1170 train_loss=0.2613 gradient_norm=4.1259 examples_per_second=5769.45
+step=1180 train_loss=0.1890 gradient_norm=2.8131 examples_per_second=5796.74
+step=1190 train_loss=0.1930 gradient_norm=3.0799 examples_per_second=5801.48
+step=1200 train_loss=0.2010 gradient_norm=2.6032 examples_per_second=5752.90
+step=1200 exact_match=0.0352 mean_joint_log_probability=-11.4927
+step=1210 train_loss=0.1487 gradient_norm=2.1129 examples_per_second=5810.55
+step=1220 train_loss=0.2137 gradient_norm=3.6750 examples_per_second=5815.62
+step=1230 train_loss=0.1695 gradient_norm=2.6559 examples_per_second=5829.68
+step=1240 train_loss=0.1973 gradient_norm=3.6953 examples_per_second=5809.01
+step=1250 train_loss=0.1665 gradient_norm=2.9874 examples_per_second=5795.25
+step=1260 train_loss=0.1650 gradient_norm=2.8898 examples_per_second=5794.70
+step=1270 train_loss=0.1229 gradient_norm=1.9662 examples_per_second=5822.81
+step=1280 train_loss=0.1619 gradient_norm=2.7151 examples_per_second=5807.88
+step=1290 train_loss=0.1974 gradient_norm=3.3141 examples_per_second=5781.58
+step=1300 train_loss=0.1709 gradient_norm=2.8539 examples_per_second=5799.17
+step=1300 exact_match=0.0312 mean_joint_log_probability=-11.9546
+step=1310 train_loss=0.1308 gradient_norm=2.3372 examples_per_second=5786.35
+step=1320 train_loss=0.1561 gradient_norm=2.9179 examples_per_second=5851.71
+step=1330 train_loss=0.1276 gradient_norm=2.2257 examples_per_second=5800.73
+step=1340 train_loss=0.1027 gradient_norm=1.7409 examples_per_second=5817.96
+step=1350 train_loss=0.1206 gradient_norm=2.3473 examples_per_second=5804.76
+step=1360 train_loss=0.2155 gradient_norm=3.0482 examples_per_second=5825.07
+step=1370 train_loss=0.1121 gradient_norm=2.4283 examples_per_second=5788.42
+step=1380 train_loss=0.1054 gradient_norm=1.8516 examples_per_second=5794.31
+step=1390 train_loss=0.1728 gradient_norm=2.6998 examples_per_second=5800.86
+step=1400 train_loss=0.1122 gradient_norm=2.8037 examples_per_second=5806.61
+step=1400 exact_match=0.0352 mean_joint_log_probability=-12.3810
+step=1410 train_loss=0.0910 gradient_norm=2.1671 examples_per_second=5826.74
+step=1420 train_loss=0.1416 gradient_norm=2.4611 examples_per_second=5837.51
+step=1430 train_loss=0.1044 gradient_norm=3.7392 examples_per_second=5825.84
+step=1440 train_loss=0.1174 gradient_norm=2.2812 examples_per_second=5853.63
+step=1450 train_loss=0.1172 gradient_norm=2.2444 examples_per_second=5823.02
+step=1460 train_loss=0.1435 gradient_norm=2.6791 examples_per_second=5841.21
+step=1470 train_loss=0.1038 gradient_norm=2.3604 examples_per_second=5854.02
+step=1480 train_loss=0.0923 gradient_norm=2.1826 examples_per_second=5830.58
+step=1490 train_loss=0.0941 gradient_norm=2.6615 examples_per_second=5842.05
+step=1500 train_loss=0.0685 gradient_norm=1.6353 examples_per_second=5869.40
+step=1500 exact_match=0.0469 mean_joint_log_probability=-12.7267
+step=1510 train_loss=0.1545 gradient_norm=2.9192 examples_per_second=5850.99
+step=1520 train_loss=0.0685 gradient_norm=1.9420 examples_per_second=5818.09
+step=1530 train_loss=0.0940 gradient_norm=2.1976 examples_per_second=5822.19
+step=1540 train_loss=0.0763 gradient_norm=2.0585 examples_per_second=5846.98
+step=1550 train_loss=0.0710 gradient_norm=1.6458 examples_per_second=5845.79
+step=1560 train_loss=0.0747 gradient_norm=1.7883 examples_per_second=5845.99
+step=1570 train_loss=0.1063 gradient_norm=2.8008 examples_per_second=5845.02
+step=1580 train_loss=0.0594 gradient_norm=1.4742 examples_per_second=5830.64
+step=1590 train_loss=0.0858 gradient_norm=2.1677 examples_per_second=5832.53
+step=1600 train_loss=0.0770 gradient_norm=2.0417 examples_per_second=5831.90
+step=1600 exact_match=0.0430 mean_joint_log_probability=-13.3070
+step=1610 train_loss=0.0875 gradient_norm=2.1412 examples_per_second=5827.62
+step=1620 train_loss=0.1035 gradient_norm=2.5470 examples_per_second=5842.35
+step=1630 train_loss=0.0573 gradient_norm=1.5701 examples_per_second=5823.91
+step=1640 train_loss=0.1074 gradient_norm=3.0464 examples_per_second=5812.82
+step=1650 train_loss=0.0548 gradient_norm=1.3004 examples_per_second=5839.18
+step=1660 train_loss=0.0582 gradient_norm=1.7954 examples_per_second=5841.94
+step=1670 train_loss=0.0886 gradient_norm=2.8387 examples_per_second=5841.03
+step=1680 train_loss=0.0564 gradient_norm=1.5905 examples_per_second=5847.49
+step=1690 train_loss=0.0572 gradient_norm=2.0660 examples_per_second=5827.94
+step=1700 train_loss=0.1440 gradient_norm=3.2267 examples_per_second=5828.28
+step=1700 exact_match=0.0312 mean_joint_log_probability=-13.4128
+step=1710 train_loss=0.0658 gradient_norm=2.8346 examples_per_second=5786.48
+step=1720 train_loss=0.0464 gradient_norm=1.2977 examples_per_second=5813.16
+step=1730 train_loss=0.0657 gradient_norm=1.6441 examples_per_second=5832.53
+step=1740 train_loss=0.0499 gradient_norm=2.0058 examples_per_second=5813.23
+step=1750 train_loss=0.0642 gradient_norm=1.7636 examples_per_second=5825.57
+step=1760 train_loss=0.0605 gradient_norm=2.0428 examples_per_second=5796.98
+step=1770 train_loss=0.0447 gradient_norm=1.5962 examples_per_second=5782.50
+step=1780 train_loss=0.0574 gradient_norm=1.6345 examples_per_second=5815.57
+step=1790 train_loss=0.0282 gradient_norm=0.9287 examples_per_second=5783.55
+step=1800 train_loss=0.0313 gradient_norm=1.0461 examples_per_second=5828.41
+step=1800 exact_match=0.0430 mean_joint_log_probability=-13.7452
+step=1810 train_loss=0.0507 gradient_norm=1.5650 examples_per_second=5808.95
+step=1820 train_loss=0.0521 gradient_norm=1.4278 examples_per_second=5823.93
+step=1830 train_loss=0.0426 gradient_norm=1.6156 examples_per_second=5861.07
+step=1840 train_loss=0.0574 gradient_norm=1.8594 examples_per_second=5818.38
+step=1850 train_loss=0.0482 gradient_norm=1.8899 examples_per_second=5820.63
+step=1860 train_loss=0.0660 gradient_norm=2.2368 examples_per_second=5827.92
+step=1870 train_loss=0.0381 gradient_norm=1.4588 examples_per_second=5780.14
+step=1880 train_loss=0.1033 gradient_norm=3.1341 examples_per_second=5808.12
+step=1890 train_loss=0.0328 gradient_norm=1.1103 examples_per_second=5809.16
+step=1900 train_loss=0.0637 gradient_norm=1.8539 examples_per_second=5825.18
+step=1900 exact_match=0.0430 mean_joint_log_probability=-13.9271
+step=1910 train_loss=0.0800 gradient_norm=2.2785 examples_per_second=5830.76
+step=1920 train_loss=0.0590 gradient_norm=2.2046 examples_per_second=5822.45
+step=1930 train_loss=0.0443 gradient_norm=1.7973 examples_per_second=5831.30
+step=1940 train_loss=0.0857 gradient_norm=3.1550 examples_per_second=5811.63
+step=1950 train_loss=0.0795 gradient_norm=3.2533 examples_per_second=5801.02
+step=1960 train_loss=0.0444 gradient_norm=1.6067 examples_per_second=5832.89
+step=1970 train_loss=0.0448 gradient_norm=1.3866 examples_per_second=5829.81
+step=1980 train_loss=0.0273 gradient_norm=1.1961 examples_per_second=5836.46
+step=1990 train_loss=0.0425 gradient_norm=1.4142 examples_per_second=5806.21
+step=2000 train_loss=0.0387 gradient_norm=1.2826 examples_per_second=5773.21
+step=2000 exact_match=0.0391 mean_joint_log_probability=-14.3073
+TRAINING_COMPLETE run_id=20261016-conlang-jax-v4-8-n1024-s2000-h128-out256-tied-g64 step=2000
+wandb: updating run metadata
+wandb: uploading history steps 181-199, summary, console lines 201-221
+wandb: 
+wandb: Run history:
+wandb:        activation_rms_message_1 ▁▁▂▂▂▃▃▄▄▄▅▅▆▆▆▆▆▆▇▇▇▇▇▇▇█▇▇▇▇▇█▇█▇▇▇█▇█
+wandb:        activation_rms_message_2 ▁▁▁▁▁▂▃▃▃▄▅▅▅▅▅▆▆▆▆▇▆▇▇▇▇▇▇█▇▇▇▇▇▇▇▇▇█▇█
+wandb:         activation_rms_receiver ▁▂▃▄▃▄▄▄▄▄▅▅▅▅▅▅▅▆▆▆▆▆▆▆▆▇▇▇▇▇▇▇████████
+wandb:                eval/exact_match ▆▅▅▂▆▅▁▇▅▅▆▅▅▅█▇▅▇▇▆
+wandb: eval/mean_joint_log_probability ██▇▇▆▆▅▅▄▄▃▃▃▂▂▂▂▁▁▁
+wandb:                     exact_match ▆▅▅▂▆▅▁▇▅▅▆▅▅▅█▇▅▇▇▆
+wandb:             examples_per_second ▃▂▂▃▃▁▁▂▄▄▅▃▇▄▄▆▄▃▅▆▅▄▆▇▄▆▅▅▇▇███▇▇█▇▇▇▇
+wandb:                   gradient_norm █▂▂▂▂▂▃▂▃▃▄▃▃▃▃▄▃▃▃▃▃▃▂▂▂▃▂▂▃▂▂▂▂▂▁▁▂▂▂▁
+wandb:           gradient_norm_agent_1 ▁▁▁▁▁▂▂▃▃▂▅▃▃▆▄▄▅▆▅██▅▅▆▄▆▆▅▅▃▅▅▄▄▃▃▃▃▄▃
+wandb:           gradient_norm_agent_2 ▁▁▁▁▁▂▂▂▃▄▃▄▄▆▆▄▇▇█▅▄▅▆▅▄▄▅▄▃▄▅▂▃▃▂▂▃▄▃▃
+wandb:                             +16 ...
+wandb: 
+wandb: Run summary:
+wandb:        activation_rms_message_1 1.20276
+wandb:        activation_rms_message_2 1.1887
+wandb:         activation_rms_receiver 2.77941
+wandb:                eval/exact_match 0.03906
+wandb: eval/mean_joint_log_probability -14.30732
+wandb:                     exact_match 0.03906
+wandb:             examples_per_second 5773.20933
+wandb:                   gradient_norm 1.28259
+wandb:           gradient_norm_agent_1 0.35112
+wandb:           gradient_norm_agent_2 0.35221
+wandb:                             +16 ...
+wandb: 
+wandb: 🚀 View run 20261016-conlang-jax-v4-8-n1024-s2000-h128-out256-tied-g64 at: https://wandb.ai/kaynelu921-massachusetts-institute-of-technology/conlangs/runs/ypiscnxz
+wandb: ⭐️ View project at: https://wandb.ai/kaynelu921-massachusetts-institute-of-technology/conlangs
+wandb: Synced 5 W&B file(s), 0 media file(s), 0 artifact file(s) and 0 other file(s)
+wandb: Find logs at: ./wandb/run-20261016_042115-ypiscnxz/logs

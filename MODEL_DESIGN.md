@@ -1,11 +1,8 @@
 # Communication model design
 
-This note records the choices in `models.py` and the reasons for them. The
+This note records the choices in `jax_models.py` and the reasons for them. The
 task is the linked-facts game: one shared sender reads each private passage,
-and a receiver (model C) must answer a question from the two messages alone.
-`ControlModel` in `control_model.py` is the single model that sees both
-passages and the question. `train.py` trains the communication model, and
-`control_train.py` trains the control model.
+and a receiver must answer a question from the two messages alone.
 
 ## Choices
 
@@ -14,68 +11,119 @@ passages and the question. `train.py` trains the communication model, and
 | Sender | One Transformer encoder, shared by both agents | You asked for one small model that both agents use. Sharing forces the same code to carry person-to-middle facts and middle-to-answer facts. |
 | Message | 4 vectors, each of size 128, per agent | You asked for 4 tokens and a hidden size of 128. The 4 positions are learned query slots read out of the encoder, so the channel length is fixed even when the passage is hundreds of characters. |
 | Receiver input | Those 8 vectors, then the question | The receiver never sees either passage. Concatenating the messages in agent order keeps which sender said what. |
+| Query-only receiver attention | Disabled by default; optionally question queries over message keys and values | This removes question embeddings from decoder content while retaining question-directed retrieval. The attended values and all later receiver memory come only from the sender messages. |
 | Receiver output | Up to 4 answer tokens | You asked for an answer of at most 4 tokens. Decoding stops at the end token. |
+| Output head | Direct linear projection by default; optional independent hidden width | A configured output hidden size adds one ReLU projection before the vocabulary logits without changing the sender, messages, or Transformer width. |
+| Role gates | Disabled by default; optional separate sender and receiver bottleneck gates | A configured gate width lets each role adapt the tied encoder output without duplicating the encoder. The residual output starts at zero, so enabling gates preserves the initial ungated function. |
+| Communication rounds | One by default; optional second synchronous exchange | In round two, each sender receives the other sender's first-round continuous message alongside its original private input, which creates a direct path for complementary facts to be joined before the receiver. |
 | Width and depth | Hidden 128, 2 layers, 4 heads, feedforward 512 | 128 was requested. Two layers and four heads keep it a small encoder-decoder. Feedforward width is the usual 4 times the hidden size from Attention Is All You Need. Each head is 32 wide. |
+| Sender-only capacity | Defaults to the shared width, depth, heads, and 4x feedforward width; each can be overridden | A sender can use a larger internal Transformer while projecting its four messages back to the receiver width. Both agents still reuse exactly one sender parameter tree. Tied sender/receiver encoders require identical dimensions. |
+| Sender average residual | Disabled by default; optionally four masked regional averages | The content-preserving path partitions valid input tokens into four contiguous equal-population regions and starts as the exact message because the learned sender projection is zero-initialized. This supplies passage-dependent values before the learned communication path has aligned with the receiver. |
 | Attention KV | Standard multi-head attention | One fused query/key/value projection per block, full keys and values for every head. No grouped-query or multi-query attention, and no KV cache. |
 | Channel contents | Continuous hidden states | The joint answer log probability has to train both messages. Continuous vectors let that gradient pass through the sender. A discrete codebook would need an extra sampling step that was not requested. |
 | Tokenizer | Characters for text, one token per answer word | Passages must expose held-out spellings. Answers are 4–13 characters, so a character answer cannot fit in 4 tokens. |
 | Objective | Sum of answer-token log probabilities | You asked for joint log probabilities. The scalar loss is the negative of that sum, averaged over the batch. |
-| Initialization | PyTorch defaults | You asked for standard initializations. Nothing is re-sampled after construction. |
-| Control model | Encoder-decoder in `control_model.py`, hidden 192, 6 heads, 2 layers, feedforward 768 | Same answer objective with no message bottleneck. Width 192 is about twice the parameter count of the 128-wide model, and 6 heads keep each head 32 wide. |
+| Optional bridge supervision | Shared vocabulary head over the person-side sender message | A nonzero weight gives direct training credit for selecting the question-specific middle entity without exposing the label as a model input. |
+| Initialization | Flax linen defaults, with token embeddings drawn from a normal of standard deviation 1 | A wider sender's input projection can use an identity-aligned rectangular kernel. When the average residual is enabled, the learned message projection starts at zero so the initial channel is exactly the regional averages. |
 | Optimizer | AdamW, learning rate `3e-4`, gradient clip `1.0` | AdamW is the usual Transformer optimizer. `3e-4` is a standard small-model step size. The clip limits a step from the large initial embeddings. |
 | Weight decay | `0.01` on matrices, `0` on biases and layer-norm scales | `0.01` is AdamW's usual default. Vector parameters such as layer-norm scales are left without decay so the decay does not shrink them toward zero. |
+| Position encoding | T5 relative attention bias, 32 buckets, maximum distance 128 | Relative buckets preserve order without allocating absolute tables at every supported sequence length. |
 
 Vocabulary size is 2191. Parameter counts, with the shared word embedding listed once:
 
 | Piece | Parameters |
 |---|---|
 | Word embedding shared by the sender and the receiver | 280,448 |
-| Sender, apart from that embedding | 463,104 |
-| Receiver, apart from that embedding | 1,226,255 |
-| Communication model, embedding counted once | 1,969,807 |
-| Control transformer, including its own embedding | 3,117,583 |
+| Sender, apart from that embedding | 397,312 |
+| Receiver, apart from that embedding | 1,209,103 |
+| Communication model, embedding counted once | 1,886,863 |
 
-Agent 1 and agent 2 are the same sender, so they are the same size. The receiver is larger than the sender because it has both an encoder and a decoder. The control model has 3,117,583 parameters, 1.92 times a 128-wide encoder-decoder of the same depth. Hidden size 256 would be 5,073,551 parameters, because the attention and feedforward matrices grow with the square of the width.
+Agent 1 and agent 2 are the same sender, so they are the same size. The receiver
+is larger than the sender because it has both an encoder and a decoder. These
+counts come from the Flax parameter tree for the configuration above.
 
 ## Architecture
 
 Both agents call `Sender`. It prepends 4 learned query embeddings to the
-character embeddings, adds learned absolute positions, and runs a
-batch-first Transformer encoder. The returned message is the encoder state at
-the 4 query positions, shape `(batch, 4, 128)`. `encode_messages` runs that
-same module twice and concatenates on the length axis, shape `(batch, 8, 128)`.
+character embeddings and runs a batch-first Transformer encoder. The returned
+message is the encoder state at the 4 query positions, shape `(batch, 4, 128)`.
+`encode_messages` runs that module twice and concatenates on the length axis,
+shape `(batch, 8, 128)`.
+
+Optional sender-specific width, depth, head count, and feed-forward width leave
+the receiver unchanged. A wider sender applies one input projection before its
+shared encoder and one output projection after the four query states, so the
+public message shape remains `(batch, 4, 128)`. With
+`sender_average_residual`, a parameter-free masked average of four contiguous
+regions is added after the output projection. The projection starts at zero,
+making the initial message exactly passage-dependent while retaining an
+end-to-end learned residual path.
+
+Setting `communication_rounds` to 2 reuses the same sender and its parameters
+for a synchronous second exchange. Each sender sees the other sender's
+first-round message followed by its own original question and passage inputs;
+the receiver sees only the two resulting second-round messages. Reusing the
+sender preserves the parameter tree, while the crossed inputs let either agent
+combine an incoming bridge entity with its complementary private hop.
 
 `Receiver` is an encoder-decoder:
 
-1. The 8 message vectors are placed in positions 0–7. They are not passed
-   through the token embedding, because they are already hidden states.
-2. The question is embedded with the shared token table and placed in the
-   following positions.
+1. The 8 message vectors are concatenated ahead of the question. They are not
+   passed through the token embedding, because they are already hidden states.
+2. The question is embedded with the shared token table and placed after the
+   messages.
 3. A 2-layer encoder mixes the messages with the question. Its output is the
    memory the decoder cross-attends to.
-4. A 2-layer decoder predicts the answer under a causal mask. The output head
-   is a separate linear map from 128 to the vocabulary.
+4. A 2-layer decoder predicts the answer under a causal mask. The default
+   output head is a separate linear map from 128 to the vocabulary. Setting
+   `output_hidden_size` adds a ReLU hidden projection of that width immediately
+   before the vocabulary map while leaving the Transformer width unchanged.
 
-Layer defaults are the PyTorch 2.14 `TransformerEncoderLayer` and
-`TransformerDecoderLayer` defaults, aside from the sizes above: ReLU, post-norm,
-layer-norm epsilon `1e-5`, bias on, dropout 0.1. Post-norm and ReLU are the
-library standard for this block. Pre-norm and GELU were not substituted.
+Setting `receiver_question_query_only` replaces the concatenated receiver
+encoder path with one shared encoder applied separately to the question and the
+eight messages. The encoded question supplies only cross-attention queries; the
+encoded messages supply all keys and values. The cross-attention result has no
+question residual and becomes the decoder memory, so question content can
+select message values but cannot enter the answer decoder directly. This mode
+requires question-blind senders, active receiver question input, and no
+question-specific bridge objective.
 
-Position tables are learned embeddings, not sinusoids. The sender table covers
-4 message slots plus 512 text characters. The receiver encoder table covers 8
-message slots plus 128 question characters. The answer position table has 4
-rows. Measured passages are a few hundred characters and questions are under
-80, so these caps hold the current generator without truncating.
+Setting `tie_sender_receiver_encoder` makes the sender and receiver reuse one
+Transformer encoder stack. Their already-shared token embedding remains tied,
+while the sender query embeddings, receiver decoder, and receiver output head
+remain separate because they have distinct roles and parameter structures.
 
-The encoder is built with `enable_nested_tensor=False`, so padding uses an
-explicit key-padding mask instead of the nested-tensor fast path.
+Setting `role_gate_channels` adds distinct residual adapters after the sender's
+message readout and after the receiver's encoder memory. Each adapter projects
+the hidden state into the configured bottleneck twice: one ReLU candidate and
+one sigmoid gate whose bias starts at `-2`. Their product is projected back to
+the Transformer width and added to the original state. The final projection is
+zero-initialized, so the adapter begins as an exact identity. Sender and
+receiver gate parameters remain separate even when their encoder stack is tied.
+
+Each block is post-norm with ReLU and dropout 0.1, built from Flax
+`MultiHeadDotProductAttention` and `Dense`. Attention softmax runs in float32.
+`deterministic` is passed on every call, so evaluation disables dropout even
+after a training call has built the module. Pre-norm and GELU were not substituted.
+
+Sequence order comes from a T5 relative attention bias, not from absolute
+position embeddings. Each head has 32 learned buckets. Offsets up to half of
+the buckets are exact, and longer offsets share logarithmic buckets out to
+distance 128. Encoder self-attention and decoder cross-attention are
+bidirectional. Decoder self-attention only buckets distances into the past.
+The 4 sender query slots stay learned content vectors; their order relative
+to the passage comes from this bias. Measured passages are a few hundred
+characters and questions are under 80, so the configured caps of 512 and 128
+hold the current generator without truncating.
+
+Padding uses an explicit boolean attention mask.
 
 ## KV structure
 
-Inside each attention block, query, key, and value share one projection
-(`in_proj_weight`, shape `(3 * 128, 128)`), initialized with Xavier uniform.
-The output projection is a separate linear layer. There is no extra KV bias
-and no zero-attention slot. Four heads each see 32-dimensional keys and values.
+Inside each attention block, query, key, and value are produced for every head
+and the heads are mixed by an output projection. There is no grouped-query or
+multi-query attention and no KV cache. Four heads each see 32-dimensional keys
+and values.
 
 The communication channel is not a token KV cache. It is the 8 continuous
 vectors. After the receiver encoder, those vectors and the question tokens
@@ -111,7 +159,7 @@ projection is not tied to it.
 
 Teacher forcing shifts the target right and starts the decoder at `<bos>`. For
 an answer encoded as `[word, eos]` and padded to 4, the scored tokens are the
-word and the end token. Padding positions use `ignore_index` and add nothing.
+word and the end token. Padding positions are masked out of the sum.
 
 ```text
 log p(answer | messages, question) = sum_t log p(answer_t | answer_<t, messages, question)
@@ -121,58 +169,51 @@ loss = -mean_batch of that sum
 The sum is the joint probability of the answer string. A mean over tokens would
 treat a short answer and a long one as the same number of decisions, which is a
 different objective. `CommunicationOutput.joint_log_probability` is the per-row
-sum. `loss` is what a minimizer should step on. The control transformer uses the
-same sum, with the full character context in place of the two messages.
+sum. `loss` is what a minimizer should step on.
+
+When `bridge_supervision_weight` is positive, one shared vocabulary projection
+also reads the mean of each sender's final message vectors. Training selects
+only the sender that holds the target person's person-to-middle fact and adds
+its middle-entity cross-entropy to the answer loss at the configured weight.
+The bridge and sender-side labels come from generator metadata and are never
+model inputs. Evaluation reports bridge accuracy for intact messages and each
+causal message intervention. A zero weight omits the projection entirely, so
+existing parameter trees and checkpoints remain unchanged.
 
 ## Initialization
 
-No custom reset runs after module construction.
-
-| Parameter | Scheme |
-|---|---|
-| Token, position, and query embeddings | Normal with mean 0 and standard deviation 1. The padding row of the token embedding stays zero. |
-| Attention input projection | Xavier uniform. Its bias is zero. |
-| Attention output projection and the vocabulary projection | Kaiming uniform on the weights, which is PyTorch's linear default. Attention output bias is then set to zero by the attention module. The vocabulary bias uses the linear default. |
-| Feedforward linears | Kaiming uniform, the linear default. |
-| Layer norm | Weight 1, bias 0. |
-
-## Control transformer
-
-`ControlModel` in `control_model.py` is one encoder-decoder with hidden size 192, 6 heads, 2
-layers, and feedforward width 768. Dropout and initialization match the other
-models. Its input is the character
-sequence `agent 1 passage + agent 2 passage + question`, capped at 1024
-positions. Measured full contexts reach 944 characters. It has no query slots
-and no message bottleneck. The answer head is the same 4-token decoder, and the
-loss is the same joint log probability.
+Token embeddings, the sender query slots, and the relative-position bucket
+tables use a normal initializer with standard deviation 1. The other
+projections and layer norms use Flax linen defaults. Nothing is re-sampled
+after the module is built.
 
 ## Training
 
-`train.py` trains the communication model. `control_train.py` trains the control model on the same loss and the same optimizer settings. Both read a generated dataset directory and optimize that loss with
-AdamW. Matrices, including the `N(0, 1)` embeddings, use weight decay `0.01`.
-Biases and layer-norm scales use weight decay `0`. The learning rate is
-`3e-4`, the gradient clip is `1.0`, and the batch size is 32. There is no
-learning-rate schedule. Evaluation runs the model in eval mode, so dropout is
-off, and reports greedy exact match. `greedy_answer_token_ids` itself does not
-switch modes.
+`train.py` trains the communication model with JAX, Flax, and Optax. It pads
+every passage, question, and answer to one configured static shape, tokenizes
+the dataset once on the host, shards each global batch across all local TPU
+devices with `jax.pmap`, and averages gradients across those devices. This
+avoids shape-driven recompilation and per-step Python tokenization on TPU.
 
-Both trainers log to the Weights & Biases project `conlangs` unless
-`--disable-wandb` is set. Each step records the loss, the answer-token
-distribution, global and per-module weight and gradient norms, and activation
-RMS. For the communication model the three gradient series are the agent-1
-sender path, the agent-2 sender path, and the receiver, with the shared
-embedding split across those paths. Each series also logs the value distribution
-of its four intermediate vectors.
+The JAX path uses AdamW with learning rate `3e-4`, matrix-only weight decay
+`0.01`, gradient clipping at `1.0`, and no learning-rate schedule. The TPU gate
+uses bfloat16 model compute with float32 log-softmax and loss calculations.
+Evaluation disables dropout and reports greedy exact match.
 
-On a TPU, omit `--dataset-dir`. The trainers read the instance zone, select the one
-`kmh-gcp` bucket whose location is that region, and stage
-`kristine/datasets/conlangs` from that bucket. A zone in another region never
-falls back to the us-west4 copy. A local directory is only used when
-`--dataset-dir` is passed.
+At the logging interval, the trainer writes one `outputs.jsonl` record with the
+greedy answer token ids, decoded strings, targets, and the fraction whose second
+token is the end token. It also records loss, the full gradient norm, separate
+gradient norms for the agent-1 sender path, the agent-2 sender path, and the
+receiver, weight norms, activation root-mean-squares, and fixed-bin histograms
+of the two message vectors and the receiver activation. Generated vocabulary
+telemetry is a compact token-ID histogram containing only the 100 most frequent
+generated tokens at that step; W&B receives no vocabulary table or
+full-vocabulary array. Throughput accounting excludes compilation, warmup,
+evaluation, and W&B logging. On TPU, omitting `dataset_dir` makes the trainer verify
+the TPU zone, require the matching regional bucket, and use the configured
+node-local cache under `/home/<user>/elf-data/`.
 
 ```bash
-python train.py --dataset-dir datasets/linked_facts_v1
-python control_train.py --dataset-dir datasets/linked_facts_v1
-python train.py
-python control_train.py
+JAX_PLATFORMS=cpu python train.py --dataset-dir datasets/linked_facts_v1 --disable-wandb
+JAX_PLATFORMS=tpu python train.py --config configs/conlang-jax-v5e8-gate1.yaml
 ```
