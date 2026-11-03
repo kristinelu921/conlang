@@ -1,0 +1,148 @@
+{
+  "schema_version": 1,
+  "status": "completed",
+  "model": "HuggingFaceTB/SmolLM2-135M",
+  "model_revision": "93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
+  "dataset": "openai/gsm8k",
+  "dataset_revision": "740312add88f781978c0658806c59bc2815b9866",
+  "split_seed": 20261102,
+  "selection_train_examples": 6726,
+  "validation_examples": 747,
+  "refit_train_examples": 7473,
+  "test_examples": 1319,
+  "test_used_for_selection": false,
+  "precision": "float32",
+  "hardware": "single dedicated Spot v5e-8",
+  "evaluation": {
+    "accuracy": "strict exact match",
+    "loss": "unweighted query-answer-token NLL including rationale and EOS",
+    "loss_units": "nats per answer token",
+    "decoding": "greedy",
+    "max_generated_tokens": 256,
+    "conditions_num_fewshot": [
+      0,
+      5
+    ],
+    "fewshot_seed": 1234
+  },
+  "optimizer": {
+    "name": "AdamW",
+    "beta1": 0.9,
+    "beta2": 0.999,
+    "epsilon": 1e-08,
+    "gradient_clip_norm": 1.0
+  },
+  "id": "matched-loss",
+  "configuration": {
+    "initialize_from": "pinned base model; never the previous full-data refits",
+    "trainable_parameters": "all, with tied input embedding and output projection",
+    "dtype": "float32",
+    "matmul_precision": "highest",
+    "batch_size": 32,
+    "gradient_accumulation": 4,
+    "maximum_epochs": 8,
+    "minimum_epochs": 3,
+    "patience": 3,
+    "schedule_epochs": 12,
+    "seed": 1234,
+    "warmup_fraction": 0.03,
+    "final_learning_rate_ratio": 0.1,
+    "weight_decay": 0.01,
+    "adam_beta1": 0.9,
+    "adam_beta2": 0.999,
+    "adam_epsilon": 1e-08,
+    "gradient_clip_norm": 1.0,
+    "label_smoothing": 0.0,
+    "final_answer_weight": 1.0,
+    "packing": false,
+    "truncation": false,
+    "loss": "globally token-weighted, shifted, query-answer-only cross entropy including rationale and EOS; demonstrations, query prompt and padding have zero loss weight",
+    "sequence_width": "resolve from complete token lengths before launch; bucket if needed, never exceed pinned model context; reject incomplete five-shot prompts",
+    "id": "loss-final",
+    "learning_rate": 0.0001,
+    "five_shot_training_fraction": 0.5,
+    "canonical_candidate_id": "matched-02",
+    "epochs": 3,
+    "final_fit": true,
+    "microbatch_size": 8,
+    "selection_objective": "minimum_zero_shot_validation_nll"
+  },
+  "five_shot_training_fraction": 0.5,
+  "gradient_accumulation": 4,
+  "selection": {
+    "criterion": "minimum_zero_shot_validation_nll",
+    "trial_id": "matched-02-r1",
+    "epoch": 3,
+    "locked_unix_seconds": 1793683851.3949428,
+    "parent_lock_sha256": "56423de9991cb1edf8558d5fc987216cbb1a8ddab5e5b6ee1ea219c5b04918f7",
+    "zero_shot_validation_nll": 0.6039251038907746,
+    "five_shot_validation_nll": 0.6065599939574664,
+    "zero_shot_validation_correct": 50,
+    "five_shot_validation_correct": 54
+  },
+  "metrics": {
+    "train_nll": 0.36718925344499126,
+    "test_nll": 0.600561287790018,
+    "zero_shot_correct": 93,
+    "zero_shot_accuracy": 0.07050796057619409,
+    "five_shot_correct": 98,
+    "five_shot_accuracy": 0.07429871114480667
+  },
+  "optimizer_updates": 702,
+  "wandb_training_url": "https://wandb.ai/kaynelu921-massachusetts-institute-of-technology/conlangs/runs/8x5c6wvb",
+  "wandb_benchmark_url": "https://wandb.ai/kaynelu921-massachusetts-institute-of-technology/conlangs/runs/4i3e0obw",
+  "model_gcs_directory": "gs://kmh-gcp-us-west4/kristine/smollm2-gsm8k-matched-validation-20261103/loss-refit/balanced-final-model-fp32/",
+  "model_manifest": {
+    "status": "complete",
+    "step": 702,
+    "source_checkpoint": "gs://kmh-gcp-us-west4/kristine/smollm2-gsm8k-matched-validation-20261103/loss-refit/checkpoints/loss-final-epoch03",
+    "source_checkpoint_sha256": "00383b2b9b311c0f46b64d161a3ed9aea393a4da1f0e0e58b1181017b6b00031",
+    "files": [
+      {
+        "name": "config.json",
+        "bytes": 736,
+        "sha256": "19bdca71fb88864db2e8fcebb66c29d59eba10ccd3c09d195728aa57dee902db"
+      },
+      {
+        "name": "generation_config.json",
+        "bytes": 111,
+        "sha256": "43d1f83d871a388f486b86713426772920fbe4bd59e2d16013b65ebc91760b4c"
+      },
+      {
+        "name": "merges.txt",
+        "bytes": 466391,
+        "sha256": "0b54e8aa4e53d5383e2e4bc635a56b43f9647f7b13832d5d9ecd8f82dac4f510"
+      },
+      {
+        "name": "model.safetensors",
+        "bytes": 538090408,
+        "sha256": "95643cd9f63a1d6a12c8cd86d559e117262ae0cc87bc6967d1f307f2a347c1f6"
+      },
+      {
+        "name": "special_tokens_map.json",
+        "bytes": 863,
+        "sha256": "847a47bace54f9f5e1eaade1c5584a917c2d4bd8ae382c2779d0d4a7f5677087"
+      },
+      {
+        "name": "tokenizer.json",
+        "bytes": 3522656,
+        "sha256": "7d27c493c729a66ecefc837280b05d948b1ed50d130eebdbf911b1b36cf38ed7"
+      },
+      {
+        "name": "tokenizer_config.json",
+        "bytes": 3720,
+        "sha256": "7d282e6bc097cad322ef8df614312cca2ffa25034d9dfd2a94999554c8b4e5d7"
+      },
+      {
+        "name": "vocab.json",
+        "bytes": 800662,
+        "sha256": "82b84012e3add4d01d12ba14442026e49b8cbbaead1f79ecf3d919784f82dc79"
+      }
+    ]
+  },
+  "provenance": {
+    "training_source_manifest_sha256": "ad401734ecda702bde838ce8e9d8625b2c07461862b650cf11fa8eec6ba0b8da",
+    "preserved_archive_sha256": "23ca5d783807eede73fa3257793d2d37cdea708ffeadcd054a5856497abcb7ba",
+    "wrapper_source_manifest_sha256": "880e4101fcfecd3d08f1ee7904450d0f552e5772ba2b31327d46c48f55155093"
+  }
+}
