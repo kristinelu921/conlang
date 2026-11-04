@@ -175,3 +175,7 @@ A small prompt ablation cannot establish general collaborative improvement.
 - 2026-11-04: source bucket location verified US-WEST4. Correctness review completed; added explicit configured-cap enforcement to supervisor and trainer before workload startup. Draft PR #4 opened.
 
 - 2026-11-04: both required read-only reviews complete; C1 implemented, no cleanup findings. Coordinator syntax, scope, diff, and all three baseline split SHA-256/byte checks passed. Runtime readiness remains pending authorized remote tests and full-model gates. No new TPU or workload has been started.
+
+- 2026-11-04: immutable snapshot prepared at `/kmh-nfs-ssd-us-mount/staging/kristine/elf/qwen3-peer-forward-step-20261104-f6cf33e-20261104T012506.552053195Z`; every peer_tree_rl source/config file verified byte-identical to selected revision f6cf33edde5f4f2768eddab19ce85654fd96e19f. Preparation receipt: `/tmp/qwen-peer-forward-step-preparation.json`. Compute authorization remains pending.
+
+- 2026-11-04: user refined the intervention: each non-final message must share a concrete forward step and then ask the partner one focused question. Final submission remains allowed. Updated the prompt and its JSON example together; parser/reward/configuration are unchanged. Coordinator syntax and source-copy consistency checks passed. The two prior critic passes are retained; no third critic was run. A new source snapshot will supersede the previously prepared snapshot. Remote validation and compute authorization remain pending.

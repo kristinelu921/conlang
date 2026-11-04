@@ -8,7 +8,8 @@ a collaborative gain. See the [experiment report](../../experiment_log/2026-11-0
 and [verified result summary](../../experiment_log/2026-11-03/qwen3-peer-tree-pilot-e225874-results.json).
 
 The selected forward-step rerun uses `forward_step.json` and adds an explicit
-instruction to advance the solution on each turn. It starts from pretrained
+instruction to advance the solution on each turn and ask a focused follow-up
+question in each non-final message. It starts from pretrained
 weights with fresh adapters and reuses the original byte-verified train,
 validation, and test splits; otherwise, the longer prompt could change the
 length filter and seeded question selection. The parser, reward, sampling,
