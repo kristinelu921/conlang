@@ -9,7 +9,7 @@
 | Started | not recorded |
 | Finished | not recorded |
 | Baseline | pilot-e225874-attempt-02, source e225874c4f019b38947c91737d942834abaf45ae |
-| Git revision | d14d4c0f49d52d0546a37d9bd2e85d087655fb0b (initial preparation; follow-up cap fix pending commit) |
+| Git revision | f6cf33edde5f4f2768eddab19ce85654fd96e19f (selected code/config revision) |
 | Pull request | https://github.com/kristinelu921/conlang/pull/4 |
 | Seed | 20261103 |
 | Hardware | proposed one new kristine Spot v5litepod-8 in us-west4-a; user approval pending |
@@ -155,7 +155,7 @@ outputs, and terminal evidence will be preserved and sent to W&B.
 | Pass | Reviewed head | Findings and resolution | Verification |
 |---|---|---|---|
 | Correctness | d14d4c0f49d52d0546a37d9bd2e85d087655fb0b | C1: configured compute cap was unused; both entry points now enforce it | Static producer/caller trace passed; remote 7200/7201/86400-second boundary tests pending authorization |
-| Cleanup | pending | pending | pending |
+| Cleanup | f6cf33edde5f4f2768eddab19ce85654fd96e19f | NO_CONFIRMED_FINDINGS | Static diff/scope and producer/caller checks passed; remote tests pending authorization |
 
 ## Failure Details
 
@@ -173,3 +173,5 @@ A small prompt ablation cannot establish general collaborative improvement.
 - 2026-11-04: prepared exact rerun; awaiting review and explicit compute authorization.
 
 - 2026-11-04: source bucket location verified US-WEST4. Correctness review completed; added explicit configured-cap enforcement to supervisor and trainer before workload startup. Draft PR #4 opened.
+
+- 2026-11-04: both required read-only reviews complete; C1 implemented, no cleanup findings. Coordinator syntax, scope, diff, and all three baseline split SHA-256/byte checks passed. Runtime readiness remains pending authorized remote tests and full-model gates. No new TPU or workload has been started.
