@@ -36,7 +36,7 @@ def file_record(path: Path) -> dict:
     return {"name": path.name, "bytes": path.stat().st_size, "sha256": digest.hexdigest()}
 
 
-def require_remote(receipt: dict, source: Path) -> None:
+def require_remote(receipt: dict, source: Path, maximum_compute_seconds: int = 86400) -> None:
     """Fail before data or model imports unless this is the explicitly audited remote VM."""
     if (socket.gethostname() != receipt["remote_hostname"] or socket.gethostname() == receipt["control_hostname"]
             or "kristine" not in receipt["tpu_name"].lower() or receipt["tpu_type"] != "v5litepod-8"
@@ -44,9 +44,9 @@ def require_remote(receipt: dict, source: Path) -> None:
             or receipt["zone"].rsplit("-", 1)[0] != receipt["region"]):
         raise PermissionError("This program requires the exact authorized remote single-host Spot TPU.")
     if time.time() >= receipt["deadline_unix_seconds"]:
-        raise TimeoutError("The persisted 24-hour allocation budget has expired.")
-    if not 0 < receipt["deadline_unix_seconds"] - receipt["allocation_created_unix_seconds"] <= 86400:
-        raise ValueError("The allocation deadline must be within the authorized 24 hours.")
+        raise TimeoutError("The persisted allocation budget has expired.")
+    if not 0 < receipt["deadline_unix_seconds"] - receipt["allocation_created_unix_seconds"] <= maximum_compute_seconds <= 86400:
+        raise ValueError("The allocation deadline exceeds the configured compute cap or absolute 24-hour maximum.")
     for relative_path, expected in receipt["source_sha256"].items():
         if file_record(source / relative_path)["sha256"] != expected:
             raise ValueError(f"Immutable source verification failed: {relative_path}")
@@ -491,8 +491,8 @@ def main() -> None:
     arguments = parser.parse_args()
     source = Path(__file__).resolve().parent
     receipt = json.loads(arguments.receipt.read_text())
-    require_remote(receipt, source)
     settings = json.loads(arguments.config.read_text())
+    require_remote(receipt, source, settings["maximum_compute_seconds"])
     validate_settings(settings)
     if not str(arguments.output.resolve()).startswith("/home/kristinelu/peer-tree/"):
         raise PermissionError("Outputs must remain in the dedicated node-local pilot directory.")

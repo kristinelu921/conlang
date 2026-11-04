@@ -21,8 +21,9 @@ def main() -> None:
     parser.add_argument("--resume", type=Path)
     arguments = parser.parse_args()
     receipt = json.loads(arguments.receipt.read_text())
+    settings = json.loads(arguments.config.read_text())
     from run import require_remote
-    require_remote(receipt, Path(__file__).resolve().parent)
+    require_remote(receipt, Path(__file__).resolve().parent, settings["maximum_compute_seconds"])
     deadline = receipt["deadline_unix_seconds"]
     attempt = arguments.output.parent / (arguments.output.name + "-supervisor")
     attempt.mkdir(parents=True, exist_ok=False)

@@ -131,6 +131,10 @@ class LifecycleTests(unittest.TestCase):
             require_remote(receipt, Path("/home/kristinelu/peer-tree/source"))
             with self.assertRaises(ValueError):
                 require_remote({**receipt, "deadline_unix_seconds": 87401}, Path("/home/kristinelu/peer-tree/source"))
+            require_remote({**receipt, "deadline_unix_seconds": 8200}, Path("/home/kristinelu/peer-tree/source"), 7200)
+            for deadline in (8201, 87400):
+                with self.subTest(deadline=deadline), self.assertRaisesRegex(ValueError, "configured compute cap"):
+                    require_remote({**receipt, "deadline_unix_seconds": deadline}, Path("/home/kristinelu/peer-tree/source"), 7200)
 
 
 if __name__ == "__main__":
