@@ -149,3 +149,15 @@ requested scoring while retaining the no-history state.
 ## Updates
 
 - Prepared and explicitly authorized on 2026-11-03 (America/New_York).
+
+## Review ledger
+
+| Pass | Reviewed base / head | Result | Verification |
+|---|---|---|---|
+| Correctness | 9cd6c6e / 0c7c33b | NO_CONFIRMED_FINDINGS | Read-only producer/caller/config/test trace; remote tests pending |
+| Cleanup | 9cd6c6e / 0c7c33b | NO_CONFIRMED_FINDINGS | Diff/scope check; optional README grammar and strict-scoring qualification corrected |
+
+Preflight found `/tmp/tpu_logs` owned by sqa:sqa mode 0775 and not writable
+by kristinelu. No launch attempted and no collaborator files modified. Checking
+for a supported run-owned log destination before proceeding. Runtime freeze
+differs from the earlier pilot; exact core package compatibility remains a gate.

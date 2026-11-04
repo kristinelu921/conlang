@@ -13,7 +13,7 @@ question in each non-final message. It starts from pretrained
 weights with fresh adapters and reuses the original byte-verified train,
 validation, and test splits; otherwise, the longer prompt could change the
 length filter and seeded question selection. The parser, reward, sampling,
-seed, and 32-tree limit are unchanged. A new two-hour compute allocation is
+seed, and 32-tree limit are unchanged. A two-hour compute allocation
 was used for that completed run. See the
 [rerun report](../../experiment_log/2026-11-04/qwen3-peer-forward-step.md).
 
@@ -33,7 +33,7 @@ chosen message and context. There is no scratchpad or automatic transcript
 sharing. A message can ask a specific subquestion or answer the partner. Either
 peer can submit a final answer; submission ends that trajectory. An eight-message
 limit, malformed action, or truncated action without a valid submission yields
-zero terminal reward. Prompt tokens remain visible and have no token-level loss.
+zero terminal reward under strict scoring. Prompt tokens remain visible and have no token-level loss.
 
 For the requested looser scoring, set `"answer_matching": "integer_search"` in
 the next run's configuration. This searches only the final generated response
