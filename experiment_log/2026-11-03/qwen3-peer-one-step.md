@@ -5,8 +5,8 @@
 | Field | Value |
 |---|---|
 | Run ID | one-step-20261103-attempt-01 |
-| Status | running |
-| Started / finished | not recorded |
+| Status | completed |
+| Started / finished | approximately 2026-11-03 23:47 / 2026-11-04 00:03 America/New_York; exact event timestamps retained |
 | Baseline | progress-when-able-20261103-attempt-01, source ce8b4b3 |
 | Git revision / PR | 29f2609518ae4027cb7fd882b2222ab4c6b625a8 / https://github.com/kristinelu921/conlang/pull/4 |
 | Seed | 20261103 |
@@ -167,3 +167,74 @@ Answer-search may reward incidental mentions; strict metrics remain separate.
   timestamp. Started the exact planned supervisor command and one 60-second
   monitor (`/tmp/qwen-peer-one-step-monitor.py`). Numerical/first-update gates
   pending; no new allocation or deadline extension.
+
+## Final verified results
+
+All 32 trees completed with stop reason `tree_limit`; supervisor exit 0 and
+`deadline_expired=false`. W&B is finished, trainer exited, and final VFIO
+occupancy is AVAILABLE. No new TPU was provisioned; the existing authorized
+allocation remains intact and idle. The original deadline was not reset.
+
+| Metric (higher is better) | Before RL | After RL |
+|---|---:|---:|
+| MATH validation answer-search | 7/16 (43.75%) | 8/16 (50%) |
+| MATH validation strict pass@1 | 1/16 (6.25%) | 1/16 (6.25%) |
+| AIME 2024 answer-search | 0/30 | 0/30 |
+| AIME 2024 strict pass@1 | 0/30 | 0/30 |
+
+Single-agent control: 2/30 under both rules, 50,131 generated tokens.
+
+| Training diagnostic | Progress-when-able | Exactly one step |
+|---|---:|---:|
+| Trees | 32 | 32 |
+| Distinct sampled messages | 82 | 196 |
+| Agent A / B messages | 80 / 2 | 122 / 74 |
+| Valid handoffs (`reason=message`) | 1 | 84 |
+| Terminal leaves | 81 | 112 |
+| Answer-search rewarded leaves | 27 | 48 |
+| Positive-credit message actions | 0 | 42 |
+| Optimizer updates A / B | 32 / 1 | 37 / 13 |
+
+The one-step prompt produces substantially more protocol-valid handoffs in this
+fixed-seed pilot. That is evidence of increased participation, not proof of
+greater combined intelligence. RL adds one answer-search hit on 16 validation
+questions; strict validation is unchanged and AIME remains zero. Search can
+reward incidental mentions. Do not treat shared tree leaves as independent
+benchmark samples or count every positive message action as a useful question.
+
+Training transitions: 84 messages, 26 submitted, 41 token-limit, 29 invalid-JSON,
+eight invalid-schema, and eight turn-limit endings. Format and length failures
+therefore remain material. After RL, validation ends with nine token-limit,
+five invalid-JSON and two submitted responses; AIME has 27 token-limit and three
+invalid-JSON responses.
+
+## Verification and artifacts
+
+- All 30 remote CPU tests passed in 11.534 seconds. No experiment tests ran on
+  the development host.
+- Full-model logit parity passed (max difference 2.288818359375e-05, tolerance
+  0.02; greedy next token matches). Sampling/replay max difference
+  1.9073486328125e-05 across 921 tokens. Finite-update, memory and checkpoint
+  gates passed; peak device-memory fraction 0.821671020806612.
+- Training phase elapsed 603.103109906001 seconds. Final supervisor time was
+  1793768605.9431427, earlier than the unchanged deadline 1793773097.0003126.
+- All 56 checkpoint files independently redownloaded and size/SHA-256 verified
+  on the remote VM. All 53 local evidence files match the durable manifest.
+  One transient SCP transport error retried automatically; exit was zero and
+  all hashes passed. This was not a model or training failure.
+- W&B (verified finished): https://wandb.ai/kaynelu921-massachusetts-institute-of-technology/conlangs/runs/rqv0b3tt
+- Durable checkpoint (verified): `gs://kmh-gcp-us-west4/kristine/qwen3-peer-one-step-20261104-0445/attempts/one-step-20261103-attempt-01/checkpoints/completed`
+- Complete metrics/gates: `qwen3-peer-one-step-29f2609-results.json`.
+- Raw local evidence: `/tmp/qwen-peer-one-step-artifacts/evidence`.
+- New exact-input/output viewer: http://localhost:60805/one-step-trees/ .
+- Previous viewers and artifacts preserved.
+- Remote console, summary, test log and verification helper archived under
+  the checkpoint's sibling `analysis/` prefix.
+- The single read-only monitor exited on the supervisor terminal sentinel.
+
+## Remaining limitations
+
+One seed, 32 training questions, 16 validation questions and 30 AIME problems;
+no pretrained contamination audit, no reliable semantic verifier, and a fixed
+256-token message limit. More conversation does not establish useful
+collaboration. No further run was launched.
