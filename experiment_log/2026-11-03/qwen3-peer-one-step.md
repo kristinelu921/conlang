@@ -5,10 +5,10 @@
 | Field | Value |
 |---|---|
 | Run ID | one-step-20261103-attempt-01 |
-| Status | planned |
+| Status | running |
 | Started / finished | not recorded |
 | Baseline | progress-when-able-20261103-attempt-01, source ce8b4b3 |
-| Git revision / PR | pending / https://github.com/kristinelu921/conlang/pull/4 |
+| Git revision / PR | 29f2609518ae4027cb7fd882b2222ab4c6b625a8 / https://github.com/kristinelu921/conlang/pull/4 |
 | Seed | 20261103 |
 | Hardware | existing authorized kristine Spot v5litepod-8, us-west4-a |
 
@@ -142,3 +142,28 @@ Answer-search may reward incidental mentions; strict metrics remain separate.
 ## Updates
 
 - Prepared 2026-11-03 America/New_York under the unchanged authorized deadline.
+
+## Review ledger
+
+| Pass | Base / head | Findings | Verification |
+|---|---|---|---|
+| Correctness | 2cc2bb8 / 29f2609 | NO_CONFIRMED_FINDINGS | Prompt/state/generation/replay and persisted-budget trace; remote tests pending |
+| Cleanup | 2cc2bb8 / 29f2609 | NO_CONFIRMED_FINDINGS | Full diff, config closure and documentation inspection |
+
+- Selected source `29f2609518ae4027cb7fd882b2222ab4c6b625a8` pushed to PR #4.
+  Immutable snapshot:
+  `/kmh-nfs-ssd-us-mount/staging/kristine/elf/qwen3-peer-one-step-29f2609-20261104T044513.114998020Z`.
+- Fresh inventory reports the exact authorized v5e-8 AVAILABLE with runtime READY.
+  Cloud creation timestamp matches the previous receipt; READY/HEALTHY/Spot.
+- Deadline remains 1793773097.0003126. Separate source, output, checkpoint and
+  W&B identities preserve the completed prior run.
+
+- All 30 immutable-source remote CPU tests passed in 11.534 seconds. Full command
+  is the planned environment with `JAX_PLATFORMS=cpu` and
+  `python -m unittest -v test_protocol test_backend test_lifecycle`; evidence
+  `/tmp/qwen-peer-one-step-stage-tests.log`. Source and same-region dataset
+  hashes and storage upload/readback verified by staging.
+- Final occupancy AVAILABLE, API READY/HEALTHY/Spot with same Cloud creation
+  timestamp. Started the exact planned supervisor command and one 60-second
+  monitor (`/tmp/qwen-peer-one-step-monitor.py`). Numerical/first-update gates
+  pending; no new allocation or deadline extension.
