@@ -1,0 +1,150 @@
+{
+  "status": "completed",
+  "source_commit": "ce8b4b305a4fcfeec555d01ea2a7082c3516f584",
+  "deadline_unix_seconds": 1793773097.0003126,
+  "durable_checkpoint": "gs://kmh-gcp-us-west4/kristine/qwen3-peer-progress-when-able-20261104-0417/attempts/progress-when-able-20261103-attempt-01/checkpoints/completed",
+  "verified_file_count": 56,
+  "checkpoint_manifest": {
+    "name": "complete.json",
+    "bytes": 9325,
+    "sha256": "e2dec2a87c3978f6949ef54209197fbffcd6976c68b828573dde09e61bbc8bc5"
+  },
+  "metrics": {
+    "before_validation": {
+      "correct": 8,
+      "total": 16,
+      "answer_search_rate": 0.5,
+      "answer_matching": "integer_search",
+      "strict_correct": 0,
+      "strict_pass_at_1": 0.0,
+      "generated_tokens": 3845,
+      "terminal_reasons": {
+        "token_limit": 11,
+        "invalid_json": 5
+      }
+    },
+    "after_validation": {
+      "correct": 8,
+      "total": 16,
+      "answer_search_rate": 0.5,
+      "answer_matching": "integer_search",
+      "strict_correct": 0,
+      "strict_pass_at_1": 0.0,
+      "generated_tokens": 3736,
+      "terminal_reasons": {
+        "token_limit": 11,
+        "invalid_json": 5
+      }
+    },
+    "before_aime2024": {
+      "correct": 0,
+      "total": 30,
+      "answer_search_rate": 0.0,
+      "answer_matching": "integer_search",
+      "strict_correct": 0,
+      "strict_pass_at_1": 0.0,
+      "generated_tokens": 7588,
+      "terminal_reasons": {
+        "token_limit": 29,
+        "invalid_json": 1
+      }
+    },
+    "after_aime2024": {
+      "correct": 0,
+      "total": 30,
+      "answer_search_rate": 0.0,
+      "answer_matching": "integer_search",
+      "strict_correct": 0,
+      "strict_pass_at_1": 0.0,
+      "generated_tokens": 7588,
+      "terminal_reasons": {
+        "token_limit": 29,
+        "invalid_json": 1
+      }
+    },
+    "single-agent-aime2024": {
+      "correct": 2,
+      "total": 30,
+      "answer_search_rate": 0.06666666666666667,
+      "answer_matching": "integer_search",
+      "strict_correct": 2,
+      "strict_pass_at_1": 0.06666666666666667,
+      "generated_tokens": 50131,
+      "maximum_generated_tokens_per_problem": 2048,
+      "comparison": "equal maximum generated-token budget, actual compute may differ"
+    }
+  },
+  "training": {
+    "trees": 32,
+    "configured_trees": 32,
+    "distinct_messages": 82,
+    "messages_by_agent": {
+      "0": 80,
+      "1": 2
+    },
+    "leaf_successes": 27.0,
+    "leaf_count": 81,
+    "positive_credit_messages": 27,
+    "positive_credit_message_actions": 0,
+    "negative_credit_messages": 55,
+    "zero_credit_messages": 0,
+    "transition_reasons": {
+      "token_limit": 63,
+      "invalid_json": 18,
+      "message": 1
+    },
+    "optimizer_steps": {
+      "0": 32,
+      "1": 1
+    },
+    "generated_tokens": 19345,
+    "training_finished": {
+      "event": "training_finished",
+      "timestamp": "2026-11-04T04:35:12.474171+00:00",
+      "elapsed_seconds": 579.8635697399995,
+      "trees": 32,
+      "stop_reason": "tree_limit"
+    }
+  },
+  "positive_message_examples": [],
+  "gates": {
+    "numerical_preflight": {
+      "event": "numerical_preflight",
+      "timestamp": "2026-11-04T04:21:51.493199+00:00",
+      "maximum_logit_difference": 2.288818359375e-05,
+      "tolerance": 0.02,
+      "greedy_next_token_matches": true,
+      "reference_device": "remote_cpu"
+    },
+    "replay_gate": {
+      "event": "replay_gate",
+      "timestamp": "2026-11-04T04:25:53.397319+00:00",
+      "maximum_log_probability_difference": 1.9073486328125e-05,
+      "mean_log_probability_difference": 3.725290298461914e-07,
+      "compared_tokens": 1024
+    },
+    "first_tree_gate": {
+      "event": "first_tree_gate",
+      "timestamp": "2026-11-04T04:26:59.332854+00:00",
+      "seconds": 86.72224542099957,
+      "messages": 4,
+      "optimizer_updates_finite": true,
+      "checkpoint_verified": true,
+      "maximum_peak_memory_fraction": 0.821671020806612,
+      "remaining_seconds_upper_projection": 2688.389558141007
+    }
+  },
+  "console": {
+    "name": "console.log",
+    "bytes": 481901,
+    "sha256": "41b515a2d974b3990c23e94b342e91335e6321c075b656b01675756a0377bf2f"
+  },
+  "verified_at_unix_seconds": 1793767023.859512,
+  "wandb": {
+    "url": "https://wandb.ai/kaynelu921-massachusetts-institute-of-technology/conlangs/runs/1f6jmcj2",
+    "state": "finished",
+    "group": "qwen3-1p7b-peer-progress-when-able-20261103",
+    "last_step": 130,
+    "checkpoint": "gs://kmh-gcp-us-west4/kristine/qwen3-peer-progress-when-able-20261104-0417/attempts/progress-when-able-20261103-attempt-01/checkpoints/completed"
+  }
+}

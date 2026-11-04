@@ -3,11 +3,12 @@
 import json
 from pathlib import Path
 import unittest
+from unittest.mock import Mock
 
 if not Path(__file__).resolve().is_relative_to("/home/kristinelu/peer-tree"):
     raise unittest.SkipTest("Pilot tests execute only from the authorized remote source snapshot.")
 
-from protocol import (Generation, Problem, State, boxed_integer, collect_tree,
+from protocol import (Generation, Problem, State, answer_reward, boxed_integer, collect_tree,
                       outcome_weight, question_fingerprint, transition, validate_settings)
 
 
@@ -16,8 +17,9 @@ def generated(action: dict, ended: bool = True) -> Generation:
 
 
 class ScriptedPolicy:
-    def __init__(self, candidate_messages: bool = True) -> None:
+    def __init__(self, candidate_messages: bool = True, numeric_answers: bool = False) -> None:
         self.candidate_messages = candidate_messages
+        self.numeric_answers = numeric_answers
         self.calls = []
 
     def generate(self, states: list[State], seeds: list[int], agent: int) -> list[Generation]:
@@ -30,7 +32,8 @@ class ScriptedPolicy:
                     for index in range(4)]
         if len(states) == 1:
             return [generated({"action": "message", "message": "prefix", "context": "private selection"})]
-        return [generated({"action": "submit", "answer": "42" if index % 2 else "99"})
+        return [generated({"action": "submit", "answer": (42 if index % 2 else 99) if self.numeric_answers
+                          else ("42" if index % 2 else "99")})
                 for index in range(len(states))]
 
 
@@ -72,6 +75,51 @@ class ProtocolTests(unittest.TestCase):
         self.assertIsNone(boxed_integer("\\boxed{42} then \\boxed{x+1}"))
         self.assertIsNone(boxed_integer("missing box 42"))
 
+    def test_integer_search_accepts_prose_and_numeric_json(self) -> None:
+        """Accept complete signed integers across ordinary final-response formats."""
+        for text, expected in (('{"action":"submit","answer":2}', 2),
+                               ("The answer is 2.", 2), ("Answer: +002", 2),
+                               ("The result is -42.", -42), ("There are 5,000 pairs.", 5000)):
+            with self.subTest(text=text):
+                self.assertEqual(answer_reward(text, expected, None, "integer_search"), 1)
+                self.assertEqual(answer_reward(text, expected, None), 0)
+
+    def test_integer_search_rejects_partial_numeric_matches(self) -> None:
+        """Reject answers embedded inside larger numbers, decimals, or identifiers."""
+        for text in ("20", "204", "-2", "2.5", "2,000", "2e3", "x2", "No answer"):
+            with self.subTest(text=text):
+                self.assertEqual(answer_reward(text, 2, None, "integer_search"), 0)
+        self.assertEqual(answer_reward("42", -42, None, "integer_search"), 0)
+
+    def test_integer_search_is_presence_not_semantic_verification(self) -> None:
+        """Keep the loose matcher's incidental-mention limitation explicit."""
+        self.assertEqual(answer_reward("It is not 42; my answer is 99.", 42, None, "integer_search"), 1)
+        self.assertEqual(answer_reward("It is not 42; my answer is 99.", 42, 99), 0)
+        with self.assertRaisesRegex(ValueError, "answer_matching"):
+            answer_reward("42", 42, 42, "unknown")
+
+    def test_integer_search_scores_terminal_candidates_and_prefixes(self) -> None:
+        """Apply the selected reward to every direct terminal path, including truncation."""
+        for tree_index in (0, 1):
+            for ended in (False, True):
+                for matching, expected in (("strict", 0), ("integer_search", 1)):
+                    with self.subTest(tree_index=tree_index, ended=ended, matching=matching):
+                        policy = Mock()
+                        policy.generate.side_effect = lambda states, seeds, agent: [
+                            generated({"action": "submit", "answer": 42}, ended) for _ in states]
+                        items, report = collect_tree(policy, self.problem,
+                            {**self.settings, "answer_matching": matching}, tree_index, lambda: None)
+                        self.assertEqual(report["leaf_rewards"], [expected] * (4 if tree_index == 0 else 1))
+                        self.assertTrue(all(item.weight == 2 * expected - 1 for item in items))
+
+    def test_integer_search_backs_up_continuation_outcomes(self) -> None:
+        """Propagate loose-scored child outcomes to their shared candidate messages."""
+        items, report = collect_tree(ScriptedPolicy(numeric_answers=True), self.problem,
+            {**self.settings, "answer_matching": "integer_search"}, 0, lambda: None)
+        self.assertEqual(report["candidate_rewards"], [[0, 1]] * 4)
+        candidates = [item for item in items if "/" not in item.identifier]
+        self.assertTrue(all(item.weight == 0 and item.observations == 2 for item in candidates))
+
     def test_unanimous_outcomes_keep_signed_credit(self) -> None:
         self.assertEqual(outcome_weight(8, 8, 0.5, 2), 1)
         self.assertEqual(outcome_weight(0, 8, 0.5, 2), -1)
@@ -81,9 +129,11 @@ class ProtocolTests(unittest.TestCase):
     def test_configuration_rejects_unimplemented_algorithm_changes(self) -> None:
         validate_settings(self.settings)
         for changes in ({"independent_lora_adapters": False}, {"lora_targets": ["o_proj"]},
-                        {"update_epochs_per_tree": 2}, {"compute_dtype": "bfloat16"}):
+                        {"update_epochs_per_tree": 2}, {"compute_dtype": "bfloat16"},
+                        {"answer_matching": "unknown"}):
             with self.assertRaises(ValueError):
                 validate_settings({**self.settings, **changes})
+        validate_settings({**self.settings, "answer_matching": "integer_search"})
 
     def test_tree_has_independent_continuations_and_no_repeated_candidate(self) -> None:
         policy = ScriptedPolicy()

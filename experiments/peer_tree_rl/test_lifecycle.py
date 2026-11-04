@@ -9,11 +9,12 @@ if not Path(__file__).resolve().is_relative_to("/home/kristinelu/peer-tree"):
 import json
 import shutil
 import tempfile
+import time
 from unittest.mock import patch
 from types import SimpleNamespace
 
-from run import Study, verify_checkpoint, write_json, require_remote
-from protocol import sample_seed
+from run import Study, file_record, prepare_data, verify_checkpoint, write_json, require_remote
+from protocol import Generation, Problem, State, sample_seed
 
 
 class FixtureBackend:
@@ -26,6 +27,100 @@ class FixtureBackend:
 
 
 class LifecycleTests(unittest.TestCase):
+    def test_evaluation_searches_only_terminal_output_and_keeps_strict_scores(self) -> None:
+        """Ensure answer mentions neither stop dialogue nor contaminate terminal scoring."""
+        class EvaluationBackend:
+            batch_size = 8
+
+            def generate(self, states: list[State], seeds: list[int], agent: int) -> list[Generation]:
+                """Produce a numeric submission and a dialogue with an incidental intermediate answer."""
+                responses = []
+                for state in states:
+                    if state.problem == "submit two":
+                        text = '{"action":"submit","answer":2}'
+                    elif state.turn == 0:
+                        text = '{"action":"message","message":"42 is an intermediate value","context":""}'
+                    else:
+                        text = "The final answer is 99."
+                    responses.append(Generation((11,), (21,), (-0.3,), text, True))
+                return responses
+
+        with tempfile.TemporaryDirectory() as temporary:
+            for matching, expected in (("strict", 0), ("integer_search", 1)):
+                with self.subTest(matching=matching):
+                    output = Path(temporary) / matching
+                    output.mkdir()
+                    study = Study({"seed": 17, "maximum_messages": 8, "answer_matching": matching},
+                                  {"deadline_unix_seconds": time.time() + 3600}, output)
+                    study.backend = EvaluationBackend()
+                    metrics = study.evaluate([Problem("numeric", "submit two", 2, "validation"),
+                        Problem("incidental", "original question includes 42", 42, "validation")], "fixture")
+                    records = [json.loads(line) for line in (output / "fixture.jsonl").read_text().splitlines()]
+                    self.assertEqual(metrics["correct"], expected)
+                    self.assertEqual(metrics["strict_correct"], 0)
+                    self.assertEqual(records[0]["correct"], expected)
+                    self.assertEqual(records[1]["correct"], 0)
+                    self.assertEqual(len(records[1]["events"]), 2)
+                    self.assertEqual(records[0]["reason"], "invalid_schema")
+                    if matching == "integer_search":
+                        self.assertEqual(metrics["answer_search_rate"], 0.5)
+                        self.assertNotIn("pass_at_1", metrics)
+
+    def test_single_agent_uses_the_same_configured_answer_matching(self) -> None:
+        """Compare both scoring modes without running a model or initializing JAX."""
+        with tempfile.TemporaryDirectory() as temporary:
+            for matching, expected in (("strict", 0), ("integer_search", 1)):
+                with self.subTest(matching=matching):
+                    output = Path(temporary) / matching
+                    output.mkdir()
+                    settings = {"seed": 17, "maximum_messages": 8, "maximum_new_tokens": 256,
+                                "finalization_reserve_seconds": 60, "answer_matching": matching}
+                    study = Study(settings, {"deadline_unix_seconds": time.time() + 3600}, output)
+                    study.backend = SimpleNamespace(prompt_width=1024, devices=[], batch_size=8,
+                        generate_device=lambda *arguments: None,
+                        generate_messages=lambda *arguments: [Generation((11,), (21,), (-0.3,), "The answer is 2.", True)])
+                    with patch.dict("sys.modules", {"jax": SimpleNamespace(pmap=lambda *arguments, **keywords: None)}):
+                        metrics = study.single_agent_baseline([Problem("fixture", "question", 2, "test")])
+                    self.assertEqual(metrics["correct"], expected)
+                    self.assertEqual(metrics["strict_correct"], 0)
+                    if matching == "integer_search":
+                        self.assertEqual(metrics["answer_search_rate"], 1)
+                        self.assertNotIn("pass_at_1", metrics)
+
+    def test_frozen_splits_preserve_order_and_fail_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "source"
+            source.mkdir()
+            files = {}
+            for name in ("train", "validation", "test"):
+                path = source / f"{name}.json"
+                write_json(path, [{"identifier": f"{name}-{index}", "problem": f"{name} question {index}",
+                                  "answer": index, "split": name} for index in (7, 2)])
+                record = file_record(path)
+                files[path.name] = {key: record[key] for key in ("bytes", "sha256")}
+            settings = {"model": "fixture", "model_revision": "fixture", "maximum_prompt_tokens": 10,
+                        "training_problem_limit": 2, "validation_problem_limit": 2, "evaluation_problem_limit": 2,
+                        "frozen_data": {"directory": str(source), "region": "us-west4",
+                                        "source_checkpoint": "gs://fixture/completed", "files": files}}
+            output = root / "output"
+            output.mkdir()
+            tokenizer = SimpleNamespace(apply_chat_template=lambda *args, **kwargs: [1, 2, 3])
+            with patch("transformers.AutoTokenizer.from_pretrained", return_value=tokenizer):
+                audit = prepare_data(settings, output, root / "cache", "us-west4")
+                self.assertTrue(audit["reused_frozen_splits"])
+                for name in ("train", "validation", "test"):
+                    self.assertEqual((output / f"{name}.json").read_bytes(), (source / f"{name}.json").read_bytes())
+                with self.assertRaisesRegex(ValueError, "original data region"):
+                    prepare_data(settings, output, root / "cache", "us-central2")
+                with self.assertRaisesRegex(ValueError, "prompt budget"):
+                    prepare_data({**settings, "maximum_prompt_tokens": 2}, output, root / "cache", "us-west4")
+                with self.assertRaisesRegex(ValueError, "split count"):
+                    prepare_data({**settings, "training_problem_limit": 3}, output, root / "cache", "us-west4")
+                (source / "train.json").write_text("corrupted")
+                with self.assertRaisesRegex(ValueError, "integrity failed"):
+                    prepare_data(settings, output, root / "cache", "us-west4")
+
     def test_failure_archive_contains_evidence_without_an_optimizer_checkpoint(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -97,6 +192,10 @@ class LifecycleTests(unittest.TestCase):
             require_remote(receipt, Path("/home/kristinelu/peer-tree/source"))
             with self.assertRaises(ValueError):
                 require_remote({**receipt, "deadline_unix_seconds": 87401}, Path("/home/kristinelu/peer-tree/source"))
+            require_remote({**receipt, "deadline_unix_seconds": 8200}, Path("/home/kristinelu/peer-tree/source"), 7200)
+            for deadline in (8201, 87400):
+                with self.subTest(deadline=deadline), self.assertRaisesRegex(ValueError, "configured compute cap"):
+                    require_remote({**receipt, "deadline_unix_seconds": deadline}, Path("/home/kristinelu/peer-tree/source"), 7200)
 
 
 if __name__ == "__main__":

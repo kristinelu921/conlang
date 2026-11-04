@@ -16,7 +16,7 @@ import subprocess
 import time
 from typing import Any
 
-from protocol import (Problem, State, boxed_integer, collect_tree,
+from protocol import (Problem, State, answer_reward, boxed_integer, collect_tree,
                       question_fingerprint, sample_seed, transition, validate_settings)
 
 
@@ -36,7 +36,7 @@ def file_record(path: Path) -> dict:
     return {"name": path.name, "bytes": path.stat().st_size, "sha256": digest.hexdigest()}
 
 
-def require_remote(receipt: dict, source: Path) -> None:
+def require_remote(receipt: dict, source: Path, maximum_compute_seconds: int = 86400) -> None:
     """Fail before data or model imports unless this is the explicitly audited remote VM."""
     if (socket.gethostname() != receipt["remote_hostname"] or socket.gethostname() == receipt["control_hostname"]
             or "kristine" not in receipt["tpu_name"].lower() or receipt["tpu_type"] != "v5litepod-8"
@@ -44,9 +44,9 @@ def require_remote(receipt: dict, source: Path) -> None:
             or receipt["zone"].rsplit("-", 1)[0] != receipt["region"]):
         raise PermissionError("This program requires the exact authorized remote single-host Spot TPU.")
     if time.time() >= receipt["deadline_unix_seconds"]:
-        raise TimeoutError("The persisted 24-hour allocation budget has expired.")
-    if not 0 < receipt["deadline_unix_seconds"] - receipt["allocation_created_unix_seconds"] <= 86400:
-        raise ValueError("The allocation deadline must be within the authorized 24 hours.")
+        raise TimeoutError("The persisted allocation budget has expired.")
+    if not 0 < receipt["deadline_unix_seconds"] - receipt["allocation_created_unix_seconds"] <= maximum_compute_seconds <= 86400:
+        raise ValueError("The allocation deadline exceeds the configured compute cap or absolute 24-hour maximum.")
     for relative_path, expected in receipt["source_sha256"].items():
         if file_record(source / relative_path)["sha256"] != expected:
             raise ValueError(f"Immutable source verification failed: {relative_path}")
@@ -69,13 +69,50 @@ def verify_checkpoint(directory: Path, settings: dict, receipt: dict) -> dict:
     return manifest
 
 
-def prepare_data(settings: dict, output: Path, cache: Path) -> dict:
+def prepare_data(settings: dict, output: Path, cache: Path, region: str) -> dict:
     """Use original competition questions and answer-only verification with disjoint splits."""
-    from datasets import load_dataset
     from transformers import AutoTokenizer
     import random
 
     tokenizer = AutoTokenizer.from_pretrained(settings["model"], revision=settings["model_revision"], cache_dir=str(cache))
+    if "frozen_data" in settings:
+        frozen = settings["frozen_data"]
+        if frozen["region"] != region:
+            raise ValueError("Frozen split reuse requires the original data region.")
+        directory = Path(frozen["directory"])
+        fingerprints: set[str] = set()
+        counts = {"reference_reasoning_exposed": False, "pretrained_contamination_audited": False,
+                  "source_checkpoint": frozen["source_checkpoint"], "reused_frozen_splits": True,
+                  "maximum_initial_prompt_tokens": 0, "files": frozen["files"]}
+        for name, limit in (("train", "training_problem_limit"), ("validation", "validation_problem_limit"),
+                            ("test", "evaluation_problem_limit")):
+            path = directory / f"{name}.json"
+            actual = file_record(path)
+            if {key: actual[key] for key in ("bytes", "sha256")} != frozen["files"][path.name]:
+                raise ValueError(f"Frozen split integrity failed: {path.name}")
+            rows = json.loads(path.read_text())
+            assert isinstance(rows, list)
+            if len(rows) != settings[limit]:
+                raise ValueError(f"Frozen split count differs from the configured limit: {name}")
+            for row in rows:
+                problem = Problem(**row)
+                fingerprint = question_fingerprint(problem.problem)
+                if problem.split != name or fingerprint in fingerprints:
+                    raise ValueError("Frozen splits must retain their labels and be disjoint.")
+                fingerprints.add(fingerprint)
+                encoded = tokenizer.apply_chat_template(State(problem.problem).messages(), tokenize=True,
+                                                         add_generation_prompt=True, enable_thinking=False)
+                if len(encoded) > settings["maximum_prompt_tokens"]:
+                    raise ValueError("A frozen question exceeds the new prompt budget; never silently filter it.")
+                counts["maximum_initial_prompt_tokens"] = max(counts["maximum_initial_prompt_tokens"], len(encoded))
+            counts[name] = len(rows)
+        # Prompt-length filtering before the seeded shuffle would change the comparison's questions.
+        for name in ("train", "validation", "test"):
+            shutil.copyfile(directory / f"{name}.json", output / f"{name}.json")
+        write_json(output / "data-audit.json", counts)
+        return counts
+    from datasets import load_dataset
+
     evaluation = load_dataset(settings["evaluation_dataset"], revision=settings["evaluation_dataset_revision"],
                               split="train", cache_dir=str(cache / "datasets"))
     test = [Problem(f"aime2024-{row['id']}", row["problem"], int(row["answer"]), "test") for row in evaluation]
@@ -195,12 +232,14 @@ class Study:
         return manifest
 
     def evaluate(self, rows: list[Problem], label: str) -> dict:
-        """Measure unbranched conversation pass@1 under fixed seeds without selecting on test results."""
+        """Score final responses under fixed seeds and retain strict correctness for comparison."""
         self.phase = label
         path = self.output / f"{label}.jsonl"
         if path.exists():
             raise FileExistsError("Evaluation artifacts are immutable; use a new attempt for a retry.")
         correct = 0
+        strict_correct = 0
+        matching = self.settings.get("answer_matching", "strict")
         total_tokens = 0
         reasons: dict[str, int] = {}
         for offset in range(0, len(rows), self.backend.batch_size):
@@ -221,17 +260,23 @@ class Study:
                     if result.next_state is not None:
                         item["state"] = result.next_state
                     else:
-                        reward = int(result.submission == item["problem"].answer) if result.submission is not None else 0
+                        strict_reward = int(answer_reward(generation.text, item["problem"].answer, result.submission))
+                        reward = int(answer_reward(generation.text, item["problem"].answer, result.submission, matching))
                         correct += reward
+                        strict_correct += strict_reward
                         reasons[result.reason] = reasons.get(result.reason, 0) + 1
-                        item.update(done=True, correct=reward, reason=result.reason)
+                        item.update(done=True, correct=reward, strict_correct=strict_reward, reason=result.reason)
             with path.open("a") as handle:
                 for item in active:
                     handle.write(json.dumps({"problem": asdict(item["problem"]), "correct": item["correct"],
+                                             "strict_correct": item["strict_correct"], "answer_matching": matching,
                                              "reason": item["reason"], "events": item["events"]}) + "\n")
             self.emit(label + "_progress", {"completed": min(offset + len(selected), len(rows)),
                                              "correct": correct, "generated_tokens": total_tokens})
-        metrics = {"correct": correct, "total": len(rows), "pass_at_1": correct / len(rows),
+        rate_name = "pass_at_1" if matching == "strict" else "answer_search_rate"
+        metrics = {"correct": correct, "total": len(rows), rate_name: correct / len(rows),
+                   "answer_matching": matching, "strict_correct": strict_correct,
+                   "strict_pass_at_1": strict_correct / len(rows),
                    "generated_tokens": total_tokens, "terminal_reasons": reasons}
         write_json(self.output / f"{label}-metrics.json", metrics)
         self.emit(label, metrics)
@@ -298,6 +343,8 @@ class Study:
         decoder.total_width = decoder.prompt_width + decoder.output_width
         decoder.generate_parallel = jax.pmap(decoder.generate_device, devices=decoder.devices)
         correct = 0
+        strict_correct = 0
+        matching = self.settings.get("answer_matching", "strict")
         tokens = 0
         path = self.output / "single-agent-aime2024.jsonl"
         with path.open("x") as handle:
@@ -310,14 +357,20 @@ class Study:
                     [sample_seed(self.settings["seed"], "single-agent", row.identifier) for row in selected], 0)
                 for row, generation in zip(selected, generations, strict=True):
                     answer = boxed_integer(generation.text)
-                    reward = int(answer == row.answer) if answer is not None else 0
+                    strict_reward = int(answer_reward(generation.text, row.answer, answer))
+                    reward = int(answer_reward(generation.text, row.answer, answer, matching))
                     correct += reward
+                    strict_correct += strict_reward
                     tokens += len(generation.token_ids)
                     handle.write(json.dumps({"problem": asdict(row), "generation": asdict(generation),
-                                             "correct": reward, "parsed_answer": answer}) + "\n")
+                                             "correct": reward, "strict_correct": strict_reward,
+                                             "answer_matching": matching, "parsed_answer": answer}) + "\n")
                 handle.flush()
                 self.emit("single_agent_progress", {"completed": min(start + len(selected), len(rows)), "correct": correct})
-        metrics = {"correct": correct, "total": len(rows), "pass_at_1": correct / len(rows),
+        rate_name = "pass_at_1" if matching == "strict" else "answer_search_rate"
+        metrics = {"correct": correct, "total": len(rows), rate_name: correct / len(rows),
+                   "answer_matching": matching, "strict_correct": strict_correct,
+                   "strict_pass_at_1": strict_correct / len(rows),
                    "generated_tokens": tokens, "maximum_generated_tokens_per_problem": decoder.output_width,
                    "comparison": "equal maximum generated-token budget, actual compute may differ"}
         write_json(self.output / "single-agent-aime2024-metrics.json", metrics)
@@ -343,7 +396,7 @@ class Study:
             cache = self.output.parent / "cache"
             resume_manifest = None
             if self.resume is None:
-                audit = prepare_data(self.settings, self.output, cache)
+                audit = prepare_data(self.settings, self.output, cache, self.receipt["region"])
                 self.emit("data_audit", audit)
             else:
                 resume_manifest = verify_checkpoint(self.resume, self.settings, self.receipt)
@@ -454,8 +507,8 @@ def main() -> None:
     arguments = parser.parse_args()
     source = Path(__file__).resolve().parent
     receipt = json.loads(arguments.receipt.read_text())
-    require_remote(receipt, source)
     settings = json.loads(arguments.config.read_text())
+    require_remote(receipt, source, settings["maximum_compute_seconds"])
     validate_settings(settings)
     if not str(arguments.output.resolve()).startswith("/home/kristinelu/peer-tree/"):
         raise PermissionError("Outputs must remain in the dedicated node-local pilot directory.")

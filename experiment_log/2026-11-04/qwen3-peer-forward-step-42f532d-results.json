@@ -1,0 +1,206 @@
+{
+  "status": "completed",
+  "source_commit": "42f532d1b011758027887bf5dd7fb47fe5bc2ccc",
+  "deadline_unix_seconds": 1793763037.098297,
+  "durable_checkpoint": "gs://kmh-gcp-us-west4/kristine/qwen3-peer-forward-step-20261104-0130/attempts/forward-step-20261104-attempt-01/checkpoints/completed",
+  "verified_file_count": 56,
+  "checkpoint_manifest": {
+    "name": "complete.json",
+    "bytes": 9329,
+    "sha256": "c88b8fc9b626977eee9c4fc2f0379809504a717fda07f04fb688f223ff92cd3a"
+  },
+  "metrics": {
+    "before_validation": {
+      "correct": 2,
+      "total": 16,
+      "pass_at_1": 0.125,
+      "generated_tokens": 4458,
+      "terminal_reasons": {
+        "invalid_schema": 5,
+        "invalid_json": 3,
+        "submitted": 3,
+        "turn_limit": 2,
+        "token_limit": 3
+      }
+    },
+    "after_validation": {
+      "correct": 0,
+      "total": 16,
+      "pass_at_1": 0.0,
+      "generated_tokens": 3757,
+      "terminal_reasons": {
+        "token_limit": 11,
+        "invalid_json": 4,
+        "invalid_schema": 1
+      }
+    },
+    "before_aime2024": {
+      "correct": 0,
+      "total": 30,
+      "pass_at_1": 0.0,
+      "generated_tokens": 8966,
+      "terminal_reasons": {
+        "token_limit": 7,
+        "invalid_json": 11,
+        "submitted": 3,
+        "invalid_schema": 6,
+        "turn_limit": 3
+      }
+    },
+    "after_aime2024": {
+      "correct": 0,
+      "total": 30,
+      "pass_at_1": 0.0,
+      "generated_tokens": 7680,
+      "terminal_reasons": {
+        "token_limit": 30
+      }
+    },
+    "single-agent-aime2024": {
+      "correct": 2,
+      "total": 30,
+      "pass_at_1": 0.06666666666666667,
+      "generated_tokens": 50131,
+      "maximum_generated_tokens_per_problem": 2048,
+      "comparison": "equal maximum generated-token budget, actual compute may differ"
+    }
+  },
+  "training": {
+    "trees": 32,
+    "configured_trees": 32,
+    "distinct_messages": 466,
+    "messages_by_agent": {
+      "1": 214,
+      "0": 252
+    },
+    "leaf_successes": 11.0,
+    "leaf_count": 145,
+    "positive_credit_messages": 17,
+    "positive_credit_message_actions": 6,
+    "negative_credit_messages": 448,
+    "zero_credit_messages": 1,
+    "transition_reasons": {
+      "message": 321,
+      "invalid_schema": 11,
+      "turn_limit": 35,
+      "submitted": 33,
+      "token_limit": 38,
+      "invalid_json": 27,
+      "invalid_answer": 1
+    },
+    "optimizer_steps": {
+      "0": 52,
+      "1": 32
+    },
+    "generated_tokens": 40448,
+    "training_finished": {
+      "event": "training_finished",
+      "timestamp": "2026-11-04T01:58:51.047427+00:00",
+      "elapsed_seconds": 715.6518697019999,
+      "trees": 32,
+      "stop_reason": "tree_limit"
+    }
+  },
+  "positive_message_examples": [
+    {
+      "identifier": "prefix-0",
+      "agent": 0,
+      "weight": 1.0,
+      "successes": 1.0,
+      "observations": 1,
+      "problem": "Vanessa set a school record for most points in a single basketball game when her team scored $48$ points. The six other players on her team averaged $3.5$ points each. How many points did Vanessa score to set her school record?",
+      "incoming_message": "",
+      "text": "{\"action\":\"message\",\"message\":\"The six other players on the team averaged 3.5 points each, so their total points are $6 \\times 3.5 = 21$ points. Vanessa scored the remaining points to set her school record. The total points scored by the team is 48, so Vanessa's points are $48 - 21 = 27$ points.\",\"context\":\"Vanessa set a school record for most points in a single basketball game when her team scored 48 points. The six other players on her team averaged 3.5 points each. How many points did Vanessa score to set her school record?\"}"
+    },
+    {
+      "identifier": "candidate-2",
+      "agent": 0,
+      "weight": 1.0,
+      "successes": 2.0,
+      "observations": 2,
+      "problem": "How many ways are there to put 4 indistinguishable balls into 2 indistinguishable boxes?",
+      "incoming_message": "",
+      "text": "{\"action\":\"message\",\"message\":\"We need to find the number of ways to put 4 indistinguishable balls into 2 indistinguishable boxes. Let's consider the possible distributions of balls between the boxes and count them. The possible distributions are: 0-4, 1-3, 2-2, and 3-1, 4-0. However, since the boxes are indistinguishable, the distributions 0-4 and 4-0 are considered the same. Similarly, 1-3 and 3-1 are considered the same. Therefore, the distinct distributions are: 0-4, 1-3, and 2-2. Thus, there are 3 ways to distribute the balls. The final answer is 3.\",\"context\":\"original_problem\"}"
+    },
+    {
+      "identifier": "candidate-0/continuation-1/turn-2",
+      "agent": 0,
+      "weight": 1.0,
+      "successes": 1.0,
+      "observations": 1,
+      "problem": "What is the value of the sum $-1 + 2 - 3 + 4 - 5 + 6 - 7 +\\dots+ 10,\\!000$?",
+      "incoming_message": "The sum alternates between negative and positive numbers. Let's analyze the pattern and calculate the sum.",
+      "text": "{\"action\":\"message\",\"message\":\"Let's analyze the pattern. The sequence alternates between negative and positive numbers. The first term is -1, then +2, then -3, and so on. We can group the terms in pairs to simplify the calculation.\",\"context\":\"original_problem\"}"
+    },
+    {
+      "identifier": "candidate-0/continuation-1/turn-3",
+      "agent": 1,
+      "weight": 1.0,
+      "successes": 1.0,
+      "observations": 1,
+      "problem": "What is the value of the sum $-1 + 2 - 3 + 4 - 5 + 6 - 7 +\\dots+ 10,\\!000$?",
+      "incoming_message": "Let's analyze the pattern. The sequence alternates between negative and positive numbers. The first term is -1, then +2, then -3, and so on. We can group the terms in pairs to simplify the calculation.",
+      "text": "{\"action\":\"message\",\"message\":\"Let's group the terms in pairs: (-1 + 2) + (-3 + 4) + (-5 + 6) + ... + (-9999 + 10000).\",\"context\":\"original_problem\"}"
+    },
+    {
+      "identifier": "candidate-0/continuation-1/turn-4",
+      "agent": 0,
+      "weight": 1.0,
+      "successes": 1.0,
+      "observations": 1,
+      "problem": "What is the value of the sum $-1 + 2 - 3 + 4 - 5 + 6 - 7 +\\dots+ 10,\\!000$?",
+      "incoming_message": "Let's group the terms in pairs: (-1 + 2) + (-3 + 4) + (-5 + 6) + ... + (-9999 + 10000).",
+      "text": "{\"action\":\"message\",\"message\":\"Great! Let's calculate the number of pairs and the sum of each pair. The total number of terms is 10,000, which is even, so there are 5000 pairs. Each pair is of the form (-n + (n+1)) where n is odd. For example, (-1 + 2) = 1, (-3 + 4) = 1, and so on. So each pair sums to 1. Therefore, the total sum is 5000 * 1 = 5000. Is this correct?\",\"context\":\"original_problem\"}"
+    },
+    {
+      "identifier": "prefix-0",
+      "agent": 0,
+      "weight": 1.0,
+      "successes": 1.0,
+      "observations": 1,
+      "problem": "Compute $\\dbinom{9}{8}$.",
+      "incoming_message": "",
+      "text": "{\"action\":\"message\",\"message\":\"I will compute $\\\\dbinom{9}{8}$.\",\"context\":\"Compute $\\\\dbinom{9}{8}$.\"}"
+    }
+  ],
+  "gates": {
+    "numerical_preflight": {
+      "event": "numerical_preflight",
+      "timestamp": "2026-11-04T01:42:18.596350+00:00",
+      "maximum_logit_difference": 2.288818359375e-05,
+      "tolerance": 0.02,
+      "greedy_next_token_matches": true,
+      "reference_device": "remote_cpu"
+    },
+    "replay_gate": {
+      "event": "replay_gate",
+      "timestamp": "2026-11-04T01:47:22.776330+00:00",
+      "maximum_log_probability_difference": 6.866455078125e-05,
+      "mean_log_probability_difference": 2.745388384126467e-07,
+      "compared_tokens": 3835
+    },
+    "first_tree_gate": {
+      "event": "first_tree_gate",
+      "timestamp": "2026-11-04T01:48:34.321133+00:00",
+      "seconds": 98.92556673800004,
+      "messages": 60,
+      "optimizer_updates_finite": true,
+      "checkpoint_verified": true,
+      "maximum_peak_memory_fraction": 0.821671020806612,
+      "remaining_seconds_upper_projection": 3066.692524517002
+    }
+  },
+  "console": {
+    "name": "console.log",
+    "bytes": 464509,
+    "sha256": "56f7dbb986698f2aec99a80f8f6e99cdbf0558da09dfcb23c6d87f23fbbdc099"
+  },
+  "verified_at_unix_seconds": 1793757628.491698,
+  "wandb": {
+    "url": "https://wandb.ai/kaynelu921-massachusetts-institute-of-technology/conlangs/runs/192ahtxm",
+    "state": "finished",
+    "group": "qwen3-1p7b-peer-forward-step-20261104",
+    "last_step": 181,
+    "checkpoint": "gs://kmh-gcp-us-west4/kristine/qwen3-peer-forward-step-20261104-0130/attempts/forward-step-20261104-attempt-01/checkpoints/completed"
+  }
+}
