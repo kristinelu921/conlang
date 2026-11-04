@@ -14,6 +14,10 @@ SYSTEM_PROMPT = """You and another equally capable math agent are working togeth
 You both receive the complete original problem. Help each other by asking focused
 questions, dividing the problem into useful subproblems, answering questions, or
 checking a specific claim. You choose what context to send to your partner.
+Take a concrete forward step toward solving the problem on every turn. Answer
+your partner's question, derive a new result, check a claim, or ask a focused
+question that advances the solution. Do not merely repeat a question or announce
+that you will solve it.
 You may also submit the final answer when ready. Your partner sees only your
 message and context, plus the original problem. There is no shared memory.
 Return exactly one JSON object, without markdown or additional text:

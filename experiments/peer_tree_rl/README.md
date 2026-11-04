@@ -7,6 +7,15 @@ The pretrained single-agent AIME baseline scored 2/30. This pilot did not show
 a collaborative gain. See the [experiment report](../../experiment_log/2026-11-03/qwen3-peer-tree-pilot-e225874.md)
 and [verified result summary](../../experiment_log/2026-11-03/qwen3-peer-tree-pilot-e225874-results.json).
 
+The selected forward-step rerun uses `forward_step.json` and adds an explicit
+instruction to advance the solution on each turn. It starts from pretrained
+weights with fresh adapters and reuses the original byte-verified train,
+validation, and test splits; otherwise, the longer prompt could change the
+length filter and seeded question selection. The parser, reward, sampling,
+seed, and 32-tree limit are unchanged. A new two-hour compute allocation is
+proposed, subject to user authorization. See the
+[rerun report](../../experiment_log/2026-11-04/qwen3-peer-forward-step.md).
+
 The first pilot asks whether downstream success can train useful questions and
 responses between two symmetric Qwen3-1.7B peers. This is a feasibility study,
 not evidence of superiority over a larger model. The user explicitly authorized

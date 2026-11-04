@@ -12,7 +12,7 @@ import tempfile
 from unittest.mock import patch
 from types import SimpleNamespace
 
-from run import Study, verify_checkpoint, write_json, require_remote
+from run import Study, file_record, prepare_data, verify_checkpoint, write_json, require_remote
 from protocol import sample_seed
 
 
@@ -26,6 +26,40 @@ class FixtureBackend:
 
 
 class LifecycleTests(unittest.TestCase):
+    def test_frozen_splits_preserve_order_and_fail_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "source"
+            source.mkdir()
+            files = {}
+            for name in ("train", "validation", "test"):
+                path = source / f"{name}.json"
+                write_json(path, [{"identifier": f"{name}-{index}", "problem": f"{name} question {index}",
+                                  "answer": index, "split": name} for index in (7, 2)])
+                record = file_record(path)
+                files[path.name] = {key: record[key] for key in ("bytes", "sha256")}
+            settings = {"model": "fixture", "model_revision": "fixture", "maximum_prompt_tokens": 10,
+                        "training_problem_limit": 2, "validation_problem_limit": 2, "evaluation_problem_limit": 2,
+                        "frozen_data": {"directory": str(source), "region": "us-west4",
+                                        "source_checkpoint": "gs://fixture/completed", "files": files}}
+            output = root / "output"
+            output.mkdir()
+            tokenizer = SimpleNamespace(apply_chat_template=lambda *args, **kwargs: [1, 2, 3])
+            with patch("transformers.AutoTokenizer.from_pretrained", return_value=tokenizer):
+                audit = prepare_data(settings, output, root / "cache", "us-west4")
+                self.assertTrue(audit["reused_frozen_splits"])
+                for name in ("train", "validation", "test"):
+                    self.assertEqual((output / f"{name}.json").read_bytes(), (source / f"{name}.json").read_bytes())
+                with self.assertRaisesRegex(ValueError, "original data region"):
+                    prepare_data(settings, output, root / "cache", "us-central2")
+                with self.assertRaisesRegex(ValueError, "prompt budget"):
+                    prepare_data({**settings, "maximum_prompt_tokens": 2}, output, root / "cache", "us-west4")
+                with self.assertRaisesRegex(ValueError, "split count"):
+                    prepare_data({**settings, "training_problem_limit": 3}, output, root / "cache", "us-west4")
+                (source / "train.json").write_text("corrupted")
+                with self.assertRaisesRegex(ValueError, "integrity failed"):
+                    prepare_data(settings, output, root / "cache", "us-west4")
+
     def test_failure_archive_contains_evidence_without_an_optimizer_checkpoint(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

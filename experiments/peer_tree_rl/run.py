@@ -69,13 +69,50 @@ def verify_checkpoint(directory: Path, settings: dict, receipt: dict) -> dict:
     return manifest
 
 
-def prepare_data(settings: dict, output: Path, cache: Path) -> dict:
+def prepare_data(settings: dict, output: Path, cache: Path, region: str) -> dict:
     """Use original competition questions and answer-only verification with disjoint splits."""
-    from datasets import load_dataset
     from transformers import AutoTokenizer
     import random
 
     tokenizer = AutoTokenizer.from_pretrained(settings["model"], revision=settings["model_revision"], cache_dir=str(cache))
+    if "frozen_data" in settings:
+        frozen = settings["frozen_data"]
+        if frozen["region"] != region:
+            raise ValueError("Frozen split reuse requires the original data region.")
+        directory = Path(frozen["directory"])
+        fingerprints: set[str] = set()
+        counts = {"reference_reasoning_exposed": False, "pretrained_contamination_audited": False,
+                  "source_checkpoint": frozen["source_checkpoint"], "reused_frozen_splits": True,
+                  "maximum_initial_prompt_tokens": 0, "files": frozen["files"]}
+        for name, limit in (("train", "training_problem_limit"), ("validation", "validation_problem_limit"),
+                            ("test", "evaluation_problem_limit")):
+            path = directory / f"{name}.json"
+            actual = file_record(path)
+            if {key: actual[key] for key in ("bytes", "sha256")} != frozen["files"][path.name]:
+                raise ValueError(f"Frozen split integrity failed: {path.name}")
+            rows = json.loads(path.read_text())
+            assert isinstance(rows, list)
+            if len(rows) != settings[limit]:
+                raise ValueError(f"Frozen split count differs from the configured limit: {name}")
+            for row in rows:
+                problem = Problem(**row)
+                fingerprint = question_fingerprint(problem.problem)
+                if problem.split != name or fingerprint in fingerprints:
+                    raise ValueError("Frozen splits must retain their labels and be disjoint.")
+                fingerprints.add(fingerprint)
+                encoded = tokenizer.apply_chat_template(State(problem.problem).messages(), tokenize=True,
+                                                         add_generation_prompt=True, enable_thinking=False)
+                if len(encoded) > settings["maximum_prompt_tokens"]:
+                    raise ValueError("A frozen question exceeds the new prompt budget; never silently filter it.")
+                counts["maximum_initial_prompt_tokens"] = max(counts["maximum_initial_prompt_tokens"], len(encoded))
+            counts[name] = len(rows)
+        # Prompt-length filtering before the seeded shuffle would change the comparison's questions.
+        for name in ("train", "validation", "test"):
+            shutil.copyfile(directory / f"{name}.json", output / f"{name}.json")
+        write_json(output / "data-audit.json", counts)
+        return counts
+    from datasets import load_dataset
+
     evaluation = load_dataset(settings["evaluation_dataset"], revision=settings["evaluation_dataset_revision"],
                               split="train", cache_dir=str(cache / "datasets"))
     test = [Problem(f"aime2024-{row['id']}", row["problem"], int(row["answer"]), "test") for row in evaluation]
@@ -343,7 +380,7 @@ class Study:
             cache = self.output.parent / "cache"
             resume_manifest = None
             if self.resume is None:
-                audit = prepare_data(self.settings, self.output, cache)
+                audit = prepare_data(self.settings, self.output, cache, self.receipt["region"])
                 self.emit("data_audit", audit)
             else:
                 resume_manifest = verify_checkpoint(self.resume, self.settings, self.receipt)
