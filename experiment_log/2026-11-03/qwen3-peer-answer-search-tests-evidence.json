@@ -1,0 +1,56 @@
+{
+  "source": {
+    "base_commit": "9cd6c6e94fda36c8378ea8ec98bccce5dee49386",
+    "archive_sha256": "17ab374c9e304791937014414da5719b2a37e5ec848088f29de4a616124256a8",
+    "files": {
+      "protocol.py": "2ac4a29bc6aa281712501e5a4286802b0c058a89f72501c6e46c8c6f14215d68",
+      "run.py": "0981b02b4c121b42b8db22a8fc40a5a384c2e5ec4b6982daedc8526cc17eaedd",
+      "test_protocol.py": "4613587d05752c89e693fe65971650f62d7911b3b595ad6ce042cbbe374b8962",
+      "test_lifecycle.py": "b427150d0ee6b0ea0e7d54babfbd53487e9693a8c5a7cafaf5083af0686c63bc",
+      "pilot.json": "d2875cbf988904b1d2ebfff91b9a7c8d5553eed15c2fe4ad2cc850895429378a"
+    },
+    "scope": "CPU-only scripted unit tests; no model, dataset, accelerator, or training"
+  },
+  "execution": {
+    "hostname": "t1v-n-0de15714-w-0",
+    "archive_sha256": "17ab374c9e304791937014414da5719b2a37e5ec848088f29de4a616124256a8",
+    "started_unix_seconds": 1793759317.7377694,
+    "maximum_seconds": 300,
+    "interpreter": "/home/kristinelu/peer-tree/answer-search-tests-20261103-01/python/cpython-3.10.18-linux-x86_64-gnu/bin/python3.10",
+    "test_command": [
+      "/home/kristinelu/peer-tree/answer-search-tests-20261103-01/python/cpython-3.10.18-linux-x86_64-gnu/bin/python3.10",
+      "-I",
+      "-S",
+      "-c",
+      "embedded unittest runner preserved in this script"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 3.1048882009999943,
+    "finished_unix_seconds": 1793759320.8398254
+  },
+  "tests": {
+    "tests_run": 21,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "elapsed_seconds": 0.18232732000069518,
+    "model_libraries_imported": false,
+    "test_names": [
+      "test_protocol",
+      "test_lifecycle.LifecycleTests.test_evaluation_searches_only_terminal_output_and_keeps_strict_scores",
+      "test_lifecycle.LifecycleTests.test_single_agent_uses_the_same_configured_answer_matching",
+      "test_lifecycle.LifecycleTests.test_failure_archive_contains_evidence_without_an_optimizer_checkpoint",
+      "test_lifecycle.LifecycleTests.test_durable_copy_restores_complete_evidence_and_detects_corruption",
+      "test_lifecycle.LifecycleTests.test_remote_guard_rejects_development_host_and_budget_extension"
+    ],
+    "python_version": "3.10.18 (main, Jul 23 2025, 00:36:45) [Clang 20.1.4 ]"
+  },
+  "console_sha256": "1634a5dc9b893f79ef6c26319abe0cc9706d6513ebce1a06ddd677042fa93e68",
+  "runner_sha256": "5669370f3b5576416c901dd90cb808b7eba94ef913ecabad6cc513410a167abe",
+  "bootstrap_link_cleanup": {
+    "removed_path": "/home/kristinelu/.local/bin/python3.10",
+    "verified_target": "/home/kristinelu/peer-tree/answer-search-tests-20261103-01/python/cpython-3.10.18-linux-x86_64-gnu/bin/python3.10",
+    "verified_owner": 2020,
+    "time": 1793759508.2210217
+  }
+}

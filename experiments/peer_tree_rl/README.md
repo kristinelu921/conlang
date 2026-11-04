@@ -7,14 +7,14 @@ The pretrained single-agent AIME baseline scored 2/30. This pilot did not show
 a collaborative gain. See the [experiment report](../../experiment_log/2026-11-03/qwen3-peer-tree-pilot-e225874.md)
 and [verified result summary](../../experiment_log/2026-11-03/qwen3-peer-tree-pilot-e225874-results.json).
 
-The selected forward-step rerun uses `forward_step.json` and adds an explicit
+The completed forward-step rerun used `forward_step.json` and added an explicit
 instruction to advance the solution on each turn and ask a focused follow-up
 question in each non-final message. It starts from pretrained
 weights with fresh adapters and reuses the original byte-verified train,
 validation, and test splits; otherwise, the longer prompt could change the
 length filter and seeded question selection. The parser, reward, sampling,
 seed, and 32-tree limit are unchanged. A new two-hour compute allocation is
-proposed, subject to user authorization. See the
+was used for that completed run. See the
 [rerun report](../../experiment_log/2026-11-04/qwen3-peer-forward-step.md).
 
 The first pilot asks whether downstream success can train useful questions and
@@ -34,6 +34,25 @@ sharing. A message can ask a specific subquestion or answer the partner. Either
 peer can submit a final answer; submission ends that trajectory. An eight-message
 limit, malformed action, or truncated action without a valid submission yields
 zero terminal reward. Prompt tokens remain visible and have no token-level loss.
+
+For the requested looser scoring, set `"answer_matching": "integer_search"` in
+the next run's configuration. This searches only the final generated response
+for the reference integer, including numeric JSON and free-form or truncated
+outputs. It recognizes signed integers and comma-grouped thousands, while
+avoiding partial matches such as `2` inside `20`, `-2`, or `2.5`. No LLM call is
+used. The default `strict` mode preserves the completed pilots' scoring.
+
+Message routing is unchanged: valid messages continue to the partner, and the
+hidden reference answer never decides when to stop a conversation. The search
+does not inspect prompts, previous turns, or reference solutions. This is an
+answer-presence reward, not semantic verification: “not 42, but 99” still matches
+the target 42. Train-tree credit, peer evaluation, and the single-agent baseline
+use the same configured rule. Search-mode metrics report `answer_search_rate`
+alongside `strict_pass_at_1`, and retain the raw output, routing failure reason,
+selected score, strict score, and matching mode. Historical scores and configs
+remain unchanged; a new run must opt in explicitly. Focused tests are added;
+all 21 selected CPU-only protocol/lifecycle tests passed on the authorized remote VM.
+See the [test record](../../experiment_log/2026-11-03/qwen3-peer-answer-search-tests.md).
 
 ## Tree and credit
 
@@ -100,3 +119,14 @@ of 1.284767 (mean 0.013022) on its first sampled tree. Its results are retained 
 failed attempt. The float32 retry keeps the same scientific settings, tests the
 original gate without relaxing its threshold, and uses a private TPU diagnostic-log
 directory. No other owner's log directory is modified.
+
+## Progress-when-able rerun (prepared)
+
+`progress_when_able.json` selects the next 32-tree run from fresh pretrained
+weights. The prompt now says to continue solving whenever capable and asks a
+question only when partner help would advance the solution. The original
+problem and latest handoff remain the entire per-turn state; history does not
+accumulate. Temperature remains 0.7. This run also activates the previously
+requested `integer_search` scoring, reporting strict scores separately. Because
+both the prompt and reward change, comparison with the completed forward-step
+run is not a prompt-only ablation. Remote validation and launch are pending.

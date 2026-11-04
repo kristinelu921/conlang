@@ -16,7 +16,7 @@ import subprocess
 import time
 from typing import Any
 
-from protocol import (Problem, State, boxed_integer, collect_tree,
+from protocol import (Problem, State, answer_reward, boxed_integer, collect_tree,
                       question_fingerprint, sample_seed, transition, validate_settings)
 
 
@@ -232,12 +232,14 @@ class Study:
         return manifest
 
     def evaluate(self, rows: list[Problem], label: str) -> dict:
-        """Measure unbranched conversation pass@1 under fixed seeds without selecting on test results."""
+        """Score final responses under fixed seeds and retain strict correctness for comparison."""
         self.phase = label
         path = self.output / f"{label}.jsonl"
         if path.exists():
             raise FileExistsError("Evaluation artifacts are immutable; use a new attempt for a retry.")
         correct = 0
+        strict_correct = 0
+        matching = self.settings.get("answer_matching", "strict")
         total_tokens = 0
         reasons: dict[str, int] = {}
         for offset in range(0, len(rows), self.backend.batch_size):
@@ -258,17 +260,23 @@ class Study:
                     if result.next_state is not None:
                         item["state"] = result.next_state
                     else:
-                        reward = int(result.submission == item["problem"].answer) if result.submission is not None else 0
+                        strict_reward = int(answer_reward(generation.text, item["problem"].answer, result.submission))
+                        reward = int(answer_reward(generation.text, item["problem"].answer, result.submission, matching))
                         correct += reward
+                        strict_correct += strict_reward
                         reasons[result.reason] = reasons.get(result.reason, 0) + 1
-                        item.update(done=True, correct=reward, reason=result.reason)
+                        item.update(done=True, correct=reward, strict_correct=strict_reward, reason=result.reason)
             with path.open("a") as handle:
                 for item in active:
                     handle.write(json.dumps({"problem": asdict(item["problem"]), "correct": item["correct"],
+                                             "strict_correct": item["strict_correct"], "answer_matching": matching,
                                              "reason": item["reason"], "events": item["events"]}) + "\n")
             self.emit(label + "_progress", {"completed": min(offset + len(selected), len(rows)),
                                              "correct": correct, "generated_tokens": total_tokens})
-        metrics = {"correct": correct, "total": len(rows), "pass_at_1": correct / len(rows),
+        rate_name = "pass_at_1" if matching == "strict" else "answer_search_rate"
+        metrics = {"correct": correct, "total": len(rows), rate_name: correct / len(rows),
+                   "answer_matching": matching, "strict_correct": strict_correct,
+                   "strict_pass_at_1": strict_correct / len(rows),
                    "generated_tokens": total_tokens, "terminal_reasons": reasons}
         write_json(self.output / f"{label}-metrics.json", metrics)
         self.emit(label, metrics)
@@ -335,6 +343,8 @@ class Study:
         decoder.total_width = decoder.prompt_width + decoder.output_width
         decoder.generate_parallel = jax.pmap(decoder.generate_device, devices=decoder.devices)
         correct = 0
+        strict_correct = 0
+        matching = self.settings.get("answer_matching", "strict")
         tokens = 0
         path = self.output / "single-agent-aime2024.jsonl"
         with path.open("x") as handle:
@@ -347,14 +357,20 @@ class Study:
                     [sample_seed(self.settings["seed"], "single-agent", row.identifier) for row in selected], 0)
                 for row, generation in zip(selected, generations, strict=True):
                     answer = boxed_integer(generation.text)
-                    reward = int(answer == row.answer) if answer is not None else 0
+                    strict_reward = int(answer_reward(generation.text, row.answer, answer))
+                    reward = int(answer_reward(generation.text, row.answer, answer, matching))
                     correct += reward
+                    strict_correct += strict_reward
                     tokens += len(generation.token_ids)
                     handle.write(json.dumps({"problem": asdict(row), "generation": asdict(generation),
-                                             "correct": reward, "parsed_answer": answer}) + "\n")
+                                             "correct": reward, "strict_correct": strict_reward,
+                                             "answer_matching": matching, "parsed_answer": answer}) + "\n")
                 handle.flush()
                 self.emit("single_agent_progress", {"completed": min(start + len(selected), len(rows)), "correct": correct})
-        metrics = {"correct": correct, "total": len(rows), "pass_at_1": correct / len(rows),
+        rate_name = "pass_at_1" if matching == "strict" else "answer_search_rate"
+        metrics = {"correct": correct, "total": len(rows), rate_name: correct / len(rows),
+                   "answer_matching": matching, "strict_correct": strict_correct,
+                   "strict_pass_at_1": strict_correct / len(rows),
                    "generated_tokens": tokens, "maximum_generated_tokens_per_problem": decoder.output_width,
                    "comparison": "equal maximum generated-token budget, actual compute may differ"}
         write_json(self.output / "single-agent-aime2024-metrics.json", metrics)

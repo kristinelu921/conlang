@@ -14,15 +14,17 @@ SYSTEM_PROMPT = """You and another equally capable math agent are working togeth
 You both receive the complete original problem. Help each other by asking focused
 questions, dividing the problem into useful subproblems, answering questions, or
 checking a specific claim. You choose what context to send to your partner.
-Take a concrete forward step toward solving the problem on every turn: answer
-your partner's question, derive a new result, or check a specific claim. When
-sending a message, share that progress and then ask your partner one focused
-question that advances the next step. Do not merely repeat a question or announce
-a plan.
+If you are capable of progressing forwards, progress. Do the next useful
+calculation, derivation, or check yourself, and keep going while you can make
+progress. Do not merely restate the problem, repeat prior work, announce a plan,
+or ask your partner to do a step you can already do.
+When handing off, share the concrete progress you made and preserve useful
+results in context. Ask a focused question only when your partner's help would
+advance the solution; a question is not required on every turn.
 You may also submit the final answer when ready. Your partner sees only your
 message and context, plus the original problem. There is no shared memory.
 Return exactly one JSON object, without markdown or additional text:
-{"action":"message","message":"your progress and follow-up question","context":"relevant context"}
+{"action":"message","message":"your progress and, if useful, a focused question","context":"relevant context"}
 or {"action":"submit","answer":"the final integer"}.
 Do not submit a partial answer. A submission ends the conversation. The final
 answer must be an integer. You have at most eight individual messages together."""
@@ -93,6 +95,19 @@ class Generator(Protocol):
 def parse_integer(value: str) -> int | None:
     """Accept a single integer, never an incidental number inside a longer answer."""
     return int(value.strip()) if re.fullmatch(r"[+-]?\d+", value.strip()) else None
+
+
+def answer_reward(text: str, expected_answer: int, parsed_answer: int | None,
+                  matching: str = "strict") -> float:
+    """Score a parsed answer or search the final response for the expected integer."""
+    if matching == "strict":
+        return float(parsed_answer == expected_answer)
+    if matching != "integer_search":
+        raise ValueError("answer_matching must be strict or integer_search.")
+    # Consume complete signed numbers so 2 cannot match 20, -2, 2.5, or 2,000.
+    pattern = r"(?<![\w.,+-])[+-]?(?:[0-9]{1,3}(?:,[0-9]{3})+|[0-9]+)(?!\w|[.,][0-9])"
+    return float(any(int(match.group().replace(",", "")) == expected_answer
+                     for match in re.finditer(pattern, text)))
 
 
 def boxed_integer(solution: str) -> int | None:
@@ -173,7 +188,8 @@ def collect_tree(generator: Generator, problem: Problem, settings: dict, tree_in
         events.append({"kind": "prefix", "state": asdict(root), "generation": asdict(generation),
                        "transition": asdict(result)})
         if result.next_state is None:
-            reward = float(result.submission == problem.answer) if result.submission is not None else 0.0
+            reward = answer_reward(generation.text, problem.answer, result.submission,
+                                   settings.get("answer_matching", "strict"))
             records.append(TrainingItem("prefix-terminal", None, root.agent, root, generation, reward, 1,
                 outcome_weight(reward, 1, settings["reward_baseline"], settings["reward_scale"])))
             return records, {"events": events, "leaf_rewards": [reward], "branch_turn": branch_turn,
@@ -192,7 +208,8 @@ def collect_tree(generator: Generator, problem: Problem, settings: dict, tree_in
         events.append({"kind": "candidate", "candidate": candidate_index, "state": asdict(root),
                        "generation": asdict(generation), "transition": asdict(result)})
         if result.next_state is None:
-            reward = float(result.submission == problem.answer) if result.submission is not None else 0.0
+            reward = answer_reward(generation.text, problem.answer, result.submission,
+                                   settings.get("answer_matching", "strict"))
             candidate_rewards[candidate_index].append(reward)
             candidate_reasons[candidate_index].append(result.reason)
         else:
@@ -220,7 +237,8 @@ def collect_tree(generator: Generator, problem: Problem, settings: dict, tree_in
             if result.next_state is not None:
                 path["state"] = result.next_state
                 continue
-            reward = float(result.submission == problem.answer) if result.submission is not None else 0.0
+            reward = answer_reward(generation.text, problem.answer, result.submission,
+                                   settings.get("answer_matching", "strict"))
             candidate_rewards[path["candidate"]].append(reward)
             candidate_reasons[path["candidate"]].append(result.reason)
             for identifier, parent, state, output in path["items"]:
@@ -246,6 +264,8 @@ def collect_tree(generator: Generator, problem: Problem, settings: dict, tree_in
 
 def validate_settings(settings: dict) -> None:
     """Reject changes that violate the frozen pilot's execution or scientific assumptions."""
+    if settings.get("answer_matching", "strict") not in ("strict", "integer_search"):
+        raise ValueError("answer_matching must be strict or integer_search.")
     if settings["model"] != "Qwen/Qwen3-1.7B" or settings["agents"] != 2:
         raise ValueError("This pilot supports the agreed two Qwen3-1.7B peers only.")
     if (not settings["independent_lora_adapters"] or settings["lora_targets"] != ["q_proj", "v_proj"]
