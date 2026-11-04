@@ -133,3 +133,11 @@ run is not a prompt-only ablation. All 30 remote tests and runtime gates passed.
 8/16; AIME stayed at 0/30. There was only one valid handoff across all training
 trees, so this run did not demonstrate collaborative improvement. See the
 [verified report](../../experiment_log/2026-11-03/qwen3-peer-progress-when-able.md).
+
+## Pending prompt revision: one step per turn
+
+The working prompt now requests exactly one concrete calculation, derivation,
+or check per turn, followed by a handoff. It removes the instruction to keep
+solving while capable. A final submission remains allowed when the answer is
+ready. This revision has not been run; the completed progress-when-able results
+and saved viewer prompts describe the earlier prompt unchanged.

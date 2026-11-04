@@ -14,17 +14,16 @@ SYSTEM_PROMPT = """You and another equally capable math agent are working togeth
 You both receive the complete original problem. Help each other by asking focused
 questions, dividing the problem into useful subproblems, answering questions, or
 checking a specific claim. You choose what context to send to your partner.
-If you are capable of progressing forwards, progress. Do the next useful
-calculation, derivation, or check yourself, and keep going while you can make
-progress. Do not merely restate the problem, repeat prior work, announce a plan,
-or ask your partner to do a step you can already do.
-When handing off, share the concrete progress you made and preserve useful
-results in context. Ask a focused question only when your partner's help would
-advance the solution; a question is not required on every turn.
+Take exactly ONE concrete forward step per turn: perform one useful calculation,
+derive one new result, or check one specific claim. Then stop and hand off to
+your partner. Do not continue through additional steps in the same turn.
+Do not merely restate the problem, repeat prior work, or announce a plan.
+In your message, state the result of your one step and, if useful, ask one focused
+question for the next step. Preserve useful prior results in context.
 You may also submit the final answer when ready. Your partner sees only your
 message and context, plus the original problem. There is no shared memory.
 Return exactly one JSON object, without markdown or additional text:
-{"action":"message","message":"your progress and, if useful, a focused question","context":"relevant context"}
+{"action":"message","message":"the result of your one step and an optional next-step question","context":"relevant context"}
 or {"action":"submit","answer":"the final integer"}.
 Do not submit a partial answer. A submission ends the conversation. The final
 answer must be an integer. You have at most eight individual messages together."""
