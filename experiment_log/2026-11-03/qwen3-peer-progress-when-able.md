@@ -5,7 +5,7 @@
 | Field | Value |
 |---|---|
 | Run ID | progress-when-able-20261103-attempt-01 |
-| Status | planned |
+| Status | running |
 | Started / Finished | not recorded |
 | Baseline | forward-step-20261104-attempt-01, source 42f532d |
 | Git revision / PR | not recorded; assigned before staging |
@@ -121,7 +121,7 @@ prompt-only ablation. Test answers never enter prompts or training selection.
 From the immutable node-local experiment source directory:
 
 ```sh
-JAX_PLATFORMS=tpu,cpu USE_TORCH_XLA=0 OMP_NUM_THREADS=8 OPENBLAS_NUM_THREADS=1 HF_HOME=/home/kristinelu/peer-tree/progress-when-able-20261103/cache /home/kristinelu/elf-runs/runtime/venv/bin/python -u supervisor.py --config /home/kristinelu/peer-tree/progress-when-able-20261103/source/experiments/peer_tree_rl/progress_when_able.json --receipt /home/kristinelu/peer-tree/progress-when-able-20261103/execution-receipt.json --output /home/kristinelu/peer-tree/progress-when-able-20261103/progress-when-able-20261103-attempt-01
+TPU_LOG_DIR=/home/kristinelu/peer-tree/progress-when-able-20261103/tpu-logs JAX_PLATFORMS=tpu,cpu USE_TORCH_XLA=0 OMP_NUM_THREADS=8 OPENBLAS_NUM_THREADS=1 HF_HOME=/home/kristinelu/peer-tree/progress-when-able-20261103/cache /home/kristinelu/elf-runs/runtime/venv/bin/python -u supervisor.py --config /home/kristinelu/peer-tree/progress-when-able-20261103/source/experiments/peer_tree_rl/progress_when_able.json --receipt /home/kristinelu/peer-tree/progress-when-able-20261103/execution-receipt.json --output /home/kristinelu/peer-tree/progress-when-able-20261103/progress-when-able-20261103-attempt-01
 ```
 
 ## Results
@@ -161,3 +161,41 @@ Preflight found `/tmp/tpu_logs` owned by sqa:sqa mode 0775 and not writable
 by kristinelu. No launch attempted and no collaborator files modified. Checking
 for a supported run-owned log destination before proceeding. Runtime freeze
 differs from the earlier pilot; exact core package compatibility remains a gate.
+
+- Source selected: `ce8b4b305a4fcfeec555d01ea2a7082c3516f584`, pushed to PR
+  https://github.com/kristinelu921/conlang/pull/4. Snapshot:
+  `/kmh-nfs-ssd-us-mount/staging/kristine/elf/qwen3-peer-progress-when-able-ce8b4b3-20261104T041746.914878463Z`.
+- The installed libtpu binary exposes `TPU_LOG_DIR`. Set it explicitly to the
+  new run-owned mode-0700 directory; never use or modify the nonwritable
+  collaborator-owned default. This is log-path plumbing only. Remote CPU tests
+  and subsequent first-use TPU logs must confirm the selected path works.
+- Budget begins with staging on the existing allocation at Unix
+  `1793765897.0003126`, deadline `1793773097.0003126`. The legacy receipt field
+  `allocation_created_unix_seconds` represents authorized-use start for this
+  reused VM; its actual Cloud creation time is separately recorded.
+- Core runtime: Python 3.10.18, JAX/JAXLIB 0.6.2, libtpu 0.0.17, Flax 0.10.5,
+  Optax 0.2.8, Transformers 4.57.6, Torch 2.2.2+cpu, NumPy 1.26.4, W&B 0.28.1.
+
+- Further producer trace confirms `Study.run` already sets `TPU_LOG_DIR` to
+  `<output>/tpu-driver-logs` before importing the TPU backend. That run-owned
+  directory is the effective training log destination (overriding the wrapper's
+  preparatory directory). The default `/tmp/tpu_logs` is never selected by this
+  harness; no source change or permission change is required.
+- Source staging verified all 11 files and the three pinned same-region split
+  hashes. Exact storage upload/readback passed.
+
+- Fresh immutable-source remote suite passed: 30 tests, 11.534 seconds, zero
+  failures. Command: `JAX_PLATFORMS=cpu USE_TORCH_XLA=0 OMP_NUM_THREADS=8
+  OPENBLAS_NUM_THREADS=1 HF_HOME=/home/kristinelu/peer-tree/progress-when-able-20261103/cache
+  TPU_LOG_DIR=/home/kristinelu/peer-tree/progress-when-able-20261103/tpu-logs
+  /home/kristinelu/elf-runs/runtime/venv/bin/python -m unittest -v test_protocol
+  test_backend test_lifecycle`, from the staged experiment source.
+  Log: `/tmp/qwen-peer-progress-remote-tests.log`. No model test ran locally.
+
+- Started remote supervisor and one 60-second read-only monitor at approximately
+  2026-11-03 23:20 America/New_York. Exact trainer PID 38603, supervisor 38602,
+  host t1v-n-4b587646-w-0. Fresh occupancy AVAILABLE and API READY/HEALTHY/Spot.
+  W&B: https://wandb.ai/kaynelu921-massachusetts-institute-of-technology/conlangs/runs/1f6jmcj2 .
+  Model loading/numerical gates pending; process startup is not training success.
+  Launch log `/tmp/qwen-peer-progress-launch.log`; recurring monitor
+  `/tmp/qwen-peer-progress-monitor.py`, history `qwen-peer-progress-monitor-history.jsonl`.
