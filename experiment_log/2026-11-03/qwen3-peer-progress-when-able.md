@@ -5,10 +5,10 @@
 | Field | Value |
 |---|---|
 | Run ID | progress-when-able-20261103-attempt-01 |
-| Status | running |
-| Started / Finished | not recorded |
+| Status | completed |
+| Started / Finished | 2026-11-03 23:20 / 23:36 America/New_York (approximate; exact timestamps in evidence) |
 | Baseline | forward-step-20261104-attempt-01, source 42f532d |
-| Git revision / PR | not recorded; assigned before staging |
+| Git revision / PR | ce8b4b305a4fcfeec555d01ea2a7082c3516f584 / https://github.com/kristinelu921/conlang/pull/4 |
 | Seed | 20261103 |
 | Hardware | existing Spot v5litepod-8 kmh-tpuvm-v5e-8-spot-kristine-04-02-37-45-861043662-0-us-west4-a, us-west4-a |
 
@@ -199,3 +199,62 @@ differs from the earlier pilot; exact core package compatibility remains a gate.
   Model loading/numerical gates pending; process startup is not training success.
   Launch log `/tmp/qwen-peer-progress-launch.log`; recurring monitor
   `/tmp/qwen-peer-progress-monitor.py`, history `qwen-peer-progress-monitor-history.jsonl`.
+
+- Full-model parity passed: maximum logit difference 2.288818359375e-05
+  (tolerance 0.02), greedy next token agrees. Run-owned TPU logs confirmed.
+- Before training: MATH answer-search 8/16, strict 0/16; AIME both 0/30.
+  Single-agent control: both 2/30, 50,131 generated tokens (same count as prior run).
+- Replay gate: max log-probability difference 1.9073486328125e-05 over 1024
+  compared tokens. First tree: 86.72224542099957 seconds including compilation,
+  peak memory fraction 0.821671020806612; finite update and checkpoint verified.
+  Projected remaining upper runtime 2688.389558141007 seconds passes budget gate.
+- Monitor confirms 16/32 completed trees; API remains READY/HEALTHY.
+
+## Final verified results
+
+Completed all 32 trees with stop reason `tree_limit`. Remote supervisor exit 0,
+trainer exited, W&B finished, and fresh occupancy returned AVAILABLE. All 56
+checkpoint files were independently downloaded and hash/size verified on the
+remote VM; all 53 evidence files copied locally match the manifest. The final
+checkpoint contains both adapters and optimizer states. No development-machine
+model execution occurred. The existing allocation is left intact and idle; it
+was not created for this run and has not been deleted or modified after use.
+
+| Metric (higher is better) | Before RL | After RL |
+|---|---:|---:|
+| MATH validation answer-search | 8/16 (50%) | 8/16 (50%) |
+| MATH validation strict pass@1 | 0/16 | 0/16 |
+| AIME 2024 answer-search | 0/30 | 0/30 |
+| AIME 2024 strict pass@1 | 0/30 | 0/30 |
+
+Single-agent control: 2/30 under both rules; 50,131 generated tokens.
+
+Training produced 82 distinct sampled message records: A=80, B=2; 81 terminal
+leaves, 27 receiving answer-search reward. There was **one valid message action**,
+63 token-limit terminations and 18 invalid-JSON terminations. A had 32 optimizer
+updates, B had one. There were 27 positive-credit records but zero positive-credit
+message actions. The only valid handoff was shared by two continuations; do not
+count it as two independently sampled questions.
+
+Every held-out conversation terminated on its first response: MATH 11 token-limit
+and five invalid-JSON cases, AIME 29 token-limit and one invalid-JSON case, both
+before and after training. The requested prompt did not establish useful
+collaboration under this protocol. Answer presence is not evidence of valid
+submission or useful dialogue. The simultaneous prompt/reward change and the
+single small seed preclude a causal prompt-only claim.
+
+The full-model, replay, finite-update, memory and checkpoint gates passed; all
+30 remote tests passed. Training phase elapsed 579.8635697399995 seconds.
+
+Artifacts:
+
+- W&B (verified finished): https://wandb.ai/kaynelu921-massachusetts-institute-of-technology/conlangs/runs/1f6jmcj2
+- Durable checkpoint (verified): `gs://kmh-gcp-us-west4/kristine/qwen3-peer-progress-when-able-20261104-0417/attempts/progress-when-able-20261103-attempt-01/checkpoints/completed`
+- Full metrics and gate evidence: `qwen3-peer-progress-when-able-ce8b4b3-results.json`.
+- Local raw evidence: `/tmp/qwen-peer-progress-artifacts/evidence`.
+- New viewer: http://localhost:60805/progress-trees/ (32 trees, exact per-turn inputs/outputs).
+- Historical viewer preserved: http://localhost:60805/trees/ .
+- Remote analysis/console archive: checkpoint's sibling `analysis/` directory.
+
+The recurring monitor reached the supervisor terminal sentinel and ended; no
+retry or new run was started. All work finished within the approved two hours.

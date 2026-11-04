@@ -120,13 +120,16 @@ failed attempt. The float32 retry keeps the same scientific settings, tests the
 original gate without relaxing its threshold, and uses a private TPU diagnostic-log
 directory. No other owner's log directory is modified.
 
-## Progress-when-able rerun (prepared)
+## Progress-when-able rerun (completed)
 
-`progress_when_able.json` selects the next 32-tree run from fresh pretrained
+`progress_when_able.json` selected a 32-tree run from fresh pretrained
 weights. The prompt now says to continue solving whenever capable and asks a
 question only when partner help would advance the solution. The original
 problem and latest handoff remain the entire per-turn state; history does not
 accumulate. Temperature remains 0.7. This run also activates the previously
 requested `integer_search` scoring, reporting strict scores separately. Because
 both the prompt and reward change, comparison with the completed forward-step
-run is not a prompt-only ablation. Remote validation and launch are pending.
+run is not a prompt-only ablation. All 30 remote tests and runtime gates passed. MATH answer-search stayed at
+8/16; AIME stayed at 0/30. There was only one valid handoff across all training
+trees, so this run did not demonstrate collaborative improvement. See the
+[verified report](../../experiment_log/2026-11-03/qwen3-peer-progress-when-able.md).
