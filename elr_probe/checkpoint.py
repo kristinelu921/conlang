@@ -20,3 +20,12 @@ def read_checkpoint(path: Path) -> dict[str, Any]:
 def restore_states(template: dict[str, Any], checkpoint: dict[str, Any]) -> dict[str, Any]:
     """Restore concrete Adam named tuples and parameter trees from saved state."""
     return serialization.from_state_dict(template, checkpoint["states"])
+
+
+def restore_trajectories(initial: dict[tuple[str, ...], Any], checkpoint: dict[str, Any]) -> dict[str, Any]:
+    """Restore trajectory paths and preserve every arm when diagnostics are disabled."""
+    if not initial:
+        return {arm: {} for arm in checkpoint["states"]}
+    template = {arm: {"/".join(path): value for path, value in initial.items()} for arm in checkpoint["states"]}
+    restored = serialization.from_state_dict(template, checkpoint["trajectories"])
+    return {arm: {tuple(path.split("/")): value for path, value in state.items()} for arm, state in restored.items()}

@@ -20,9 +20,9 @@ import numpy as np
 import optax
 import yaml
 
-from elr_probe.dynamics import controlled_update, matrix_diagnostics
+from elr_probe.dynamics import angular_distance, controlled_update, matrix_diagnostics, norm_multiplier, trajectory_diagnostics
 from elr_probe.tracking import tracking_metrics
-from elr_probe.checkpoint import read_checkpoint, restore_states
+from elr_probe.checkpoint import read_checkpoint, restore_states, restore_trajectories
 
 
 class LanguageModel(nn.Module):
@@ -67,14 +67,17 @@ class LanguageModel(nn.Module):
         return embedding.attend(nn.RMSNorm(name="final_norm")(hidden))
 
 
-def make_step(model: LanguageModel, optimizer: optax.GradientTransformation) -> Any:
+def make_step(model: LanguageModel, optimizer: optax.GradientTransformation, angular_patterns: bool = False) -> Any:
     """Compile a data-parallel update with per-matrix diagnostics before projection."""
-    @functools.partial(jax.pmap, axis_name="data", in_axes=(0, 0, 0, None, None, None, None))
+    @functools.partial(jax.pmap, axis_name="data", in_axes=(0, 0, 0, None, None, None, None, 0, None, None))
     def step(
         parameters: dict[str, Any], optimizer_state: Any, batch: jax.Array,
         learning_rate: jax.Array, next_norm_multiplier: jax.Array,
         target_norms: dict[tuple[str, ...], jax.Array], controlled: bool,
-    ) -> tuple[dict[str, Any], Any, dict[str, jax.Array]]:
+        trajectory_states: dict[tuple[str, ...], dict[str, jax.Array]],
+        initial_matrices: dict[tuple[str, ...], jax.Array],
+        reference_matrices: dict[tuple[str, ...], jax.Array],
+    ) -> tuple[dict[str, Any], Any, dict[str, jax.Array], dict[tuple[str, ...], dict[str, jax.Array]]]:
         def loss_function(weights: dict[str, Any]) -> jax.Array:
             logits = model.apply({"params": weights}, batch[:, :-1])
             return optax.softmax_cross_entropy_with_integer_labels(logits, batch[:, 1:]).mean()
@@ -85,6 +88,7 @@ def make_step(model: LanguageModel, optimizer: optax.GradientTransformation) -> 
         flat_parameters = flatten_dict(parameters)
         flat_updates = flatten_dict(updates)
         next_parameters = {}
+        next_trajectories = {}
         metrics = {"loss": jax.lax.pmean(loss, "data")}
         for path, parameter in flat_parameters.items():
             provisional = parameter + learning_rate * flat_updates[path]
@@ -92,14 +96,46 @@ def make_step(model: LanguageModel, optimizer: optax.GradientTransformation) -> 
                 diagnostics = matrix_diagnostics(parameter, provisional)
                 diagnostics["elr"] = learning_rate / diagnostics["norm"]
                 diagnostics["unscaled_update_norm"] = jnp.linalg.norm(flat_updates[path])
-                for name, value in diagnostics.items():
-                    metrics["/".join(path) + "/" + name] = value
                 projected = controlled_update(parameter, flat_updates[path], learning_rate, target_norms[path] * next_norm_multiplier)
                 provisional = jnp.where(controlled, projected, provisional)
+                if angular_patterns:
+                    pattern_metrics, next_trajectories[path] = trajectory_diagnostics(
+                        parameter, provisional, initial_matrices[path], reference_matrices[path], trajectory_states[path], controlled,
+                    )
+                    diagnostics.update(pattern_metrics)
+                    if path[-1] == "kernel":
+                        # Rotational Equilibrium: How Weight Decay Balances Learning Across Neural Networks: https://proceedings.mlr.press/v235/kosson24a.html
+                        unit_angles = angular_distance(parameter, provisional, axis=0)
+                        quantiles = jnp.quantile(unit_angles, jnp.array([0.1, 0.5, 0.9]))
+                        for index, label in enumerate(("p10", "p50", "p90")):
+                            diagnostics[f"neuron_angle_{label}_radians"] = quantiles[index]
+                        if path[0].endswith(("_q", "_k", "_v")):
+                            head_shape = (parameter.shape[0], model.heads, model.width // model.heads)
+                            head_angles = angular_distance(parameter.reshape(head_shape), provisional.reshape(head_shape), axis=(0, 2))
+                        elif path[0].endswith("_o"):
+                            head_shape = (model.heads, model.width // model.heads, parameter.shape[1])
+                            head_angles = angular_distance(parameter.reshape(head_shape), provisional.reshape(head_shape), axis=(1, 2))
+                        else:
+                            head_angles = None
+                        if head_angles is not None:
+                            for head in range(model.heads):
+                                diagnostics[f"head_{head}_angle_radians"] = head_angles[head]
+                for name, value in diagnostics.items():
+                    metrics["/".join(path) + "/" + name] = value
             next_parameters[path] = provisional
-        return unflatten_dict(next_parameters), next_optimizer_state, metrics
+        return unflatten_dict(next_parameters), next_optimizer_state, metrics, next_trajectories
 
     return step
+
+
+@jax.jit
+def compare_directions(first: dict[str, Any], second: dict[str, Any]) -> dict[str, jax.Array]:
+    """Compare paired matrix directions on one replica after the same update."""
+    first_flat, second_flat = flatten_dict(first), flatten_dict(second)
+    return {
+        "/".join(path) + "/between_arm_angle_radians": angular_distance(value[0], second_flat[path][0])
+        for path, value in first_flat.items() if value[0].ndim == 2
+    }
 
 
 def run(config: dict[str, Any], data_path: Path, output_path: Path, tracking_run: Any, resume_path: Path | None = None) -> None:
@@ -108,6 +144,9 @@ def run(config: dict[str, Any], data_path: Path, output_path: Path, tracking_run
         raise RuntimeError("This pilot requires an authorized single-host TPU")
     if not 0 < config["warmup_steps"] < config["steps"]:
         raise ValueError("Warmup must be positive and shorter than training")
+    ramp_end_step = config.get("ramp_end_step", config["steps"])
+    if not config["warmup_steps"] < ramp_end_step <= config["steps"]:
+        raise ValueError("Norm ramp must end after warmup and no later than training")
     if min(config[name] for name in ("batch_size", "sequence_length", "checkpoint_every", "width", "layers", "heads", "learning_rate", "final_norm_multiplier")) <= 0:
         raise ValueError("Model, training, and norm schedule dimensions must be positive")
     if config["width"] % (2 * config["heads"]):
@@ -138,7 +177,8 @@ def run(config: dict[str, Any], data_path: Path, output_path: Path, tracking_run
     (output_path / "data-sha256.txt").write_text(data_checksum)
     model = LanguageModel(config["width"], config["layers"], config["heads"], config["vocabulary_size"])
     optimizer = optax.chain(optax.scale_by_adam(b1=0.9, b2=0.95, eps=1e-8), optax.scale(-1.0))
-    step_function = make_step(model, optimizer)
+    angular_patterns = config.get("angular_patterns", False)
+    step_function = make_step(model, optimizer, angular_patterns)
     started = time.monotonic()
     for seed_index, seed in enumerate(config["seeds"]):
         if resumed is not None and seed_index < config["seeds"].index(resumed["seed"]):
@@ -147,9 +187,16 @@ def run(config: dict[str, Any], data_path: Path, output_path: Path, tracking_run
         parameters = model.init(jax.random.PRNGKey(seed), jnp.zeros((1, config["sequence_length"]), dtype=jnp.int32))["params"]
         assert isinstance(parameters, dict)
         optimizer_state = optimizer.init(parameters)
+        initial_matrices = {path: value for path, value in flatten_dict(parameters).items() if value.ndim == 2}
+        reference_matrices = initial_matrices
         targets = {path: jnp.linalg.norm(value) for path, value in flatten_dict(parameters).items() if value.ndim == 2}
         replicate = functools.partial(jax.device_put_replicated, devices=devices)
         states = {"baseline": (replicate(parameters), replicate(optimizer_state))}
+        initial_trajectories = {
+            path: {"previous_direction": jnp.zeros_like(value), "previous_valid": jnp.array(False), "total_path": jnp.array(0.0), "controlled_path": jnp.array(0.0)}
+            for path, value in initial_matrices.items()
+        } if angular_patterns else {}
+        trajectories = {"baseline": jax.tree.map(replicate, initial_trajectories)}
         loss_averages: dict[str, float] = {}
         starting_step = 0
         if resumed is not None and seed == resumed["seed"]:
@@ -159,6 +206,9 @@ def run(config: dict[str, Any], data_path: Path, output_path: Path, tracking_run
             loss_averages = resumed["loss_averages"]
             targets = {tuple(path.split("/")): jnp.array(value) for path, value in resumed["targets"].items()}
             starting_step = resumed["step"]
+            trajectories = jax.tree.map(replicate, restore_trajectories(initial_trajectories, resumed))
+            if angular_patterns:
+                reference_matrices = {tuple(path.split("/")): jnp.array(value) for path, value in resumed["reference_matrices"].items()}
             print(f"RESTORED_CHECKPOINT={resume_path} seed={seed} next_step={starting_step}", flush=True)
         with (output_path / f"metrics-{seed}.jsonl").open("x", buffering=1) as metrics_file:
             for step_index in range(starting_step, config["steps"]):
@@ -169,18 +219,19 @@ def run(config: dict[str, Any], data_path: Path, output_path: Path, tracking_run
                 controlled = step_index >= warmup_steps
                 if step_index == warmup_steps:
                     states["matched"] = states["baseline"]
+                    trajectories["matched"] = trajectories["baseline"]
                     warm_parameters = jax.tree.map(lambda value: value[0], states["baseline"][0])
                     targets = {path: jnp.linalg.norm(value) for path, value in flatten_dict(warm_parameters).items() if value.ndim == 2}
+                    reference_matrices = {path: value for path, value in flatten_dict(warm_parameters).items() if value.ndim == 2}
                     loss_averages["matched"] = loss_averages["baseline"]
                 record: dict[str, Any] = {"step": step_index, "seed": seed, "controlled": controlled, "elapsed_seconds": time.monotonic() - started}
                 for arm in states:
-                    fraction = max(0, step_index - warmup_steps) / (config["steps"] - warmup_steps)
-                    next_fraction = max(0, step_index + 1 - warmup_steps) / (config["steps"] - warmup_steps)
-                    multiplier = 1 + fraction * (config["final_norm_multiplier"] - 1) if arm == "matched" else 1.0
-                    next_multiplier = 1 + next_fraction * (config["final_norm_multiplier"] - 1) if arm == "matched" else 1.0
+                    multiplier = norm_multiplier(step_index, warmup_steps, ramp_end_step, config["final_norm_multiplier"]) if arm == "matched" else 1.0
+                    next_multiplier = norm_multiplier(step_index + 1, warmup_steps, ramp_end_step, config["final_norm_multiplier"]) if arm == "matched" else 1.0
                     learning_rate = config["learning_rate"] * min(1, (step_index + 1) / warmup_steps) * multiplier
-                    next_parameters, next_state, metrics = step_function(*states[arm], batch, learning_rate, next_multiplier, targets, controlled)
+                    next_parameters, next_state, metrics, next_trajectory = step_function(*states[arm], batch, learning_rate, next_multiplier, targets, controlled, trajectories[arm], initial_matrices, reference_matrices)
                     states[arm] = (next_parameters, next_state)
+                    trajectories[arm] = next_trajectory
                     observed = {name: float(value[0]) for name, value in jax.device_get(metrics).items()}
                     loss_averages[arm] = 0.99 * loss_averages.get(arm, observed["loss"]) + 0.01 * observed["loss"]
                     observed["loss_ema"] = loss_averages[arm]
@@ -199,13 +250,22 @@ def run(config: dict[str, Any], data_path: Path, output_path: Path, tracking_run
                             comparison[name + "_baseline_over_matched"] = record["baseline"][name] / denominator if denominator > 1e-8 else None
                     comparison["loss_ema_matched_minus_baseline"] = loss_averages["matched"] - loss_averages["baseline"]
                     record["comparison"] = comparison
-                metrics_file.write(json.dumps(record, allow_nan=False) + "\n")
-                tracking_run.log(tracking_metrics(record), step=seed_index * config["steps"] + step_index)
+                    if angular_patterns and step_index % config.get("pattern_log_every", 10) == 0:
+                        separation = jax.device_get(compare_directions(states["baseline"][0], states["matched"][0]))
+                        comparison.update({name: float(value) for name, value in separation.items()})
+                if step_index % config.get("log_every", 1) == 0 or step_index + 1 == config["steps"]:
+                    metrics_file.write(json.dumps(record, allow_nan=False) + "\n")
+                    tracking_run.log(tracking_metrics(record), step=seed_index * config["steps"] + step_index)
                 if step_index % 20 == 0:
                     print(json.dumps({"seed": seed, "step": step_index, "loss": {arm: record[arm]["loss"] for arm in states}}), flush=True)
                 if (step_index + 1) % config["checkpoint_every"] == 0 or step_index + 1 == config["steps"]:
                     checkpoint = {"states": jax.device_get(jax.tree.map(lambda value: value[0], states)), "step": step_index + 1, "seed": seed, "generator": json.dumps(generator.bit_generator.state), "loss_averages": loss_averages, "targets": {"/".join(path): float(value) for path, value in targets.items()}}
                     checkpoint.update(config=scientific_config, data_sha256=data_checksum, wandb_url=tracking_run.url)
+                    if angular_patterns:
+                        checkpoint.update(
+                            trajectories={arm: {"/".join(path): jax.device_get(jax.tree.map(lambda value: value[0], state)) for path, state in arm_state.items()} for arm, arm_state in trajectories.items()},
+                            reference_matrices={"/".join(path): np.asarray(value) for path, value in reference_matrices.items()},
+                        )
                     destination = output_path / f"checkpoint-{seed}-{step_index + 1}.msgpack"
                     temporary = destination.with_suffix(".partial")
                     temporary.write_bytes(serialization.to_bytes(checkpoint))
