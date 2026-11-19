@@ -39,3 +39,18 @@ def test_checkpoint_restores_adam_and_next_batch_offsets(tmp_path: Path) -> None
     path.write_bytes(path.read_bytes() + b"corrupt")
     with pytest.raises(ValueError, match="SHA-256"):
         read_checkpoint(path)
+
+
+def test_restore_trajectories_preserves_both_arms() -> None:
+    from elr_probe.checkpoint import restore_trajectories
+
+    checkpoint = {"states": {"baseline": {}, "matched": {}}}
+    assert restore_trajectories({}, checkpoint) == {"baseline": {}, "matched": {}}
+    initial = {("layer", "kernel"): {"total_path": jnp.array(0.0)}}
+    checkpoint["trajectories"] = serialization.to_state_dict({
+        "baseline": {"layer/kernel": {"total_path": jnp.array(1.0)}},
+        "matched": {"layer/kernel": {"total_path": jnp.array(2.0)}},
+    })
+    restored = restore_trajectories(initial, checkpoint)
+    assert float(restored["baseline"][("layer", "kernel")]["total_path"]) == 1.0
+    assert float(restored["matched"][("layer", "kernel")]["total_path"]) == 2.0

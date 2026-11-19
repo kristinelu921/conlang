@@ -22,7 +22,7 @@ import yaml
 
 from elr_probe.dynamics import angular_distance, controlled_update, matrix_diagnostics, norm_multiplier, trajectory_diagnostics
 from elr_probe.tracking import tracking_metrics
-from elr_probe.checkpoint import read_checkpoint, restore_states
+from elr_probe.checkpoint import read_checkpoint, restore_states, restore_trajectories
 
 
 class LanguageModel(nn.Module):
@@ -206,13 +206,8 @@ def run(config: dict[str, Any], data_path: Path, output_path: Path, tracking_run
             loss_averages = resumed["loss_averages"]
             targets = {tuple(path.split("/")): jnp.array(value) for path, value in resumed["targets"].items()}
             starting_step = resumed["step"]
+            trajectories = jax.tree.map(replicate, restore_trajectories(initial_trajectories, resumed))
             if angular_patterns:
-                trajectory_template = {arm: {"/".join(path): value for path, value in initial_trajectories.items()} for arm in states}
-                restored_trajectories = serialization.from_state_dict(trajectory_template, resumed["trajectories"])
-                trajectories = {
-                    arm: {tuple(path.split("/")): jax.tree.map(replicate, value) for path, value in arm_state.items()}
-                    for arm, arm_state in restored_trajectories.items()
-                }
                 reference_matrices = {tuple(path.split("/")): jnp.array(value) for path, value in resumed["reference_matrices"].items()}
             print(f"RESTORED_CHECKPOINT={resume_path} seed={seed} next_step={starting_step}", flush=True)
         with (output_path / f"metrics-{seed}.jsonl").open("x", buffering=1) as metrics_file:
