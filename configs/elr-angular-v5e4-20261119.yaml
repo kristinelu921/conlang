@@ -1,0 +1,14 @@
+run_id: elr-angular-v5e4-20261119-1548
+wandb_project: elr-angular-dynamics
+width: 128
+layers: 4
+heads: 4
+vocabulary_size: 50304
+batch_size: 32
+sequence_length: 256
+steps: 600
+warmup_steps: 100
+learning_rate: 0.001
+final_norm_multiplier: 2.0
+checkpoint_every: 200
+seeds: [1729, 1730]
