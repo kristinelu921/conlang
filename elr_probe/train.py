@@ -22,6 +22,7 @@ import yaml
 
 from elr_probe.dynamics import controlled_update, matrix_diagnostics
 from elr_probe.tracking import tracking_metrics
+from elr_probe.checkpoint import read_checkpoint, restore_states
 
 
 class LanguageModel(nn.Module):
@@ -101,7 +102,7 @@ def make_step(model: LanguageModel, optimizer: optax.GradientTransformation) -> 
     return step
 
 
-def run(config: dict[str, Any], data_path: Path, output_path: Path, tracking_run: Any) -> None:
+def run(config: dict[str, Any], data_path: Path, output_path: Path, tracking_run: Any, resume_path: Path | None = None) -> None:
     """Train paired arms with identical minibatches and an identical warmup state."""
     if jax.default_backend() != "tpu" or jax.process_count() != 1:
         raise RuntimeError("This pilot requires an authorized single-host TPU")
@@ -127,15 +128,21 @@ def run(config: dict[str, Any], data_path: Path, output_path: Path, tracking_run
         raise ValueError("Expected a nonempty one-dimensional uint16 token corpus")
     if int(tokens.max()) >= config["vocabulary_size"]:
         raise ValueError("Corpus token IDs exceed vocabulary")
+    data_checksum = hashlib.sha256(data_path.read_bytes()).hexdigest()
+    scientific_config = {name: value for name, value in config.items() if name not in {"run_id", "wandb_project"}}
+    resumed = read_checkpoint(resume_path) if resume_path is not None else None
+    if resumed is not None and (resumed["config"] != scientific_config or resumed["data_sha256"] != data_checksum):
+        raise ValueError("Checkpoint configuration or dataset differs from this run")
     output_path.mkdir(parents=True)
     (output_path / "config.yaml").write_text(yaml.safe_dump(config))
-    with data_path.open("rb") as source:
-        (output_path / "data-sha256.txt").write_text(hashlib.file_digest(source, "sha256").hexdigest())
+    (output_path / "data-sha256.txt").write_text(data_checksum)
     model = LanguageModel(config["width"], config["layers"], config["heads"], config["vocabulary_size"])
     optimizer = optax.chain(optax.scale_by_adam(b1=0.9, b2=0.95, eps=1e-8), optax.scale(-1.0))
     step_function = make_step(model, optimizer)
     started = time.monotonic()
     for seed_index, seed in enumerate(config["seeds"]):
+        if resumed is not None and seed_index < config["seeds"].index(resumed["seed"]):
+            continue
         generator = np.random.default_rng(seed)
         parameters = model.init(jax.random.PRNGKey(seed), jnp.zeros((1, config["sequence_length"]), dtype=jnp.int32))["params"]
         assert isinstance(parameters, dict)
@@ -144,8 +151,17 @@ def run(config: dict[str, Any], data_path: Path, output_path: Path, tracking_run
         replicate = functools.partial(jax.device_put_replicated, devices=devices)
         states = {"baseline": (replicate(parameters), replicate(optimizer_state))}
         loss_averages: dict[str, float] = {}
+        starting_step = 0
+        if resumed is not None and seed == resumed["seed"]:
+            template = {arm: (parameters, optimizer_state) for arm in resumed["states"]}
+            states = jax.tree.map(replicate, restore_states(template, resumed))
+            generator.bit_generator.state = json.loads(resumed["generator"])
+            loss_averages = resumed["loss_averages"]
+            targets = {tuple(path.split("/")): jnp.array(value) for path, value in resumed["targets"].items()}
+            starting_step = resumed["step"]
+            print(f"RESTORED_CHECKPOINT={resume_path} seed={seed} next_step={starting_step}", flush=True)
         with (output_path / f"metrics-{seed}.jsonl").open("x", buffering=1) as metrics_file:
-            for step_index in range(config["steps"]):
+            for step_index in range(starting_step, config["steps"]):
                 offsets = generator.integers(0, len(tokens) - config["sequence_length"], size=config["batch_size"])
                 batch = np.stack([tokens[offset:offset + config["sequence_length"] + 1] for offset in offsets]).astype(np.int32)
                 batch = batch.reshape(len(devices), -1, config["sequence_length"] + 1)
@@ -189,6 +205,7 @@ def run(config: dict[str, Any], data_path: Path, output_path: Path, tracking_run
                     print(json.dumps({"seed": seed, "step": step_index, "loss": {arm: record[arm]["loss"] for arm in states}}), flush=True)
                 if (step_index + 1) % config["checkpoint_every"] == 0 or step_index + 1 == config["steps"]:
                     checkpoint = {"states": jax.device_get(jax.tree.map(lambda value: value[0], states)), "step": step_index + 1, "seed": seed, "generator": json.dumps(generator.bit_generator.state), "loss_averages": loss_averages, "targets": {"/".join(path): float(value) for path, value in targets.items()}}
+                    checkpoint.update(config=scientific_config, data_sha256=data_checksum, wandb_url=tracking_run.url)
                     destination = output_path / f"checkpoint-{seed}-{step_index + 1}.msgpack"
                     temporary = destination.with_suffix(".partial")
                     temporary.write_bytes(serialization.to_bytes(checkpoint))
@@ -203,6 +220,7 @@ def main() -> None:
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--data", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--resume", type=Path)
     arguments = parser.parse_args()
     config = yaml.safe_load(arguments.config.read_text())
     assert isinstance(config, dict)
@@ -223,12 +241,15 @@ def main() -> None:
     finally:
         os.environ["JAX_PLATFORMS"] = previous_platform
     print(f"WANDB_URL={tracking_run.url}", flush=True)
+    if arguments.resume is not None:
+        tracking_run.config.update({"resume_checkpoint": str(arguments.resume), "predecessor_wandb_url": read_checkpoint(arguments.resume)["wandb_url"]})
     exit_code = 1
     try:
         for seed in config["seeds"]:
             tracking_run.define_metric(f"seed_{seed}/training_step")
             tracking_run.define_metric(f"seed_{seed}/*", step_metric=f"seed_{seed}/training_step")
-        run(config, arguments.data, arguments.output, tracking_run)
+        jax.config.update("jax_default_matmul_precision", "highest")
+        run(config, arguments.data, arguments.output, tracking_run, arguments.resume)
         exit_code = 0
     finally:
         tracking_run.finish(exit_code=exit_code)
