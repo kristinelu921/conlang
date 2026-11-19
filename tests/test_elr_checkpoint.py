@@ -21,11 +21,14 @@ def test_checkpoint_restores_adam_and_next_batch_offsets(tmp_path: Path) -> None
     _, saved_state = optimizer.update(gradients, initial)
     generator = np.random.default_rng(1729)
     generator.integers(0, 1000, size=32)
-    checkpoint = {"states": {"baseline": (parameters, saved_state)}, "generator": json.dumps(generator.bit_generator.state)}
+    config = {"seeds": [1729, 1730], "learning_rate": 0.001}
+    checkpoint = {"states": {"baseline": (parameters, saved_state)}, "generator": json.dumps(generator.bit_generator.state), "config": config}
     path = tmp_path / "checkpoint.msgpack"
     path.write_bytes(serialization.to_bytes(checkpoint))
     path.with_suffix(".sha256").write_text(hashlib.sha256(path.read_bytes()).hexdigest())
     loaded = read_checkpoint(path)
+    assert loaded["config"] == serialization.to_state_dict(config)
+    assert loaded["config"] != serialization.to_state_dict({**config, "seeds": [1729, 1731]})
     restored = restore_states({"baseline": (parameters, initial)}, loaded)
     expected_update, _ = optimizer.update(gradients, saved_state)
     actual_update, _ = optimizer.update(gradients, restored["baseline"][1])

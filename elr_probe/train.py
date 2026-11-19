@@ -131,7 +131,7 @@ def run(config: dict[str, Any], data_path: Path, output_path: Path, tracking_run
     data_checksum = hashlib.sha256(data_path.read_bytes()).hexdigest()
     scientific_config = {name: value for name, value in config.items() if name not in {"run_id", "wandb_project"}}
     resumed = read_checkpoint(resume_path) if resume_path is not None else None
-    if resumed is not None and (resumed["config"] != scientific_config or resumed["data_sha256"] != data_checksum):
+    if resumed is not None and (resumed["config"] != serialization.to_state_dict(scientific_config) or resumed["data_sha256"] != data_checksum):
         raise ValueError("Checkpoint configuration or dataset differs from this run")
     output_path.mkdir(parents=True)
     (output_path / "config.yaml").write_text(yaml.safe_dump(config))
