@@ -1,0 +1,926 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Island Community · Observatory</title>
+<style>
+:root{color-scheme:dark;--bg:#09191f;--panel:#10262e;--line:#24424a;--text:#e3eee8;--muted:#99b6b5;--mint:#a7e6bb;--amber:#e4bd7b;--red:#ee927e}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,sans-serif}main{max-width:1440px;margin:auto;padding:30px}header{display:flex;justify-content:space-between;gap:20px;align-items:center;margin-bottom:28px}.eyebrow{text-transform:uppercase;letter-spacing:.2em;color:var(--mint);font-size:11px;font-weight:700}h1{font:400 36px/1.1 Georgia,serif;margin:9px 0}h2{font-size:15px;font-weight:600;margin:0 0 16px}p{margin:8px 0;color:var(--muted)}button,select{font:inherit;color:var(--text);border:1px solid var(--line);background:#18343c;border-radius:7px;padding:8px 13px;cursor:pointer}button:focus-visible,select:focus-visible{outline:2px solid var(--mint);outline-offset:3px}.status{font-size:12px;color:var(--muted);text-align:right;margin-bottom:8px}.status::before{content:'●';color:var(--mint);margin-right:7px}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px}.stat-label{font-size:12px;color:var(--muted)}.stat-value{font-size:30px;font-variant-numeric:tabular-nums;margin-top:7px}.stat-unit{font-size:12px;color:var(--muted)}.layout{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(290px,1fr);gap:18px}.map-head{display:flex;justify-content:space-between;gap:15px}.map-head p{font-size:12px}.map{width:100%;height:340px;border-radius:8px;background:radial-gradient(ellipse at center,#18383f 0,#0c2028 70%)}.map line{stroke:#3c6872;stroke-width:1}.map .island{cursor:pointer;outline:none}.map .island:focus circle{stroke:white;stroke-width:4}.map text{fill:var(--text);font:11px system-ui,sans-serif}.legend{display:flex;gap:18px;color:var(--muted);font-size:12px;margin-top:10px}.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--mint);margin-right:5px}.dot.amber{background:var(--amber)}.charts{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px}.chart{width:100%;height:160px}.chart text{fill:var(--muted);font:10px system-ui,sans-serif}.details-head{display:flex;justify-content:space-between;align-items:center;gap:10px}.details-head select{max-width:150px}.details-list{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin:16px 0}.detail small{display:block;color:var(--muted);font-size:11px}.detail strong{font-size:17px;font-weight:500}table{border-collapse:collapse;width:100%;font-size:13px}th{color:var(--muted);text-align:left;font-size:11px;font-weight:500}td,th{padding:7px 0;border-bottom:1px solid var(--line)}td:last-child,th:last-child{text-align:right}.section-label{color:var(--mint);font-size:11px;text-transform:uppercase;letter-spacing:.12em;margin:22px 0 8px}.lower{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px}.feed{max-height:250px;overflow:auto}.event{padding:9px 0;border-bottom:1px solid var(--line);font-size:12px;word-break:break-word}.event small{color:var(--muted);margin-right:8px}.empty{padding:40px 20px;text-align:center;color:var(--muted)}.banner{padding:15px 20px;border:1px solid var(--line);border-radius:9px;margin-bottom:18px;color:var(--amber)}footer{color:var(--muted);font-size:11px;margin:24px 0 0}.subtle{color:var(--muted);font-size:12px}.scroll{max-height:270px;overflow:auto}@media(max-width:850px){main{padding:18px}.layout,.lower{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}h1{font-size:30px}}@media(max-width:480px){header{align-items:flex-start}.charts{grid-template-columns:1fr}.card{padding:15px}.map{height:280px}}
+</style>
+<style>
+.inventory-table{min-width:320px}.inventory-table th:not(:first-child),.inventory-table td:not(:first-child){text-align:right;padding-left:10px}.inventory-table td:first-child{min-width:100px}.inventory-table .subtle{font-size:10px}.inventory-note{font-size:11px;color:var(--muted);margin-top:8px}.event-title{font-weight:600;margin-bottom:3px}.event-detail{color:var(--muted);margin-top:3px}.feed-heading{margin:16px 0 5px;font-size:12px;color:var(--mint)}.feed-heading:first-child{margin-top:0}.channel-closed{display:inline-block;width:17px;border-top:2px dashed var(--amber);margin-right:5px;vertical-align:middle}.legend{flex-wrap:wrap;gap:8px 18px}
+</style>
+<style>
+.replay-bar{margin-bottom:18px;padding:18px 20px}.replay-top,.replay-buttons,.timeline-labels{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.replay-top{justify-content:space-between}.replay-top h2{margin:0}.replay-buttons button{min-width:40px}.replay-buttons .primary{background:var(--mint);color:#102820;border-color:var(--mint);font-weight:650;min-width:100px}button:disabled,select:disabled{opacity:.4;cursor:default}.timeline-labels{justify-content:space-between;font-size:12px;color:var(--muted);margin-top:14px}.timeline-labels output{font-size:14px;color:var(--text);font-variant-numeric:tabular-nums}input[type=range]{width:100%;accent-color:var(--mint);cursor:pointer;margin:12px 0 2px}.follow-label{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}.replay-help{font-size:11px;margin:7px 0 0}.map .island circle{transition:r .15s,fill .2s}.island-deceased{opacity:.55}.timeline-cursor{stroke:#e3eee8;stroke-width:1;stroke-dasharray:3 3}.legend .dot.dead{background:#617e86}.cargo{fill:var(--amber);stroke:#0c2028;stroke-width:2}.state-note{padding:9px 12px;border-left:2px solid var(--amber);font-size:12px;color:var(--muted);background:#192d31}.choice-box{font-size:13px;color:var(--text)}@media(max-width:700px){.replay-top{align-items:flex-start}.replay-buttons{width:100%;gap:6px}.replay-buttons button,.replay-buttons select{padding:8px}.replay-bar{padding:15px}}
+</style>
+<style>
+.policy-panel{margin-top:18px;min-width:0}.policy-controls{display:flex;gap:15px;flex-wrap:wrap;align-items:center}.policy-controls label{display:flex;gap:8px;align-items:center;font-size:12px;flex-wrap:wrap}.policy-controls input{font:inherit;background:#18343c;color:var(--text);border:1px solid var(--line);border-radius:7px;padding:9px;max-width:100%}.policy-controls a{color:var(--mint);font-size:12px}.policy-scroll{overflow:auto;max-height:440px}.policy-table{min-width:780px;table-layout:fixed}.policy-table th:first-child{width:46%}.policy-table th,.policy-table td{padding:9px 10px;text-align:left;overflow-wrap:anywhere}.policy-table thead{position:sticky;top:0;background:var(--panel)}.policy-table td:not(:first-child){font-variant-numeric:tabular-nums;font-size:12px}.policy-chosen{background:#23463f;box-shadow:inset 3px 0 var(--mint)}.probability-track{height:5px;background:#203e45;margin-top:5px}.probability-fill{display:block;height:5px;background:var(--mint)}
+</style>
+</head>
+<body><main>
+<header><div><div class="eyebrow">Island Community</div><h1>The observatory</h1><p>A living economy, one island at a time.</p></div><div><div class="status" id="status" aria-live="polite">Waiting for a recording</div><label class="follow-label"><input id="follow" type="checkbox"> Follow newest turn</label></div></header>
+<div class="banner" id="banner">No simulation data loaded. This viewer reads recorded runs and does not advance the world.</div>
+<section class="card replay-bar" aria-label="Replay controls">
+<div class="replay-top"><h2>Replay the community</h2><div class="replay-buttons">
+<button id="restart" type="button" title="Go to first recorded turn" aria-label="Go to first recorded turn">↤</button>
+<button id="previous" type="button" title="Previous turn" aria-label="Previous turn">←</button>
+<button id="play" class="primary" type="button" disabled>Play</button>
+<button id="next" type="button" title="Next turn" aria-label="Next turn">→</button>
+<button id="last" type="button" title="Go to last recorded turn" aria-label="Go to last recorded turn">↦</button>
+<label class="subtle" for="speed">Speed</label><select id="speed" aria-label="Playback speed"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option></select>
+</div></div>
+<div class="timeline-labels"><span id="first-turn">—</span><output id="playhead" for="timeline" aria-live="polite">No recording yet</output><span id="last-turn">—</span></div>
+<input id="timeline" type="range" min="0" max="0" value="0" step="1" disabled aria-label="Replay turn">
+<p class="replay-help" id="replay-help">Choose a turn to inspect its islands, decisions, and events. Space plays or pauses; arrow keys step.</p>
+</section>
+<div class="stats"><div class="card"><div class="stat-label">Simulation turn</div><div class="stat-value" id="turn">—</div></div><div class="card"><div class="stat-label">Living islands</div><div class="stat-value" id="population">—</div></div><div class="card"><div class="stat-label">Owned resource value</div><div class="stat-value" id="value">—</div><div class="stat-unit">configured value units</div></div><div class="card"><div class="stat-label">Mean health</div><div class="stat-value" id="health">—</div><div class="stat-unit">health points</div></div></div>
+<div class="layout"><div><section class="card"><div class="map-head"><h2>Transport world</h2><p>Select an island to inspect it</p></div><svg class="map" id="map" viewBox="0 0 700 340" role="img" aria-label="Island transport network"></svg><div class="legend"><span><i class="dot"></i>At least half health</span><span><i class="dot amber"></i>Below half health</span><span><i class="dot dead"></i>Deceased</span><span>Lines represent channels · diamonds show cargo in transit</span><span><i class="channel-closed"></i>Temporarily closed</span></div></section><div class="charts"><section class="card"><h2>Population · islands</h2><svg id="population-chart" class="chart" viewBox="0 0 330 160" role="img" aria-label="Population by simulation turn"></svg></section><section class="card"><h2>Resource value · units</h2><svg id="value-chart" class="chart" viewBox="0 0 330 160" role="img" aria-label="Resource value by simulation turn"></svg></section></div></div>
+<aside class="card"><div class="details-head"><h2>Island details</h2><select id="selection" aria-label="Select island"><option>No islands</option></select></div><div id="details" class="empty">Island records will appear here.</div></aside></div>
+<section class="card policy-panel" aria-label="Model choices and logits">
+<h2>Model choices &amp; logits</h2><p id="policy-context">Select an island and a turn.</p>
+<div class="policy-controls"><label>Decision <select id="policy-stage"><option value="action">Action / partner / items</option><option value="quantity">Amounts for the chosen trade</option></select></label><label>Find an option <input id="policy-filter" type="search" placeholder="grain, accept, manufacture…"></label><a id="policy-download" hidden>Download scores</a></div>
+<p class="subtle" id="policy-summary"></p><p class="subtle" id="policy-explanation"></p>
+<div id="policy-options" class="policy-scroll" aria-live="polite"></div>
+</section>
+<div class="lower"><section class="card"><h2>Shipments and agreements</h2><div id="shipments" class="feed empty">No recorded shipments.</div></section><section class="card"><h2>Recent world events</h2><div id="events" class="feed empty">No recorded events.</div></section></div>
+<details class="card" open style="margin-top:18px"><summary style="cursor:pointer;font-size:20px">Items, food &amp; improvements</summary><p id="rules-note" class="subtle">Loading item guide…</p><div class="scroll" id="item-guide"></div><p id="rules-limits" class="subtle"></p></details>
+<footer>Recorded state only · Playback does not run agents or train models. Private island details are visible to the observer, not automatically to other islands.</footer>
+</main>
+<script>
+const svgNamespace = 'http://www.w3.org/2000/svg';
+const numberFormatter = new Intl.NumberFormat(undefined, {maximumFractionDigits: 1});
+const element = identifier => document.getElementById(identifier);
+const number = value => Number.isFinite(value) ? numberFormatter.format(value) : '—';
+const readableName = value => String(value ?? '').replaceAll('_', ' ');
+let latest = null;
+let selected = null;
+let turns = [];
+let chartMetrics = [];
+let frameIndex = 0;
+let playing = false;
+let playbackTimer = null;
+let metadataInFlight = false;
+let requestVersion = 0;
+let hasLoadedRecording = false;
+let recordingStatus = 'unknown';
+const frameCache = new Map();
+const policyCache = new Map();
+let policyRequestVersion = 0;
+let policyPayload = null;
+
+/** Label trade templates without implying that their placeholder amounts are the final proposal. */
+function policyOptionLabel(action, stage) {
+    if (stage === 'action' && policyPayload?.stages.quantity && ['propose_trade', 'counter'].includes(action.kind)) {
+        const arguments = action.args;
+        const offered = Object.keys(arguments.offer ?? {}).map(readableName).join(', ') || 'currency';
+        const requested = Object.keys(arguments.request ?? {}).map(readableName).join(', ') || 'nothing';
+        const destination = action.kind === 'counter' ? `counter proposal #${arguments.proposal}` : `island ${arguments.target}`;
+        return `${offered} for ${requested} · ${destination} · choose amounts next`;
+    }
+    return choiceSummary(action);
+}
+
+/** Show every valid option, ranked by its actual probability, with the sampled option marked. */
+function drawPolicyScores() {
+    const container = element('policy-options');
+    container.replaceChildren();
+    if (!policyPayload) return;
+    const stage = element('policy-stage').value;
+    const scores = policyPayload.stages[stage];
+    const filter = element('policy-filter').value.trim().toLowerCase();
+    if (scores.format === 'qwen_choice_v1') {
+        const execution = policyPayload.stages.execution;
+        element('policy-summary').textContent = `${scores.option_count} options · model chose ID ${scores.selected_index} · ${execution.executed ? 'executed' : 'rejected by world'} · ${number(scores.seconds)} seconds`;
+        element('policy-explanation').textContent = `Qwen returns a constrained JSON menu ID. No action logits are recorded for this language policy. ${scores.reasoning_truncated ? 'The reasoning token budget was reached.' : ''}`;
+        const response = textNode('pre', `Model response: ${scores.raw_response}\nRequested: ${JSON.stringify(execution.requested_action)}\nSubmitted: ${JSON.stringify(execution.submitted_action)}\nExecuted: ${execution.executed}`);
+        response.style.whiteSpace = 'pre-wrap';
+        container.append(response);
+        for (const [label, content] of [['Generated reasoning', scores.raw_reasoning], ['Exact model input', scores.rendered_prompt]]) {
+            const detail = document.createElement('details');
+            detail.append(textNode('summary', label));
+            const text = textNode('pre', content);
+            text.style.whiteSpace = 'pre-wrap';
+            text.style.overflowWrap = 'anywhere';
+            detail.append(text);
+            container.append(detail);
+        }
+        const table = document.createElement('table');
+        table.className = 'policy-table';
+        const heading = document.createElement('tr');
+        heading.append(textNode('th', 'Menu ID'), textNode('th', 'Exact action'), textNode('th', 'Choice'));
+        table.append(heading);
+        scores.options.forEach((option, index) => {
+            const label = policyOptionLabel(option.action, stage);
+            if (filter && !label.toLowerCase().includes(filter)) return;
+            const row = document.createElement('tr');
+            row.dataset.optionIndex = String(index);
+            if (index === scores.selected_index) row.className = 'policy-chosen';
+            row.append(textNode('td', String(index)), textNode('td', label), textNode('td', index === scores.selected_index ? 'Selected' : ''));
+            table.append(row);
+        });
+        container.append(table);
+        return;
+    }
+    const options = scores.options.map((option, index) => ({...option, index, label: policyOptionLabel(option.action, stage)}))
+        .filter(option => !filter || option.label.toLowerCase().includes(filter))
+        .sort((first, second) => second.probability - first.probability || first.index - second.index);
+    element('policy-summary').textContent = `${scores.options.length} options · showing ${options.length} · temperature ${scores.temperature.toFixed(3)} · chosen option #${scores.selected_index + 1}`;
+    const balanced = scores.options.some(option => option.group_log_count !== 0);
+    element('policy-explanation').textContent = `Adjusted logit = raw logit ÷ temperature${balanced ? ' − log(number of options of this action type)' : ''}. Probability = softmax of adjusted logits. The chosen option is sampled, so it can have less than the highest probability.${stage === 'quantity' ? ' These amounts belong only to the selected action template; a non-trade has one unchanged option.' : ''}`;
+    const table = document.createElement('table');
+    table.className = 'policy-table';
+    const heading = document.createElement('tr');
+    for (const title of ['Option', 'Raw logit', 'Adjusted logit', 'Probability', 'Choice']) heading.append(textNode('th', title));
+    const head = document.createElement('thead');
+    head.append(heading);
+    table.append(head);
+    const body = document.createElement('tbody');
+    for (const option of options) {
+        const row = document.createElement('tr');
+        row.dataset.optionIndex = String(option.index);
+        row.dataset.probability = String(option.probability);
+        const chosen = option.index === scores.selected_index;
+        if (chosen) row.className = 'policy-chosen';
+        row.append(textNode('td', `#${option.index + 1} · ${option.label}`));
+        for (const value of [option.raw_logit, option.adjusted_logit]) {
+            const cell = textNode('td', value.toPrecision(6));
+            cell.title = String(value);
+            row.append(cell);
+        }
+        const probability = textNode('td', `${(option.probability * 100).toPrecision(4)}%`);
+        probability.title = String(option.probability);
+        const bar = textNode('div', '', 'probability-track');
+        const fill = textNode('span', '', 'probability-fill');
+        fill.style.width = `${Math.max(0, Math.min(100, option.probability * 100))}%`;
+        bar.append(fill);
+        probability.append(bar);
+        row.append(probability, textNode('td', chosen ? 'Chosen' : ''));
+        body.append(row);
+    }
+    table.append(body);
+    container.append(table);
+}
+
+/** Load saved logits for the selected island, discarding replies from earlier selections. */
+async function loadPolicyScores(snapshot) {
+    const version = ++policyRequestVersion;
+    const islandId = selected;
+    const key = `${snapshot.turn}:${islandId}`;
+    policyPayload = null;
+    element('policy-options').replaceChildren();
+    element('policy-summary').textContent = '';
+    element('policy-explanation').textContent = '';
+    element('policy-download').hidden = true;
+    element('policy-context').textContent = islandId == null ? 'No island selected.' : `Island ${islandId} · turn ${snapshot.turn}`;
+    const decision = (snapshot.decisions ?? []).find(choice => String(choice.island_id) === islandId);
+    if (!decision) {
+        element('policy-summary').textContent = 'This island has no recorded decision at this turn.';
+        return;
+    }
+    if (decision.candidate_counts) {
+        const counts = Object.entries(decision.candidate_counts);
+        element('policy-summary').textContent = `${counts.reduce((total, [, count]) => total + count, 0)} action options · ${counts.map(([kind, count]) => `${count} ${readableName(kind)}`).join(' · ')}`;
+    }
+    const address = `api/decision?turn=${snapshot.turn}&island=${islandId}`;
+    try {
+        let payload = policyCache.get(key);
+        if (!payload) {
+            const response = await fetch(address);
+            if (version !== policyRequestVersion) return;
+            if (response.status === 404) {
+                element('policy-explanation').textContent = 'Logits were not saved for this decision. Older recordings retain their original data.';
+                return;
+            }
+            if (!response.ok) throw new Error('Saved scores are temporarily unavailable. Select the island again to retry.');
+            payload = await response.json();
+            policyCache.set(key, payload);
+            while (policyCache.size > 16) policyCache.delete(policyCache.keys().next().value);
+        }
+        if (version !== policyRequestVersion) return;
+        policyPayload = payload;
+        element('policy-stage').querySelector('[value="quantity"]').disabled = !payload.stages.quantity;
+        if (!payload.stages[element('policy-stage').value]) element('policy-stage').value = 'action';
+        element('policy-download').href = address;
+        element('policy-download').download = `island-${islandId}-turn-${snapshot.turn}-scores.json`;
+        element('policy-download').hidden = false;
+        drawPolicyScores();
+    } catch (error) {
+        if (version === policyRequestVersion) element('policy-explanation').textContent = error.message;
+    }
+}
+
+function describeBonus(name, amount) {
+    if (name === 'productivity') return `+${number(amount * 100)}% production speed`;
+    if (name === 'recovery') return `+${number(amount)} health per fully fed and watered turn`;
+    if (name === 'comfort') return `${number(amount * 100)}% less unhappiness damage`;
+    if (name === 'disease_resistance') return `${number(amount * 100)}% less disease damage`;
+    return `${number(amount * 100)}% less resource loss from events (rounded up to whole items)`;
+}
+
+async function loadItemGuide() {
+    try {
+        const response = await fetch('api/rules');
+        if (!response.ok) throw new Error('Item guide is temporarily unavailable.');
+        const {recorded, defaults} = await response.json();
+        const configuration = recorded?.item_utility ? recorded : defaults;
+        const isCurrentRecording = Boolean(recorded?.item_utility);
+        element('rules-note').textContent = isCurrentRecording
+            ? 'These are the rules saved with this recording. Using an item spends one available unit; food and water are consumed automatically.'
+            : 'New simulation rules preview. This older recording keeps its original rules and has no item improvements or saved meal nutrition.';
+        if (!recorded) element('rules-note').textContent = 'Default rules preview. No saved rule configuration is available for this recording.';
+        const table = document.createElement('table');
+        const header = document.createElement('tr');
+        for (const title of ['Item', 'Use and effect', 'Lasts']) {
+            const cell = textNode('th', title);
+            cell.scope = 'col';
+            header.append(cell);
+        }
+        table.append(header);
+        for (const [identifier, item] of Object.entries(configuration.items)) {
+            const effect = configuration.item_utility?.uses[identifier];
+            const descriptions = [];
+            if (item.survival.food) descriptions.push(`${number(item.survival.food)} food units; unused nutrition carries forward`);
+            if (item.survival.water) descriptions.push(`${number(item.survival.water)} water units for drinking`);
+            if (effect) {
+                if (effect.health) descriptions.push(`Restore up to ${number(effect.health)} health`);
+                if (effect.disease_turns) descriptions.push(`Shorten illness by ${effect.disease_turns} turns`);
+                for (const [name, amount] of Object.entries(effect.bonuses)) descriptions.push(describeBonus(name, amount));
+            }
+            const label = textNode('td', item.name);
+            label.append(textNode('div', `Per ${item.unit}`, 'subtle'));
+            const description = textNode('td', descriptions.join(' · '));
+            if (effect) description.prepend(textNode('div', effect.purpose, 'subtle'));
+            for (const recipe of Object.values(configuration.recipes)) {
+                if (recipe.outputs[identifier]) description.append(textNode('div',
+                    `${formatItems(recipe.inputs)} → ${formatItems(recipe.outputs)} · ${number(recipe.base_time)} work units before skill and equipment`, 'subtle'));
+            }
+            const row = document.createElement('tr');
+            row.append(label, description, textNode('td', effect?.duration ? `${effect.duration} turns` : 'Immediate'));
+            table.append(row);
+        }
+        element('item-guide').replaceChildren(table);
+        const needs = configuration.survival.consumption;
+        const caps = configuration.item_utility.bonus_caps;
+        element('rules-limits').textContent = `Every turn needs ${number(needs.food)} food and ${number(needs.water)} water. A meal's saved nutrition can cover later food needs; drinking water is still required. Item use costs ${number(configuration.item_utility.action_time)} work units. Improvements include the turn of use, expire, and cannot be reapplied while active. Combined limits: ${Object.entries(caps).map(([name, amount]) => describeBonus(name, amount)).join('; ')}. Bonuses belong to the island and are not inherited.`;
+    } catch (error) {
+        element('rules-note').textContent = error.message;
+    }
+}
+
+function svgNode(tag, attributes = {}, text = null) {
+    const result = document.createElementNS(svgNamespace, tag);
+    for (const [name, value] of Object.entries(attributes)) {
+        result.setAttribute(name, String(value));
+    }
+    if (text !== null) result.textContent = text;
+    return result;
+}
+
+function textNode(tag, text, className = '') {
+    const result = document.createElement(tag);
+    result.textContent = text;
+    result.className = className;
+    return result;
+}
+
+function formatItems(items) {
+    return Object.entries(items ?? {})
+        .filter(([, quantity]) => quantity > 0)
+        .map(([item, quantity]) => `${number(quantity)} ${readableName(item)}`)
+        .join(', ');
+}
+
+function channelIsClosed(channel, turn) {
+    // Zero denotes an undisrupted channel, including the initial turn-zero snapshot.
+    return channel.disabled_until > 0 && channel.disabled_until >= turn;
+}
+
+function drawChart(identifier, rows, key, color) {
+    const chart = element(identifier);
+    chart.replaceChildren();
+    const points = rows.filter(row => Number.isFinite(row[key]) && Number.isFinite(row.turn));
+    if (!points.length) {
+        chart.append(svgNode('text', {x: 165, y: 80, 'text-anchor': 'middle'}, 'No completed turns yet'));
+        return;
+    }
+    const maximum = Math.max(1, ...points.map(row => row[key]));
+    const first = points[0].turn;
+    const last = points[points.length - 1].turn;
+    const horizontalPosition = turn => 35 + (turn - first) / Math.max(1, last - first) * 280;
+    const verticalPosition = value => 125 - value / maximum * 105;
+    chart.append(svgNode('line', {x1: 35, y1: 125, x2: 315, y2: 125, stroke: '#35545d'}));
+    chart.append(svgNode('polyline', {
+        points: points.map(row => `${horizontalPosition(row.turn)},${verticalPosition(row[key])}`).join(' '),
+        fill: 'none', stroke: color, 'stroke-width': 2,
+    }));
+    chart.append(svgNode('text', {x: 5, y: 23}, number(maximum)));
+    chart.append(svgNode('text', {x: 15, y: 128}, '0'));
+    chart.append(svgNode('text', {x: 35, y: 145}, String(first)));
+    chart.append(svgNode('text', {x: 315, y: 145, 'text-anchor': 'end'}, `${last} turns`));
+    if (latest && latest.turn >= first && latest.turn <= last) {
+        const position = horizontalPosition(latest.turn);
+        chart.append(svgNode('line', {x1: position, y1: 18, x2: position, y2: 128, class: 'timeline-cursor'}));
+    }
+}
+
+function drawMap(snapshot) {
+    const map = element('map');
+    map.replaceChildren();
+    const islands = [...(snapshot.islands ?? []), ...(snapshot.deceased ?? [])];
+    const compact = islands.length > 20;
+    document.querySelector('.map-head p').textContent = compact
+        ? `Routes and cargo for island ${selected} · select another to inspect`
+        : 'Select an island to inspect it';
+    if (!islands.length) {
+        map.append(svgNode('text', {x: 350, y: 170, 'text-anchor': 'middle'}, 'No islands recorded'));
+        return;
+    }
+    const maximumHealth = snapshot.maximum_health ?? 100;
+    const positions = new Map();
+    const coordinates = islands.map((island, index) => island.location ?? [
+        Math.cos(index / islands.length * 2 * Math.PI),
+        Math.sin(index / islands.length * 2 * Math.PI),
+    ]);
+    const extent = Math.max(1, ...coordinates.flat().map(Math.abs));
+    islands.forEach((island, index) => positions.set(String(island.id), [
+        350 + coordinates[index][0] / extent * 270,
+        170 + coordinates[index][1] / extent * 115,
+    ]));
+    for (const channel of snapshot.channels ?? []) {
+        if (compact && String(channel.source) !== selected && String(channel.target) !== selected) continue;
+        const source = positions.get(String(channel.source));
+        const target = positions.get(String(channel.target));
+        if (!source || !target) continue;
+        const closed = channelIsClosed(channel, snapshot.turn);
+        const line = svgNode('line', {
+            x1: source[0], y1: source[1], x2: target[0], y2: target[1],
+            opacity: closed ? 0.7 : 0.45,
+            'stroke-dasharray': closed ? '5 5' : 'none',
+            style: `stroke:${closed ? '#e4bd7b' : '#3c6872'}`,
+        });
+        const availability = closed ? `Closed through turn ${channel.disabled_until}` : 'Open';
+        line.append(svgNode('title', {},
+            `Islands ${channel.source} ↔ ${channel.target} · ${availability} · Capacity ${number(channel.capacity)} load units per turn`));
+        map.append(line);
+    }
+    for (const shipment of snapshot.shipments ?? []) {
+        if (compact && String(shipment.source) !== selected && String(shipment.target) !== selected) continue;
+        const source = positions.get(String(shipment.source));
+        const target = positions.get(String(shipment.target));
+        if (!source || !target) continue;
+        const horizontal = (source[0] + target[0]) / 2;
+        const vertical = (source[1] + target[1]) / 2;
+        const cargo = svgNode('path', {d: `M ${horizontal} ${vertical - 6} l 6 6 -6 6 -6 -6 Z`, class: 'cargo'});
+        cargo.append(svgNode('title', {}, `In transit to island ${shipment.target}: ${formatItems(shipment.items)} · scheduled turn ${shipment.arrival_turn}`));
+        map.append(cargo);
+    }
+    for (const island of islands) {
+        const deceased = island.death_turn != null;
+        const [horizontal, vertical] = positions.get(String(island.id));
+        const isSelected = String(island.id) === selected;
+        const group = svgNode('g', {
+            class: `island${deceased ? ' island-deceased' : ''}`, tabindex: 0, role: 'button',
+            'aria-label': `Inspect island ${island.id}, ${deceased ? `deceased at turn ${island.death_turn}` : `health ${number(island.health)} of ${number(maximumHealth)}`}`,
+            'aria-pressed': isSelected,
+        });
+        group.append(svgNode('circle', {
+            cx: horizontal, cy: vertical, r: compact ? (isSelected ? 10 : 6) : (isSelected ? 18 : 13),
+            fill: deceased ? '#617e86' : island.health < maximumHealth / 2 ? '#e4bd7b' : '#a7e6bb',
+            stroke: isSelected ? '#ffffff' : '#16343c', 'stroke-width': compact && !isSelected ? 1 : 3,
+        }));
+        group.append(svgNode('title', {}, `Island ${island.id} · ${island.specialization.map(readableName).join(', ')}`));
+        group.append(svgNode('text', {
+            x: horizontal, y: vertical + (compact ? 3 : 32), 'text-anchor': 'middle',
+            style: compact ? 'pointer-events:none;fill:#0c2028;font-size:9px;font-weight:600' : 'pointer-events:none',
+        }, compact ? String(island.id) : `Island ${island.id}`));
+        const selectIsland = () => {
+            selected = String(island.id);
+            element('selection').value = selected;
+            drawMap(snapshot);
+            drawDetails(snapshot);
+        };
+        group.addEventListener('click', selectIsland);
+        group.addEventListener('keydown', event => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                selectIsland();
+            }
+        });
+        map.append(group);
+    }
+}
+
+function inventoryTable(island) {
+    const table = document.createElement('table');
+    table.className = 'inventory-table';
+    const heading = document.createElement('tr');
+    for (const label of ['Item', 'Total', 'Reserved', 'Contaminated']) {
+        const cell = textNode('th', label);
+        cell.scope = 'col';
+        heading.append(cell);
+    }
+    table.append(heading);
+    for (const [item, total] of Object.entries(island.inventory ?? {})) {
+        const reserved = island.reserved?.[item] ?? 0;
+        const contaminated = island.contaminated?.[item] ?? 0;
+        const row = document.createElement('tr');
+        const label = textNode('td', readableName(item));
+        label.append(textNode('div', `${number(total - reserved)} available`, 'subtle'));
+        row.append(label, textNode('td', number(total)), textNode('td', number(reserved)),
+            textNode('td', number(contaminated)));
+        table.append(row);
+    }
+    return table;
+}
+
+function skillTable(skills) {
+    const table = document.createElement('table');
+    const heading = document.createElement('tr');
+    heading.append(textNode('th', 'Skill'), textNode('th', 'Level'));
+    table.append(heading);
+    for (const [name, level] of Object.entries(skills ?? {})) {
+        const row = document.createElement('tr');
+        row.append(textNode('td', readableName(name)), textNode('td', number(level)));
+        table.append(row);
+    }
+    return table;
+}
+
+function drawDetails(snapshot) {
+    void loadPolicyScores(snapshot);
+    const container = element('details');
+    const island = [...(snapshot.islands ?? []), ...(snapshot.deceased ?? [])].find(value => String(value.id) === selected);
+    container.replaceChildren();
+    if (!island) {
+        container.className = 'empty';
+        container.textContent = 'No island selected.';
+        return;
+    }
+    container.className = '';
+    if (island.death_turn != null) {
+        container.append(textNode('p', `Died at turn ${island.death_turn}. These are its last recorded holdings before the world's death accounting.`, 'state-note'));
+    }
+    const choice = (snapshot.decisions ?? []).find(decision => String(decision.island_id) === selected);
+    if (choice) {
+        container.append(textNode('div', 'Choice this turn', 'section-label'),
+            textNode('p', choiceSummary(choice.action), 'choice-box'),
+            textNode('p', `${choice.reward_components ? 'Learning reward' : 'Resource reward'}: ${number(choice.reward)}${choice.terminal ? ' · final transition' : ''}`, 'subtle'));
+        if (choice.reward_components) {
+            const parts = choice.reward_components;
+            container.append(textNode('p', `Inventory reward: ${number(parts.resource_reward)} · Empty food penalty: ${number(parts.empty_food_penalty)} · Health loss penalty: ${number(parts.health_loss_penalty)}`, 'subtle'),
+                textNode('p', `Usable food remaining: ${number(parts.food_available)} units · Health lost this turn: ${number(parts.health_lost)} points`, 'subtle'));
+            if (parts.empty_water_penalty != null) {
+                container.append(textNode('p', `Empty water penalty: ${number(parts.empty_water_penalty)} · Usable water remaining: ${number(parts.water_available)} units`, 'subtle'));
+            }
+        }
+    }
+    const grid = textNode('div', '', 'details-list');
+    const details = [
+        ['Age', `${island.age} turns`],
+        ['Parent', island.parent_id == null ? 'Founder' : `Island ${island.parent_id}`],
+        ['Health', `${number(island.health)} / ${number(snapshot.maximum_health ?? 100)}`],
+        ['Unhappiness', number(island.unhappiness)],
+        ['Currency', number(island.currency)],
+        ['Resource value', number(island.resource_value)],
+    ];
+    if (island.food_reserve != null) details.push(['Saved nutrition', `${number(island.food_reserve)} food units`]);
+    for (const [label, value] of details) {
+        const cell = textNode('div', '', 'detail');
+        cell.append(textNode('small', label), textNode('strong', value));
+        grid.append(cell);
+    }
+    container.append(grid);
+    if (island.neighbors != null) {
+        container.append(textNode('div', 'Communication neighbors', 'section-label'),
+            textNode('p', island.neighbors.length ? island.neighbors.map(identifier => `Island ${identifier}`).join(' · ') : 'No living neighbors.', 'subtle'));
+        container.append(textNode('p', island.missing_neighbor_resources.length
+            ? `Missing producer access: ${island.missing_neighbor_resources.map(readableName).join(', ')}.`
+            : 'Grain and water producers are both in this neighborhood.', 'subtle'));
+    }
+    if (island.recent_history != null) {
+        container.append(textNode('div', 'Recent private experience', 'section-label'));
+        if (!island.recent_history.length) container.append(textNode('p', 'No completed turns yet.', 'subtle'));
+        for (const experience of island.recent_history) {
+            container.append(textNode('p', `Turn ${experience.turn}: ${choiceSummary(experience.action)} · reward ${number(experience.reward)} · food ${number(experience.food_available)} · water ${number(experience.water_available)} · health ${number(experience.health)}`, 'subtle'));
+        }
+    }
+    if (island.item_bonuses) {
+        container.append(textNode('div', 'Active improvements', 'section-label'));
+        const improvements = Object.entries(island.item_bonuses).filter(([, amount]) => amount > 0);
+        container.append(textNode('p', improvements.length
+            ? improvements.map(([name, amount]) => describeBonus(name, amount)).join(' · ')
+            : 'No improvements active.', 'subtle'));
+        for (const [item, expiresTurn] of Object.entries(island.active_effects ?? {})) {
+            container.append(textNode('p', `${readableName(item)} · through turn ${expiresTurn}`, 'subtle'));
+        }
+    }
+    container.append(textNode('div', 'Inventory', 'section-label'));
+    const inventory = textNode('div', '', 'scroll');
+    inventory.append(inventoryTable(island));
+    container.append(inventory, textNode('p',
+        'Reserved and contaminated amounts are part of total stock and can overlap. Available stock excludes reservations.',
+        'inventory-note'));
+    container.append(textNode('div', 'Manufacturing skills', 'section-label'), skillTable(island.skills));
+    if (island.specialization?.length) {
+        container.append(textNode('div', 'Receives world allocations', 'section-label'),
+            textNode('p', island.specialization.map(readableName).join(', '), 'subtle'));
+    }
+    if (island.work) {
+        container.append(textNode('div', 'Work in progress', 'section-label'),
+            textNode('p', `${readableName(island.work.recipe)} · ${number(island.work.remaining)} work units remaining`, 'subtle'));
+    }
+}
+
+function proposalSummary(proposal) {
+    const terms = [];
+    if (proposal.kind === 'trade') {
+        if (formatItems(proposal.offer)) terms.push(`Offers ${formatItems(proposal.offer)}`);
+        if (formatItems(proposal.request)) terms.push(`Requests ${formatItems(proposal.request)}`);
+    } else if (proposal.kind === 'service') {
+        terms.push(`Manufactures ${readableName(proposal.recipe)}`);
+        terms.push(`Reserves its own inputs: ${formatItems(proposal.offer)}`);
+    } else {
+        terms.push(`${proposal.kind === 'teaching' ? 'Teaches' : 'Transfers'} ${readableName(proposal.skill)}`);
+        if (proposal.transfer_capability) terms.push('Includes manufacturing capability');
+    }
+    const payer = proposal.payment_from === 'proposer' ? proposal.proposer : proposal.acceptor;
+    terms.push(proposal.price > 0 ? `Island ${payer} pays ${number(proposal.price)} currency` : 'No payment');
+    terms.push(`Expires after turn ${proposal.expires_turn}`);
+    return {
+        title: `Proposal #${proposal.id} · Island ${proposal.proposer} → Island ${proposal.acceptor}`,
+        details: terms.join(' · '),
+    };
+}
+
+function contractSummary(contract) {
+    const kinds = {trade: 'Trade', service: 'Manufacturing', teaching: 'Teaching', transfer: 'Skill transfer'};
+    const details = [`Deadline: turn ${contract.deadline}`, `From proposal #${contract.proposal_id}`];
+    if (contract.escrow > 0) details.push(`${number(contract.escrow)} currency held in escrow`);
+    if (contract.shipments?.length) details.push(`Shipments: ${contract.shipments.map(identifier => `#${identifier}`).join(', ')}`);
+    return {
+        title: `${kinds[contract.kind] ?? readableName(contract.kind)} agreement #${contract.id} · Islands ${contract.supplier} and ${contract.customer}`,
+        details: details.join(' · '),
+    };
+}
+
+function shipmentSummary(shipment, snapshot) {
+    const remaining = shipment.arrival_turn - snapshot.turn;
+    const expectedArrival = remaining > 0
+        ? `Expected turn ${shipment.arrival_turn} (in ${number(remaining)} ${remaining === 1 ? 'turn' : 'turns'})`
+        : `Scheduled for turn ${shipment.arrival_turn}; awaiting delivery`;
+    const details = [formatItems(shipment.items), `Owned by island ${shipment.owner}`, expectedArrival];
+    const contamination = formatItems(shipment.contaminated);
+    if (contamination) details.push(`Contaminated: ${contamination}`);
+    const channel = (snapshot.channels ?? []).find(value =>
+        (value.source === shipment.source && value.target === shipment.target)
+        || (value.source === shipment.target && value.target === shipment.source));
+    if (channel && channelIsClosed(channel, snapshot.turn)) {
+        details.push(`Channel closed through turn ${channel.disabled_until}`);
+    }
+    return {
+        title: `Shipment #${shipment.id} · Island ${shipment.source} → Island ${shipment.target}`,
+        details: details.join(' · '),
+    };
+}
+
+function eventSummary(record) {
+    const reasonNames = {
+        world_allocation: 'world allocation', initial_endowment: 'starting resources',
+        initial_specialization_endowment: 'starting specialization resources',
+        manufacturing_input: 'manufacturing inputs', manufacturing_output: 'manufactured output',
+        positive_event: 'windfall', negative_event: 'resource loss', trade_dispatch: 'shipment sent',
+        trade_receipt: 'shipment received', survival_consumption: 'survival needs',
+        deceased_asset_destruction: 'assets retired after death', child_transfer_out: 'transferred to child',
+        child_transfer_in: 'inherited from parent', service_escrow: 'service payment reserved',
+        party_deceased: 'one party died', owner_deceased: 'owner died', deadline: 'deadline passed',
+        failed_contract: 'agreement failed', dead_escrow_owner: 'payer died',
+    };
+    const reason = reasonNames[record.reason] ?? readableName(record.reason);
+    switch (record.type) {
+        case 'inventory': {
+            const change = `${record.delta > 0 ? '+' : ''}${number(record.delta)}`;
+            const contamination = record.contamination_delta
+                ? `; ${record.contamination_delta > 0 ? 'added' : 'removed'} ${number(Math.abs(record.contamination_delta))} contaminated`
+                : '';
+            return `Island ${record.island}: ${change} ${readableName(record.item)} · ${reason}${contamination}`;
+        }
+        case 'currency':
+            return `Island ${record.island}: ${record.delta > 0 ? '+' : ''}${number(record.delta)} currency · ${reason}`;
+        case 'founding':
+            return `Island ${record.island} founded with ${number(record.currency)} currency.`;
+        case 'birth':
+            return `Island ${record.child} born from island ${record.parent} · Inherits ${formatItems(record.transfer)}.`;
+        case 'death':
+            return `Island ${record.island} died · Lifetime reward ${number(record.lifetime_reward)}.`;
+        case 'work_started':
+            return `Island ${record.island} started ${readableName(record.recipe)} · ${number(record.duration)} work units.`;
+        case 'learning_reward':
+            return `Island ${record.island}: reward ${number(record.total)} · inventory ${number(record.resource_reward)}, empty food ${number(record.empty_food_penalty)}${record.empty_water_penalty != null ? `, empty water ${number(record.empty_water_penalty)}` : ''}, health loss ${number(record.health_loss_penalty)}.`;
+        case 'item_used':
+            return `Island ${record.island} used ${readableName(record.item)}${record.health_gained ? ` · +${number(record.health_gained)} health` : ''}${record.disease_turns_removed ? ` · illness shortened by ${record.disease_turns_removed} turns` : ''}${record.expires_turn != null ? ` · improvement through turn ${record.expires_turn}` : ''}.`;
+        case 'item_effect_expired':
+            return `Island ${record.island}: ${readableName(record.item)} improvement expired.`;
+        case 'work_completed':
+            return `Island ${record.island} finished ${readableName(record.recipe)}.`;
+        case 'work_lost':
+            return `Island ${record.island} lost unfinished ${readableName(record.recipe)} · ${reason}.`;
+        case 'proposal': {
+            const proposal = proposalSummary(record.proposal);
+            return `${proposal.title} · ${proposal.details}`;
+        }
+        case 'proposal_expired':
+        case 'proposal_cancelled':
+        case 'proposal_rejected':
+        case 'proposal_countered':
+            return `Proposal #${record.proposal} ${record.type.replace('proposal_', '')}${reason ? ` · ${reason}` : ''}.`;
+        case 'contract_accepted': {
+            const contract = contractSummary(record.contract);
+            return `${contract.title} accepted · Channel fee ${number(record.channel_fee)} currency.`;
+        }
+        case 'contract_completed':
+            return `Agreement #${record.contract} completed.`;
+        case 'contract_failed':
+            return `Agreement #${record.contract} failed · ${reason}.`;
+        case 'shipment_dispatched': {
+            const shipment = record.shipment;
+            return `Shipment #${shipment.id} sent: island ${shipment.source} → island ${shipment.target} · ${formatItems(shipment.items)} · Scheduled turn ${shipment.arrival_turn}.`;
+        }
+        case 'shipment_arrived':
+            return `Shipment #${record.shipment} delivered to island ${record.owner}.`;
+        case 'shipment_destroyed':
+            return `Shipment #${record.shipment} lost · ${reason}.`;
+        case 'skill_transaction':
+            return `Island ${record.supplier} ${record.kind === 'teaching' ? 'taught' : 'transferred'} ${readableName(record.skill)} to island ${record.customer}.`;
+        case 'message':
+            return `Island ${record.sender} requests ${readableName(record.item)} ${record.receiver == null ? 'on the public board' : `from island ${record.receiver}`}.`;
+        case 'action_rejected':
+            return `Island ${record.island} could not complete its ${readableName(record.action.kind)} action.`;
+        case 'allocation_skipped':
+            return `No allocation of ${readableName(record.item)}: no eligible island.`;
+        case 'currency_destroyed':
+            return `${number(record.amount)} currency retired for island ${record.owner} · ${reason}.`;
+        case 'world_event': {
+            const eventNames = {windfall: 'Windfall', loss: 'Resource loss', income_reduction: 'Reduced allocations', disease: 'Disease', channel_outage: 'Channel disruption'};
+            const duration = ['windfall', 'loss'].includes(record.event) ? '' : ` · ${number(record.duration)} turns`;
+            return `${eventNames[record.event] ?? readableName(record.event)} affects island ${record.island}${duration}.`;
+        }
+        case 'turn_completed':
+            return `Turn completed · ${number(record.population)} living islands · ${Object.keys(record.births ?? {}).length} births · ${(record.deaths ?? []).length} deaths.`;
+        default:
+            return readableName(record.type);
+    }
+}
+
+function appendFeedSection(container, title, records, summarize) {
+    if (!records.length) return;
+    container.append(textNode('h3', `${title} · ${records.length}`, 'feed-heading'));
+    for (const record of records.slice(-40).reverse()) {
+        const summary = summarize(record);
+        const row = textNode('div', '', 'event');
+        row.append(textNode('div', summary.title, 'event-title'), textNode('div', summary.details, 'event-detail'));
+        container.append(row);
+    }
+    if (records.length > 40) container.append(textNode('p', 'Showing the 40 most recent records in this group.', 'subtle'));
+}
+
+function drawFeeds(snapshot) {
+    const shipments = element('shipments');
+    shipments.replaceChildren();
+    shipments.className = 'feed';
+    appendFeedSection(shipments, 'In transit', snapshot.shipments ?? [], shipment => shipmentSummary(shipment, snapshot));
+    appendFeedSection(shipments, 'Active agreements', snapshot.contracts ?? [], contractSummary);
+    appendFeedSection(shipments, 'Awaiting a response', snapshot.proposals ?? [], proposalSummary);
+    if (!shipments.childNodes.length) shipments.append(textNode('p', 'No active shipments, agreements, or proposals.'));
+    const events = element('events');
+    events.replaceChildren();
+    events.className = 'feed';
+    for (const record of (snapshot.events ?? []).slice(-60).reverse()) {
+        const row = textNode('div', '', 'event');
+        row.append(textNode('small', `Turn ${record.turn ?? '—'}`), document.createTextNode(eventSummary(record)));
+        events.append(row);
+    }
+    if (!events.childNodes.length) events.append(textNode('p', 'No recorded events.'));
+}
+
+function choiceSummary(action) {
+    const arguments = action.args ?? {};
+    const partner = arguments.target == null ? '' : ` with island ${arguments.target}`;
+    switch (action.kind) {
+        case 'wait': return 'Wait';
+        case 'manufacture': return `Manufacture ${readableName(arguments.recipe)}`;
+        case 'use_item': return `Use ${readableName(arguments.item)}`;
+        case 'private_request': return `Request ${readableName(arguments.item)} from island ${arguments.target}`;
+        case 'public_request': return `Request ${readableName(arguments.item)} on the public board`;
+        case 'propose_trade': return `Propose trade${partner}: offer ${formatItems(arguments.offer) || 'currency'}, request ${formatItems(arguments.request) || 'currency'}`;
+        case 'propose_service': return `Offer to manufacture ${readableName(arguments.recipe)}${partner}`;
+        case 'propose_teaching': return `Offer to teach ${readableName(arguments.skill)}${partner}`;
+        case 'propose_transfer': return `Offer to transfer ${readableName(arguments.skill)}${partner}`;
+        case 'accept': case 'reject': case 'cancel': case 'counter':
+            return `${readableName(action.kind)} proposal #${arguments.proposal}`;
+        default: return readableName(action.kind);
+    }
+}
+
+function render(snapshot) {
+    latest = snapshot;
+    const living = snapshot.islands ?? [];
+    const islands = [...living, ...(snapshot.deceased ?? [])];
+    const statistics = snapshot.metrics ?? {};
+    element('turn').textContent = number(snapshot.turn);
+    element('population').textContent = number(statistics.population ?? living.length);
+    element('value').textContent = number(statistics.total_resource_value);
+    element('health').textContent = number(living.length
+        ? living.reduce((sum, island) => sum + island.health, 0) / living.length : 0);
+    if (!islands.some(island => String(island.id) === selected)) {
+        selected = islands.length ? String(islands[0].id) : null;
+    }
+    const selection = element('selection');
+    selection.replaceChildren();
+    for (const island of islands) {
+        const option = textNode('option', `Island ${island.id}${island.death_turn != null ? ' · deceased' : ''}`);
+        option.value = String(island.id);
+        selection.append(option);
+    }
+    selection.value = selected ?? '';
+    drawMap(snapshot);
+    drawDetails(snapshot);
+    drawFeeds(snapshot);
+    drawChart('population-chart', chartMetrics, 'population', '#a7e6bb');
+    drawChart('value-chart', chartMetrics, 'total_resource_value', '#e4bd7b');
+    updateControls();
+}
+
+function updateControls() {
+    const available = turns.length > 0;
+    element('timeline').disabled = turns.length < 2;
+    element('timeline').max = String(Math.max(0, turns.length - 1));
+    element('timeline').value = String(frameIndex);
+    element('timeline').setAttribute('aria-valuetext', available ? `Turn ${turns[frameIndex]}` : 'No recorded turn');
+    element('play').disabled = turns.length < 2;
+    element('play').textContent = playing ? 'Pause' : 'Play';
+    element('restart').disabled = !available || frameIndex === 0;
+    element('previous').disabled = !available || frameIndex === 0;
+    element('next').disabled = !available || frameIndex >= turns.length - 1;
+    element('last').disabled = !available || frameIndex >= turns.length - 1;
+    element('speed').disabled = turns.length < 2;
+    element('first-turn').textContent = available ? `Turn ${turns[0]}` : '—';
+    element('last-turn').textContent = available ? `Turn ${turns[turns.length - 1]}` : '—';
+    element('playhead').textContent = available ? `Turn ${turns[frameIndex]} · ${frameIndex + 1} / ${turns.length}` : 'No recording yet';
+    element('status').textContent = !available ? 'Waiting for a recording'
+        : playing ? 'Playing recording'
+        : element('follow').checked ? 'Following newest recorded turn'
+        : `Replay paused · ${recordingStatus === 'extinct' ? 'run ended in extinction' : recordingStatus}`;
+}
+
+function stopPlayback() {
+    playing = false;
+    requestVersion += 1;
+    clearTimeout(playbackTimer);
+    playbackTimer = null;
+    updateControls();
+}
+
+function showError(error) {
+    stopPlayback();
+    element('banner').hidden = false;
+    element('banner').textContent = error.message;
+}
+
+async function showFrame(index) {
+    if (!turns.length) return false;
+    const requestedIndex = Math.max(0, Math.min(index, turns.length - 1));
+    const turn = turns[requestedIndex];
+    const version = ++requestVersion;
+    try {
+        let snapshot = frameCache.get(turn);
+        if (!snapshot) {
+            const response = await fetch(`api/snapshot?turn=${turn}`);
+            if (!response.ok) throw new Error('This turn is temporarily unavailable. Try again once the recording finishes writing.');
+            snapshot = await response.json();
+            // Completed historical frames are immutable; keep only a small working set.
+            if (turn !== turns[turns.length - 1] || ['completed', 'extinct'].includes(recordingStatus)) {
+                frameCache.set(turn, snapshot);
+                while (frameCache.size > 64) frameCache.delete(frameCache.keys().next().value);
+            }
+        }
+        if (version !== requestVersion) return false;
+        frameIndex = requestedIndex;
+        render(snapshot);
+        element('banner').hidden = true;
+        return true;
+    } catch (error) {
+        if (version === requestVersion) showError(error);
+        return false;
+    }
+}
+
+function schedulePlayback() {
+    clearTimeout(playbackTimer);
+    if (!playing) return;
+    playbackTimer = setTimeout(async () => {
+        if (!playing) return;
+        if (frameIndex >= turns.length - 1) {
+            stopPlayback();
+            return;
+        }
+        const shown = await showFrame(frameIndex + 1);
+        if (!shown || !playing) return;
+        if (frameIndex >= turns.length - 1) stopPlayback();
+        else schedulePlayback();
+    }, 1000 / Number(element('speed').value));
+}
+
+async function togglePlayback() {
+    if (playing) {
+        stopPlayback();
+        return;
+    }
+    if (turns.length < 2) return;
+    element('follow').checked = false;
+    playing = true;
+    updateControls();
+    if (frameIndex === turns.length - 1 && !await showFrame(0)) return;
+    if (playing) schedulePlayback();
+}
+
+function seek(index) {
+    stopPlayback();
+    element('follow').checked = false;
+    void showFrame(index);
+}
+
+async function refreshTimeline() {
+    if (metadataInFlight) return;
+    metadataInFlight = true;
+    try {
+        const [timelineResponse, metricsResponse] = await Promise.all([
+            fetch('api/timeline'), fetch('api/metrics'),
+        ]);
+        if (!timelineResponse.ok || !metricsResponse.ok) throw new Error('The recording is temporarily unavailable.');
+        const timeline = await timelineResponse.json();
+        chartMetrics = await metricsResponse.json();
+        const previousTurn = latest?.turn;
+        turns = timeline.turns;
+        recordingStatus = timeline.status;
+        if (!turns.length) {
+            stopPlayback();
+            element('banner').hidden = false;
+            element('banner').textContent = 'No recorded turns yet. This page will update when a recording is available.';
+            return;
+        }
+        element('replay-help').textContent = timeline.has_history
+            ? 'Choose a turn to inspect its islands, choices, and events. Space plays or pauses; arrow keys step.'
+            : 'Only the final turn is available in this older recording. Prepare its replay history to unlock playback.';
+        if (!hasLoadedRecording) {
+            hasLoadedRecording = await showFrame(0);
+        } else if (element('follow').checked) {
+            await showFrame(turns.length - 1);
+        } else if (!turns.includes(previousTurn)) {
+            frameCache.clear();
+            stopPlayback();
+            await showFrame(0);
+        } else {
+            frameIndex = turns.indexOf(previousTurn);
+            updateControls();
+        }
+    } catch (error) {
+        showError(error);
+    } finally {
+        metadataInFlight = false;
+    }
+}
+
+element('selection').addEventListener('change', event => {
+    selected = event.target.value;
+    if (latest) {
+        drawMap(latest);
+        drawDetails(latest);
+    }
+});
+element('policy-stage').addEventListener('change', drawPolicyScores);
+element('policy-filter').addEventListener('input', drawPolicyScores);
+element('play').addEventListener('click', () => void togglePlayback());
+element('restart').addEventListener('click', () => seek(0));
+element('previous').addEventListener('click', () => seek(frameIndex - 1));
+element('next').addEventListener('click', () => seek(frameIndex + 1));
+element('last').addEventListener('click', () => seek(turns.length - 1));
+element('timeline').addEventListener('input', event => seek(Number(event.target.value)));
+element('speed').addEventListener('change', schedulePlayback);
+element('follow').addEventListener('change', () => {
+    stopPlayback();
+    if (element('follow').checked) void showFrame(turns.length - 1);
+});
+document.addEventListener('keydown', event => {
+    if (event.target.closest('input, select, button, textarea, [contenteditable]')) return;
+    if (event.code === 'Space') {
+        event.preventDefault();
+        void togglePlayback();
+    } else if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+        event.preventDefault();
+        seek(frameIndex + (event.key === 'ArrowLeft' ? -1 : 1));
+    }
+});
+void loadItemGuide();
+void refreshTimeline();
+setInterval(() => void refreshTimeline(), 2000);
+</script></body></html>

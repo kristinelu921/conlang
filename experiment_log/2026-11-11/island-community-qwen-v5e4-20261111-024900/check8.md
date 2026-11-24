@@ -1,0 +1,7 @@
+# Attention chunking diagnostic — prepared
+
+Exact command/environment `native-check8.sh`, SHA-256 `59e44c1228115754351e41d6457118a12d7f2762018ac879f5b3cf290e460ee4`. Same authorized TPU and seven-test suite as check7. Implementation unchanged; regression separates same-backend chunking error from baseline CPU/TPU differences and prints absolute/relative-L2 errors for output and all three input gradients. Same-backend output/gradient thresholds remain atol/rtol 0.005 on TPU; CPU chunked/eager use 1e-5. Existing full-model CPU/TPU logits and cached-generation test is unchanged. CPU reference calculations execute on the authorized remote VM, not development.
+
+## Initialization failure — 2026-11-11 04:22 UTC
+
+All seven tests failed in 8.60 seconds before inference, exit 1, because the native runtime reported `TPU is already in use`. Our prior empty lock was removed with recorded exact ownership/timestamp and idle-device evidence before this launch. Subsequent minimal checks found every device unheld, no lockfile, and 16 GiB free disk; task-local runtime diagnostic directory was empty. No active holder was observed or disturbed. Cause remains unconfirmed: possibly transient initialization/resource contention, not evidence of numerical or chunking failure. A fresh idle preflight will precede one new diagnostic attempt in a separate output identity. The kristine-only capacity audit had no AVAILABLE compatible resource.

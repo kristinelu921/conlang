@@ -1,0 +1,7 @@
+-r requirements.txt
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.15.0+cpu
+torch-tpu==0.2.0
+transformers==5.22.2
+numpy==2.5.4
+accelerate==1.15.0
