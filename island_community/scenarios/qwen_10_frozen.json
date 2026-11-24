@@ -1,0 +1,552 @@
+{
+  "schema_version": 9,
+  "seed": 42,
+  "initialization": {
+    "population": 10,
+    "specialization_rule": "proportional_single_resource",
+    "specialization_limit": 1,
+    "survival_turns": 5,
+    "endowment_rounding": "next_power_of_two",
+    "specialization_quantity": 8,
+    "currency": 30,
+    "location_radius": 2.0,
+    "capabilities": [
+      "cooking",
+      "weaving",
+      "building",
+      "medicine"
+    ]
+  },
+  "items": {
+    "water": {
+      "name": "Water",
+      "category": "base",
+      "unit": "liter",
+      "fractional": false,
+      "transport_load": 1,
+      "reward_value": 1,
+      "survival": {
+        "water": 1
+      },
+      "disease_eligible": false
+    },
+    "grain": {
+      "name": "Edible grain",
+      "category": "base",
+      "unit": "ration",
+      "fractional": false,
+      "transport_load": 1,
+      "reward_value": 2,
+      "survival": {
+        "food": 1
+      },
+      "disease_eligible": true
+    },
+    "timber": {
+      "name": "Timber",
+      "category": "base",
+      "unit": "piece",
+      "fractional": false,
+      "transport_load": 2,
+      "reward_value": 2,
+      "survival": {},
+      "disease_eligible": false
+    },
+    "stone": {
+      "name": "Stone",
+      "category": "base",
+      "unit": "block",
+      "fractional": false,
+      "transport_load": 2,
+      "reward_value": 1,
+      "survival": {},
+      "disease_eligible": false
+    },
+    "iron": {
+      "name": "Iron",
+      "category": "base",
+      "unit": "ingot",
+      "fractional": false,
+      "transport_load": 2,
+      "reward_value": 4,
+      "survival": {},
+      "disease_eligible": false
+    },
+    "clay": {
+      "name": "Clay",
+      "category": "base",
+      "unit": "block",
+      "fractional": false,
+      "transport_load": 1,
+      "reward_value": 1,
+      "survival": {},
+      "disease_eligible": false
+    },
+    "fiber": {
+      "name": "Fiber",
+      "category": "base",
+      "unit": "bundle",
+      "fractional": false,
+      "transport_load": 1,
+      "reward_value": 2,
+      "survival": {},
+      "disease_eligible": false
+    },
+    "herbs": {
+      "name": "Herbs",
+      "category": "base",
+      "unit": "bundle",
+      "fractional": false,
+      "transport_load": 1,
+      "reward_value": 3,
+      "survival": {},
+      "disease_eligible": false
+    },
+    "salt": {
+      "name": "Salt",
+      "category": "base",
+      "unit": "bag",
+      "fractional": false,
+      "transport_load": 1,
+      "reward_value": 2,
+      "survival": {},
+      "disease_eligible": false
+    },
+    "fuel": {
+      "name": "Fuel",
+      "category": "base",
+      "unit": "unit",
+      "fractional": false,
+      "transport_load": 1,
+      "reward_value": 3,
+      "survival": {},
+      "disease_eligible": false
+    },
+    "meal": {
+      "name": "Prepared meal",
+      "category": "manufactured",
+      "unit": "meal",
+      "fractional": false,
+      "transport_load": 1,
+      "reward_value": 2,
+      "survival": {
+        "food": 2
+      },
+      "disease_eligible": true
+    },
+    "cloth": {
+      "name": "Cloth",
+      "category": "manufactured",
+      "unit": "sheet",
+      "fractional": false,
+      "transport_load": 1,
+      "reward_value": 4,
+      "survival": {},
+      "disease_eligible": false
+    },
+    "tool": {
+      "name": "Tool",
+      "category": "manufactured",
+      "unit": "tool",
+      "fractional": false,
+      "transport_load": 1,
+      "reward_value": 6,
+      "survival": {},
+      "disease_eligible": false
+    },
+    "medicine": {
+      "name": "Medicine",
+      "category": "manufactured",
+      "unit": "dose",
+      "fractional": false,
+      "transport_load": 1,
+      "reward_value": 5,
+      "survival": {},
+      "disease_eligible": false
+    }
+  },
+  "recipes": {
+    "cook": {
+      "inputs": {
+        "grain": 2,
+        "water": 1
+      },
+      "outputs": {
+        "meal": 2
+      },
+      "capability": "cooking",
+      "skill": "cooking",
+      "base_time": 0.7
+    },
+    "weave": {
+      "inputs": {
+        "fiber": 2
+      },
+      "outputs": {
+        "cloth": 1
+      },
+      "capability": "weaving",
+      "skill": "weaving",
+      "base_time": 1.5
+    },
+    "build": {
+      "inputs": {
+        "timber": 1,
+        "iron": 1
+      },
+      "outputs": {
+        "tool": 1
+      },
+      "capability": "building",
+      "skill": "building",
+      "base_time": 2.0
+    },
+    "compound": {
+      "inputs": {
+        "herbs": 2,
+        "water": 1
+      },
+      "outputs": {
+        "medicine": 1
+      },
+      "capability": "medicine",
+      "skill": "medicine",
+      "base_time": 1.0
+    }
+  },
+  "allocation": {
+    "turns_per_minute": 1,
+    "allocations_per_minute": 1,
+    "quantities": [
+      1,
+      2,
+      4,
+      8,
+      16,
+      32,
+      64,
+      128,
+      256,
+      512,
+      1024
+    ],
+    "quantity_weights": [
+      1,
+      2,
+      5,
+      8,
+      5,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "resource_weights": {
+      "water": 4,
+      "grain": 4,
+      "timber": 1,
+      "stone": 1,
+      "iron": 1,
+      "clay": 1,
+      "fiber": 1,
+      "herbs": 1,
+      "salt": 1,
+      "fuel": 1
+    },
+    "recipient_rule": "self",
+    "scope": "per_island",
+    "require_all_resource_producers": false
+  },
+  "actions": {
+    "time_budget": 1.0,
+    "communication_time": 0.02,
+    "agreement_time": 0.02,
+    "minimum_work_time": 0.05,
+    "work_carries_forward": true,
+    "skill_gain": 0.05,
+    "skill_speed_factor": 0.2,
+    "teaching_time": 0.3,
+    "teaching_gain": 0.1,
+    "teaching_cost": 0,
+    "transfer_time": 0.2,
+    "transfer_units": 0.25,
+    "transfer_cost": 0,
+    "proposal_lifetime": 5,
+    "contract_deadline": 15,
+    "trade_quantities": [],
+    "service_price": 2,
+    "message_lifetime": 10,
+    "purchase_price_per_value": 1.0,
+    "trade_quantity_mode": "all_feasible"
+  },
+  "survival": {
+    "consumption": {
+      "food": 1,
+      "water": 1
+    },
+    "bundle_items": {
+      "food": "grain",
+      "water": "water"
+    },
+    "maximum_health": 300.0,
+    "death_threshold": 0.0,
+    "shortage_damage": 7.0,
+    "unhappiness_damage": 1.0,
+    "recovery": 1.0,
+    "unhappiness_formula": "relative_reward_shortfall_ema",
+    "unhappiness_smoothing": 0.2,
+    "disease_damage": 3.0,
+    "disease_duration": 4,
+    "learning_strength_gain": 0.5
+  },
+  "aging": {
+    "start_turn": 60,
+    "interval": 10,
+    "skill_retention": 0.95,
+    "productivity_decay": 0.05,
+    "minimum_productivity": 0.2,
+    "health_damage": 1.0,
+    "event_susceptibility": 0.2
+  },
+  "transport": {
+    "topology": "resource_neighbors",
+    "direction": "bidirectional",
+    "distance": "euclidean",
+    "capacity": 32,
+    "distance_per_turn": 2.0,
+    "minimum_transit_turns": 1,
+    "fee_per_distance": 1.0,
+    "fee_denomination": "currency",
+    "congestion": "seeded_priority",
+    "ownership": "recipient_at_dispatch",
+    "late_failure": "retain_recipient_owned_shipments",
+    "cancellation": "pending_only",
+    "maximum_neighbors": 5,
+    "required_neighbor_resources": [
+      "grain",
+      "water"
+    ]
+  },
+  "reproduction": {
+    "enabled": true,
+    "interval": 20,
+    "inheritance_formula": "floor_factor_sqrt_available",
+    "additional_inheritance_factor": 0.5,
+    "policy_mutation_std": 0.01,
+    "location": "near_parent",
+    "location_jitter": 0.2,
+    "channels": "match_topology",
+    "specialization": "inherit_parent",
+    "inherit_skills": false,
+    "inherit_capabilities": true
+  },
+  "rewards": {
+    "scale": 0.01,
+    "currency_value": 0.0,
+    "measurement": "after_deaths_and_births",
+    "committed_inventory": "included",
+    "in_transit": "recipient_owned",
+    "work_in_progress": "excluded",
+    "lifetime_score": "sum_learning_rewards",
+    "terminal_reward": 0.0,
+    "recipe_validation": "positive_values_no_amplification"
+  },
+  "reward_shaping": {
+    "empty_food_penalty": 5.0,
+    "empty_water_penalty": 5.0,
+    "health_loss_penalty_per_point": 0.5
+  },
+  "events": {
+    "probability_per_turn": 0.05,
+    "type_weights": {
+      "windfall": 1,
+      "loss": 1,
+      "channel_outage": 1,
+      "income_reduction": 1,
+      "disease": 1
+    },
+    "resource_quantity": 4,
+    "duration": 3,
+    "affected_items": [
+      "water",
+      "grain",
+      "timber",
+      "stone",
+      "iron",
+      "clay",
+      "fiber",
+      "herbs",
+      "salt",
+      "fuel"
+    ],
+    "windfall_items": [
+      "water",
+      "grain"
+    ],
+    "income_multiplier": 0.5,
+    "incoming_contamination_probability": 0.02
+  },
+  "death": {
+    "assets": "destroy",
+    "extinction": "stop"
+  },
+  "learning": {
+    "death_replay": false,
+    "ancestral_replay": false
+  },
+  "exploration": {
+    "initial_temperature": 2.0,
+    "final_temperature": 1.0,
+    "initial_entropy_coefficient": 0.05,
+    "anneal_updates": 30,
+    "balance_action_kinds": true
+  },
+  "trade_initialization": {
+    "initial_odds_multiplier": 2.0,
+    "reserve_turns": 1.0
+  },
+  "item_utility": {
+    "action_time": 0.1,
+    "bonus_caps": {
+      "productivity": 1.0,
+      "recovery": 3.0,
+      "comfort": 0.8,
+      "disease_resistance": 0.8,
+      "loss_protection": 0.75
+    },
+    "uses": {
+      "timber": {
+        "purpose": "Repair supply shelters",
+        "health": 0,
+        "disease_turns": 0,
+        "duration": 8,
+        "bonuses": {
+          "loss_protection": 0.25
+        }
+      },
+      "stone": {
+        "purpose": "Reinforce supply shelters",
+        "health": 0,
+        "disease_turns": 0,
+        "duration": 12,
+        "bonuses": {
+          "loss_protection": 0.5
+        }
+      },
+      "iron": {
+        "purpose": "Improve workshop fittings",
+        "health": 0,
+        "disease_turns": 0,
+        "duration": 6,
+        "bonuses": {
+          "productivity": 0.15
+        }
+      },
+      "clay": {
+        "purpose": "Make hygiene vessels",
+        "health": 0,
+        "disease_turns": 0,
+        "duration": 6,
+        "bonuses": {
+          "recovery": 1.0
+        }
+      },
+      "fiber": {
+        "purpose": "Make bedding",
+        "health": 0,
+        "disease_turns": 0,
+        "duration": 6,
+        "bonuses": {
+          "comfort": 0.3
+        }
+      },
+      "herbs": {
+        "purpose": "Treat minor illness",
+        "health": 3,
+        "disease_turns": 1,
+        "duration": 0,
+        "bonuses": {}
+      },
+      "salt": {
+        "purpose": "Prepare preserved food",
+        "health": 0,
+        "disease_turns": 0,
+        "duration": 5,
+        "bonuses": {
+          "disease_resistance": 0.5
+        }
+      },
+      "fuel": {
+        "purpose": "Keep living quarters warm",
+        "health": 0,
+        "disease_turns": 0,
+        "duration": 3,
+        "bonuses": {
+          "recovery": 2.0
+        }
+      },
+      "cloth": {
+        "purpose": "Make protective clothing",
+        "health": 0,
+        "disease_turns": 0,
+        "duration": 10,
+        "bonuses": {
+          "comfort": 0.6,
+          "disease_resistance": 0.2
+        }
+      },
+      "tool": {
+        "purpose": "Equip the workshop",
+        "health": 0,
+        "disease_turns": 0,
+        "duration": 10,
+        "bonuses": {
+          "productivity": 0.5
+        }
+      },
+      "medicine": {
+        "purpose": "Treat illness",
+        "health": 12,
+        "disease_turns": 4,
+        "duration": 0,
+        "bonuses": {}
+      }
+    }
+  },
+  "policy": {
+    "hidden_size": 256,
+    "learning_rate": 0.0003,
+    "discount": 0.99,
+    "entropy_coefficient": 0.01,
+    "value_coefficient": 0.5,
+    "gradient_clip": 1.0,
+    "initial_capacity": 50,
+    "adam_beta1": 0.9,
+    "adam_beta2": 0.999,
+    "adam_epsilon": 1e-08
+  },
+  "memory": {
+    "history_turns": 8
+  },
+  "language_model": {
+    "model_id": "Qwen/Qwen3-0.6B",
+    "revision": "c1899de289a04d12100db370d81485cdf75e47ca",
+    "mode": "frozen",
+    "max_reasoning_tokens": 96,
+    "max_context_tokens": 16384,
+    "temperature": 0.6,
+    "top_p": 0.95,
+    "top_k": 20,
+    "adapter_rank": 8,
+    "adapter_layers": 2,
+    "learning_rate": 1e-05,
+    "reward_scale": 0.1,
+    "value_learning_rate": 0.001,
+    "value_hidden_size": 64,
+    "discount": 0.99,
+    "gradient_clip": 1.0,
+    "threads": 4
+  }
+}

@@ -1,0 +1,9 @@
+# Reward continuation — turn-two HBM failure
+
+2026-11-11 04:14 UTC. Run `reward-20`, published source `bf6f8d12c63a13442f8227c353e219bcf186ba25`, exact command/environment `reward-20.sh`. Authorized `kmh-tpuvm-v5e-4-spot-myang-ar`, us-west4-a, v5litepod-4 / topology 2x2, one worker, READY/HEALTHY/Spot. Source, model, checkpoint, and outputs node-local.
+
+Generation reached turn two, but teacher-forcing policy-gradient replay failed with exit 1: `RuntimeBufferAllocationFailure`, requesting 3.05 GiB when only 2.62 GiB remained. Endpoint: `_trajectory_log_probability`, materialization of `torch.isfinite(result)`; this is a deferred execution failure, so the Python location does not identify which earlier tensor allocated the buffer. Full eager attention's quadratic memory is the leading explanation. No completed turn-two checkpoint exists; earlier per-island in-memory updates might have happened but were not committed. The last valid state remains turn one, SHA-256 `12af13d843451dbbad4de173bd2ca0552e1c469be1e5609c54c3111694a31570` (restored/re-serialized from the independently verified first-turn checkpoint).
+
+A 04:16 read confirmed all TPU resources unheld and the current-user empty lock timestamp `2026-11-11 04:10:29.638287585 +0000`, from this run. Cleanup is separately authorized. No other process was signaled, and the TPU was not reset/rebooted. The comparison sequencer detected failure and did not launch subsequent arms. Preserve the failed recording and logs; retry must use a new identity and the last complete checkpoint.
+
+Repair under development: partition attention queries while retaining every key/value token and the original causal mask; recompute gradient-bearing attention chunks during backward. Preserve float32 weights, complete context, history, seeds, all sampling and learning settings. Require forward/logit/gradient parity and real resumed-turn success before continuation.
